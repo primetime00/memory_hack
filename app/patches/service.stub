@@ -1,0 +1,9 @@
+[Unit]
+Description=Memory Manipulation Service
+After=multi-user.target
+[Service]
+Type=simple
+Restart=always
+ExecStart=#venv# #script#
+[Install]
+WantedBy=multi-user.target

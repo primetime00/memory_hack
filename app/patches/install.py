@@ -30,6 +30,7 @@ def extract_source():
                 data = zip_ref.read(x)
                 data_path = Path(fp)
                 data_path.write_bytes(data)
+    os.unlink("master.zip")
 
 def create_venv():
     print('creating virtual environment...')
@@ -48,9 +49,20 @@ def extract_onsen():
     with zipfile.ZipFile("app/resources/static/onsen.zip","r") as zip_ref:
         zip_ref.extractall("app/resources/static/")
 
+def installed():
+    app_path = Path("./app")
+    prog_path = Path("./mem_manip.py")
+    return app_path.exists() and prog_path.exists()
 
-download_source()
-extract_source()
-create_venv()
-patch_mem_edit()
-extract_onsen()
+def show_service():
+    with open("app/patches/service.stub", "rt") as fp:
+        data = fp.read().replace('#venv#', str(Path('venv').absolute())).replace('#script#', str(Path('mem_manip.py').absolute()))
+        print(data)
+
+if not installed():
+    download_source()
+    extract_source()
+    create_venv()
+    patch_mem_edit()
+    extract_onsen()
+show_service()
