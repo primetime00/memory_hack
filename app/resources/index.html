@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+<body>
+  <link rel="stylesheet" href="resources/static/onsenui.min.css">
+  <link rel="stylesheet" href="resources/static/onsen-css-components.min.css">
+
+  <script src="resources/static/onsenui.min.js"></script>
+  <script src="resources/static/jquery.js" type="text/javascript"></script>
+  <script>
+  var load_count = 0;
+  $(document).on('prechange', function(event) {
+    $('ons-toolbar .center').innerHTML = event.originalEvent.tabItem.getAttribute('label');
+  });
+
+  $(document).on('init', function(event) {
+    load_count += 1;
+    if (load_count >= 4) {
+      main_page_ready(event);
+    }
+  });
+
+
+  ons.ready(function() {
+    ons.platform.select('android')
+    ons['mem_minip'] = {}
+    ons.mem_minip['process_handlers'] = [];
+  });
+
+  main_page_ready = function(event) {
+    process_control.ready()
+    search.ready()
+    aob.ready()
+    script.ready()
+  };
+  </script>
+  <style>
+td {
+    -webkit-user-select: all;
+    -moz-user-select: all;
+    -ms-user-select: all;
+    user-select: all;
+}
+.textarea {
+    width: 100%;
+    display: inline-block;
+    font-family: font-family: "Lucida Console", monospace; font-size: 16px;
+}
+.upload_button {
+  font: bold 11px Arial;
+  text-decoration: none;
+  background-color: #EEEEEE;
+  color: #333333;
+  padding: 2px 6px 2px 6px;
+  border-top: 1px solid #CCCCCC;
+  border-right: 1px solid #333333;
+  border-bottom: 1px solid #333333;
+  border-left: 1px solid #CCCCCC;
+}
+  </style>
+
+  <ons-page on-show="main_page_ready(event)">
+  <ons-toolbar>
+    <div class="center">MemMinip</div>
+  </ons-toolbar>
+
+  <ons-tabbar swipeable position="auto">
+    <ons-tab page="/search" label="Search" icon="md-search" #search_active#>
+    </ons-tab>
+    <ons-tab page="/aob" label="AOB" icon="md-trending-up" #aob_active#>
+    </ons-tab>
+    <ons-tab page="/script" label="Scripts" icon="md-language-python" #script_active#>
+    </ons-tab>
+  </ons-tabbar>
+</ons-page>
+
+<template id="dialog.html">
+  <ons-dialog id="process-dialog">
+    <div style="text-align: center; padding: 10px;">
+      <p>
+        Select a process:
+      </p>
+      <select id="process_list"></select>
+    </div>
+  </ons-dialog>
+</template>
+  <script src="resources/static/process_control.js" type="text/javascript"></script>
+  <script src="resources/static/search.js" type="text/javascript"></script>
+  <script src="resources/static/aob.js" type="text/javascript"></script>
+  <script src="resources/static/script.js" type="text/javascript"></script>
+</body>
+</html>

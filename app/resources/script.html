@@ -1,0 +1,10 @@
+<ons-page id="script_page">
+  <h2>Scripts</h2>
+
+  <br><br>Load Script:
+  <select name="script_names" id="script_names" onchange="script.script_name_selected(this.value)"></select>
+  <input type="file" id="script_upload_button" onchange="script.script_upload_file_changed(this.files[0])" hidden/>
+  <label class="upload_button" for="script_upload_button">Upload</label>
+  <div id="current_script"></div>
+
+</ons-page>

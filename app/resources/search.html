@@ -1,0 +1,66 @@
+<ons-page id="search_page">
+  <h2>Search</h2>
+
+  ##process_control##
+
+  <h3>Search Size:</h3>
+  <select name="search_size" id="search_size">
+    <option value="byte_1">BYTE</option>
+    <option value="byte_2">2 BYTES</option>
+    <option value="byte_4">4 BYTES</option>
+    <option value="float">FLOAT</option>
+    <option value="array">ARRAY</option>
+  </select>
+
+  <div>
+    <h3>Search Type:</h3>
+    <select name="search_type" id="search_type" onchange="search.search_changed(this);">
+      <option value="exact">EXACT</option>
+      <option value="unknown">UNKNOWN</option>
+    </select>
+  </div>
+
+  <div id="search_value_div">
+    <h3>Search Value:</h3>
+    <input type="text" id="search_value" name="search_value">
+  </div>
+
+  <div id="search_direction_div">
+    <h3>Search Option:</h3>
+    <select name="search_direction" id="search_direction">
+      <option value="increase">INCREASE</option>
+      <option value="decrease">DECREASE</option>
+      <option value="unchanged">UNCHANGED</option>
+      <option value="changed">CHANGED</option>
+    </select>
+  </div>
+
+  <button type="button" class="search-button" id="search_button" onclick="search.on_search_clicked()">Search</button>
+  <button type="button" class="reset-button" id="search_reset_button" onclick="search.on_reset_clicked()">Reset</button>
+
+  <br>
+  <div id="search_results">
+    <h3>Found <span id="search_num_results"></span> results.</h3>
+  </div>
+  <div id="search_searching">
+    <h2>Searching... <span id="search_progress"></span></h2>
+  </div>
+  <div id="search_errors">
+
+  </div>
+  <table id="search_result_table">
+    <thead>
+      <tr>
+        <th>Address</th>
+        <th>Value</th>
+        <th>New Value</th>
+        <th>Write</th>
+      </tr>
+    </thead>
+    <tbody id="search_table_body">
+    </tbody>
+</table>
+  <script>
+    //$("#search_page").on('init', search.ready());
+  </script>
+</ons-page>

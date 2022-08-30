@@ -1,0 +1,63 @@
+<ons-page id="aob_page">
+  <h2>AOB</h2>
+  ##process_control##
+
+  <br><br>Name:<br>
+  <input type="text" id="aob_search_name" oninput="aob.aob_search_name_changed()">
+  <select name="aob_search_names" id="aob_search_names" onchange="aob.aob_search_name_selected()">
+  </select>
+  <input type="file" id="aob_upload_button" onchange="aob.aob_upload_file_changed(this.files[0])" hidden/>
+  <label class="upload_button" for="aob_upload_button">Upload</label>
+  <br><br>Search Type:
+  <select name="aob_address_or_value" id="aob_address_or_value" onchange="aob.aob_search_type_changed()">
+    <option value="address" selected>Address</option>
+    <option value="value">Value</option>
+  </select>
+  <div id="aob_search_type_address">
+    <br>Address:<br>
+    <input type="text" id="aob_search_address" oninput="aob.aob_search_address_changed()" value="0x0000561039CDEAEE">
+    <div id="aob_search_range_div">
+      <br><br>Range:<br>
+      <input type="text" id="aob_search_range" value="65536">
+    </div>
+  </div>
+  <div id="aob_search_type_value">
+    <br>Value:<br>
+    <input type="text" id="aob_search_value">
+    <select name="search_size" id="aob_search_size">
+      <option value="byte_1">BYTE</option>
+      <option value="byte_2">2 BYTES</option>
+      <option value="byte_4" selected>4 BYTES</option>
+      <option value="float">FLOAT</option>
+      <option value="array">ARRAY (HEX)</option>
+    </select>
+
+  </div>
+  <br>
+  <button type="button" id="aob_run" onclick="aob.run_aob()">Run</button>
+
+  <h3 id="aob_search_status">Search currently in progress...</h3>
+
+  <h3 id="aob_search_done_initial">Initial search complete!</h3>
+  <h3 id="aob_search_no_results">This search has yielded 0 results.</h3>
+  <h3 id="aob_search_done">Search complete! Found <span id="aob_count"></span> possible AOBs</h3>
+  <div id="aob_view_results">
+    <div class="center">
+        View <span></span> Results
+        <ons-switch onchange="aob.result_switch_changed(event)"></ons-switch>
+      </div>
+  </div>
+
+  <div id="aob_results_text">
+    <div>
+    <textarea class="textarea textarea--transparent" rows="30" placeholder="Textarea" readonly></textarea>
+    </div>
+    <div>
+      <button type="button" id="aob_download" onclick="aob.download_aob()">Download</button>
+    </div>
+  </div>
+
+  <script>
+    //$("#aob_page").on('init', aob.ready());
+  </script>
+</ons-page>
