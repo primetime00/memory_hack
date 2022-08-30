@@ -1,0 +1,187 @@
+diff -uN ./abstract.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/abstract.py
+--- ./abstract.py	2022-08-29 23:28:27.941501949 -0400
++++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/abstract.py	2022-08-22 15:35:58.188344067 -0400
+@@ -267,6 +267,7 @@
+                          addresses: List[int],
+                          needle_buffer: ctypes_buffer_t,
+                          verbatim: bool = True,
++                         search_data = {},
+                          ) -> List[int]:
+         """
+         Search for the provided value at each of the provided addresses, and return the addresses
+@@ -292,16 +293,67 @@
+         else:
+             compare = utils.ctypes_equal
+ 
++        if 'total' in search_data:
++            search_data['total'] = len(addresses)
++        if 'current' in search_data:
++            search_data['current'] = 0
+         for address in addresses:
++            if 'break' in search_data and search_data['break']:
++                break
+             self.read_memory(address, read_buffer)
+             if compare(needle_buffer, read_buffer):
+                 found.append(address)
++            if 'current' in search_data:
++                search_data['current'] += 1
+         return found
+ 
++
++    def search_all_wildcards(self, needle_buffers: list, addresses: list=None, search_data = {}):
++        found = []
++        if len(needle_buffers) == 1:
++            if addresses:
++                return self.search_addresses(addresses, needle_buffers[0]['buffer'], search_data=search_data)
++            return self.search_all_memory(needle_buffers[0]['buffer'], search_data=search_data)
++        if addresses:
++            return self.search_addresses_wildcard(needle_buffers, addresses, search_data=search_data)
++        search = utils.search_buffer_multiple
++        for start, stop in self.list_mapped_regions(True):
++            try:
++                region_buffer = (ctypes.c_byte * (stop - start))()
++                self.read_memory(start, region_buffer)
++                found += [offset + start for offset in search(needle_buffers, region_buffer, search_data=search_data)]
++                if 'break' in search_data and search_data['break']:
++                    return []
++            except OSError:
++                pass
++                #logger.warn('Failed to read in range  0x{} - 0x{}'.format(start, stop))
++        return found
++
++    def search_addresses_wildcard(self, needle_buffers: list, addresses: list=None, search_data = {}):
++        found = []
++        for address in addresses:
++            finished = True
++            current_address = address
++            for current_needle in needle_buffers:
++                if 'break' in search_data and search_data['break']:
++                    return []
++                current_address += current_needle['gap']
++                read_buffer = copy.copy(current_needle['buffer'])
++                self.read_memory(current_address, read_buffer)
++                if bytes(read_buffer) != bytes(current_needle['buffer']):
++                    finished = False
++                    break
++                current_address += len(current_needle['buffer'])
++            if finished:
++                found.append(address)
++        return found
++
++
+     def search_all_memory(self,
+                           needle_buffer: ctypes_buffer_t,
+                           writeable_only: bool = True,
+                           verbatim: bool = True,
++                          search_data={},
+                           ) -> List[int]:
+         """
+         Search the entire memory space accessible to the process for the provided value.
+@@ -326,11 +378,14 @@
+ 
+         for start, stop in self.list_mapped_regions(writeable_only):
+             try:
++                if 'break' in search_data and search_data['break']:
++                    return []
+                 region_buffer = (ctypes.c_byte * (stop - start))()
+                 self.read_memory(start, region_buffer)
+-                found += [offset + start for offset in search(needle_buffer, region_buffer)]
++                found += [offset + start for offset in search(needle_buffer, region_buffer, search_data=search_data)]
+             except OSError:
+-                logger.error('Failed to read in range  0x{} - 0x{}'.format(start, stop))
++                pass
++                #logger.warn('Failed to read in range  0x{} - 0x{}'.format(start, stop))
+         return found
+ 
+     @classmethod
+diff -uN ./linux.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux.py
+--- ./linux.py	2022-08-29 23:28:27.941501949 -0400
++++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux.py	2022-08-01 14:12:56.661290991 -0400
+@@ -58,7 +58,9 @@
+ 
+     def close(self):
+         os.kill(self.pid, signal.SIGSTOP)
++        os.waitpid(self.pid, 0)
+         ptrace(ptrace_commands['PTRACE_DETACH'], self.pid, 0, 0)
++        os.kill(self.pid, signal.SIGCONT)
+         self.pid = None
+ 
+     def write_memory(self, base_address: int, write_buffer: ctypes_buffer_t):
+Common subdirectories: ./__pycache__ and /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/__pycache__
+diff -uN ./utils.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/utils.py
+--- ./utils.py	2022-08-29 23:28:27.941501949 -0400
++++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/utils.py	2022-08-22 15:32:24.231833518 -0400
+@@ -23,8 +23,38 @@
+     pass
+ 
+ 
++def search_buffer_multiple(needles: List[dict], haystack_buffer: ctypes_buffer_t) -> List[int]:
++    #needle is list of dict {'buffer', 'gap'}
++    found = []
++    start = 0
++    sz = 0
++    haystack = bytes(haystack_buffer)
++    first_needle = needles[0]
++    needle = bytes(first_needle['buffer'])
++    result = haystack.find(needle, start)
++    while start < len(haystack) and result != -1:
++        found.append(result)
++        start = result + 1
++        result = haystack.find(needle, start)
++    if len(found) == 0:
++        return []
++    sz = len(needle)
++    for i in range(1, len(needles)):
++        next_needle = needles[i]
++        needle = bytes(next_needle['buffer'])
++        for j in range(len(found)-1, -1, -1):
++            found_item = found[j]
++            result = haystack.find(needle, found_item+sz+next_needle['gap'], found_item+sz+next_needle['gap']+len(needle))
++            if result == -1:
++                found.pop()
++                if len(found) == 0:
++                    return []
++        sz += len(needle) + next_needle['gap']
++    return found
++
+ def search_buffer_verbatim(needle_buffer: ctypes_buffer_t,
+                            haystack_buffer: ctypes_buffer_t,
++                           search_data={}
+                            ) -> List[int]:
+     """
+     Search for a buffer inside another buffer, using a direct (bitwise) comparison
+@@ -44,7 +74,12 @@
+     start = 0
+     result = haystack.find(needle, start)
+     while start < len(haystack) and result != -1:
++        if 'break' in search_data and search_data['break']:
++            print('broken')
++            return []
+         found.append(result)
++        if 'current' in search_data:
++            search_data['current'] += (result-start)
+         start = result + 1
+         result = haystack.find(needle, start)
+     return found
+@@ -52,6 +87,7 @@
+ 
+ def search_buffer(needle_buffer: ctypes_buffer_t,
+                   haystack_buffer: ctypes_buffer_t,
++                  search_data={}
+                   ) -> List[int]:
+     """
+     Search for a buffer inside another buffer, using `ctypes_equal` for comparison.
+@@ -67,9 +103,13 @@
+     found = []
+     read_type = type(needle_buffer)
+     for offset in range(0, len(haystack_buffer) - ctypes.sizeof(needle_buffer)):
++        if 'break' in search_data and search_data['break']:
++            return []
+         v = read_type.from_buffer(haystack_buffer, offset)
+         if ctypes_equal(needle_buffer, v):
+             found.append(offset)
++        if 'current' in search_data:
++            search_data['current'] += 1
+     return found
+ 
+ 
