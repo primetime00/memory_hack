@@ -18,9 +18,8 @@ class SingletonMeta(type):
         return cls._instances[cls]
 
 
-from utils.memory import Memory
-from typing import List
-from mem_edit import Process
+from app.helpers.memory import Memory
+
 
 class DataStore(metaclass=SingletonMeta):
     def __init__(self):

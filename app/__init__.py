@@ -1,0 +1,1 @@
+from app.main import AOBResource, MainResource, SearchResource, ScriptResource, InfoResource
