@@ -21,8 +21,6 @@ def extract_source():
     print('extracting...')
     with zipfile.ZipFile("master.zip","r") as zip_ref:
         for x in zip_ref.infolist():
-            if '/app/' not in x.filename:
-                continue
             fp = x.filename.replace(zip_dir_name+'/','')
             if x.is_dir():
                 os.makedirs(fp, exist_ok=True)
