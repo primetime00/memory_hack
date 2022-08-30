@@ -22,6 +22,8 @@ def extract_source():
     with zipfile.ZipFile("master.zip","r") as zip_ref:
         for x in zip_ref.infolist():
             fp = x.filename.replace(zip_dir_name+'/','')
+            if len(fp) == 0:
+                continue
             if x.is_dir():
                 os.makedirs(fp, exist_ok=True)
             else:

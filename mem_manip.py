@@ -7,7 +7,7 @@ from app import ScriptResource, SearchResource, MainResource, AOBResource, InfoR
 from wsgiref.simple_server import make_server
 
 if __name__ == '__main__':
-    pt = Path(__file__).parent
+    pt = Path(__file__).parent.joinpath('app')
     os.chdir(pt)
     app = falcon.App(middleware=[MultipartMiddleware()])
     app.add_route('/', MainResource())

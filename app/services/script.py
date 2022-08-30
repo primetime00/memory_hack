@@ -153,7 +153,7 @@ class Script:
         self.current_script = ""
 
     def load_script(self, name):
-        mod_name = 'scripts.{}'.format(name)
+        mod_name = 'app.scripts.{}'.format(name)
         try:
             mod = import_module(mod_name)
             for cls, obj in inspect.getmembers(mod):
