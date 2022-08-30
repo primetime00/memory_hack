@@ -1,4 +1,5 @@
-import os
+import os, sys
+import shutil
 import subprocess
 import zipfile
 from pathlib import Path
@@ -54,15 +55,116 @@ def installed():
     prog_path = Path("./mem_manip.py")
     return app_path.exists() and prog_path.exists()
 
-def show_service():
-    with open("app/patches/service.stub", "rt") as fp:
-        data = fp.read().replace('#venv#', str(Path('venv').absolute())).replace('#script#', str(Path('mem_manip.py').absolute()))
-        print(data)
+def get_sudo(service_type):
+    euid = os.geteuid()
+    if euid != 0:
+        print("Running sudo...")
+        args = ['sudo', sys.executable] + [str(Path('app/patches/install.py').absolute())] + [service_type] + [os.environ]
+        os.execlpe('sudo', *args)
 
-if not installed():
-    download_source()
-    extract_source()
-    create_venv()
-    patch_mem_edit()
-    extract_onsen()
-show_service()
+def run_service():
+    subprocess.check_call(['/usr/bin/systemctl', "daemon-reload"])
+    subprocess.check_call(['/usr/bin/systemctl', "enable", "mem_manip.service"])
+    subprocess.check_call(['/usr/bin/systemctl', "start", "mem_manip.service"])
+
+def install_service():
+    print('installing service!')
+    with open("app/patches/service.stub", "rt") as fp:
+        data = fp.read().replace('#venv#', str(Path('venv/bin/python3').absolute())).replace('#script#', str(Path('mem_manip.py').absolute()))
+    with open("/etc/systemd/system/mem_manip.service", "wt") as fp:
+        fp.write(data)
+    run_service()
+
+
+def remove_service():
+    subprocess.check_call(['/usr/bin/systemctl', "stop", "mem_manip.service"])
+    subprocess.check_call(['/usr/bin/systemctl', "disable", "mem_manip.service"])
+    subprocess.check_call(['/usr/bin/systemctl', "daemon-reload"])
+    os.unlink("/etc/systemd/system/mem_manip.service")
+
+def has_service():
+    if Path("/etc/systemd/system/mem_manip.service").exists():
+        return True
+    return False
+
+def service_running():
+    stat = subprocess.call(["systemctl", "is-active", "--quiet", "mem_manip.service"])
+    return stat == 0
+
+def question(question):
+    reply = None
+    while not reply:
+        reply = str(input(question + ' (y/n): ')).lower().strip()
+        if reply[:1] == 'y':
+            return True
+        if reply[:1] == 'n':
+            return False
+        reply = None
+
+def uninstall_service():
+    print("Removing service...")
+    remove_service()
+    Path("/etc/systemd/system/mem_manip.service").unlink(missing_ok=True)
+
+def uninstall_files():
+    shutil.rmtree(str(Path('app').absolute()))
+    shutil.rmtree(str(Path('venv').absolute()))
+    os.unlink(str(Path('mem_manip.py').absolute()))
+
+def wants_service():
+    return question('\nWould you like to install Memory Manipulator as a service?')
+
+def wants_service_run():
+    return question('Would you like to run the service?')
+
+def wants_uninstall():
+    return question('Would you like to uninstall Memory Manipulator?')
+
+
+
+
+if '--service_install' in sys.argv:
+    if os.geteuid() != 0:
+        get_sudo('--service_install')
+    install_service()
+    print("Service installation complete.\nYou can test by accessing http://localhost:5000.")
+elif '--service_remove' in sys.argv:
+    if os.geteuid() != 0:
+        get_sudo('--service_remove')
+    uninstall_service()
+    uninstall_files()
+    print("Uninstall is complete!")
+elif '--service_run' in  sys.argv:
+    if os.geteuid() != 0:
+        get_sudo('--service_run')
+    print("Running service...")
+    run_service()
+else:
+    if installed():
+        print("Installation already detected.")
+        if wants_uninstall():
+            if has_service():
+                get_sudo("--service_remove")
+            else:
+                uninstall_files()
+                print("Uninstall is complete!")
+            exit(0)
+    else:
+        download_source()
+        extract_source()
+        create_venv()
+        patch_mem_edit()
+        extract_onsen()
+    if has_service():
+        print("Service is already installed.")
+        if service_running():
+            print("Service is already running.")
+        else:
+            print("Service is installed, but not running.")
+            if wants_service_run():
+                if os.geteuid() != 0:
+                    get_sudo('--service_run')
+                    print("Service is running.\nYou can test by accessing http://localhost:5000.")
+    else:
+        if wants_service():
+            get_sudo('--service_install')
