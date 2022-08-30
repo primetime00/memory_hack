@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, stat
 import shutil
 import subprocess
 import zipfile
@@ -49,6 +49,12 @@ def extract_onsen():
     print('extracting front-end...')
     with zipfile.ZipFile("app/resources/static/onsen.zip","r") as zip_ref:
         zip_ref.extractall("app/resources/static/")
+
+def create_run_script():
+    with open('run.sh', 'wt') as fp:
+        fp.write("#!/bin/bash\n")
+        fp.write("{} {}\n".format(Path('venv/bin/python3').absolute(), Path('mem_manip.py').absolute()))
+    os.chmod('run.sh', stat.S_IRWXU)
 
 def installed():
     app_path = Path("./app")
@@ -110,6 +116,8 @@ def uninstall_files():
     shutil.rmtree(str(Path('app').absolute()))
     shutil.rmtree(str(Path('venv').absolute()))
     os.unlink(str(Path('mem_manip.py').absolute()))
+    if Path('run.sh').exists():
+        os.unlink(str(Path('run.sh').absolute()))
 
 def wants_service():
     return question('\nWould you like to install Memory Manipulator as a service?')
@@ -155,6 +163,7 @@ else:
         create_venv()
         patch_mem_edit()
         extract_onsen()
+        create_run_script()
     if has_service():
         print("Service is already installed.")
         if service_running():
@@ -168,3 +177,5 @@ else:
     else:
         if wants_service():
             get_sudo('--service_install')
+        else:
+            print("Installation complete.  You can manually start Memory Manipulator by running\n'./run.sh'")
