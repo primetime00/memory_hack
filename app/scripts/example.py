@@ -21,7 +21,8 @@ class Test(BaseScript):
         {'offset': 0x6d33, 'value': ctypes.c_uint16(65500)},
     ]
     pointer_offset = 0xEF6D
-    pointer_magic = 0x2ED6CE
+    army_magic = 0x2ED6CE
+    movement_magic = 0x2ED703
 
     def on_load(self):
         self.add_aob(self.resources_aob)
@@ -36,6 +37,7 @@ class Test(BaseScript):
     def build_ui(self):
         self.add_ui_element(Toggle("Unlimited Resources", self.unlimited_resources, self.is_resource_found))
         self.add_ui_element(InputButton("Set Army # of Selected", self.add_army, self.is_pointer_found, default_value="100", validation_checker=self.limit_value))
+        self.add_ui_element(Toggle("Unlimited Movement for Selected", self.unlimited_movement, self.is_pointer_found))
 
     def is_resource_found(self):
         return self.resources_aob.is_found()
@@ -55,7 +57,7 @@ class Test(BaseScript):
     def add_army(self, memory: Memory, control: BaseUI):
         val = control.input_handler.get_validated_value()
         pointer_value = memory.read(self.pointer_aob.get_bases()[0] + self.pointer_offset, ctypes.c_uint32())
-        starting_address = (self.pointer_aob.get_bases()[0] + self.pointer_offset) + pointer_value.value - self.pointer_magic
+        starting_address = (self.pointer_aob.get_bases()[0] + self.pointer_offset) + pointer_value.value - self.army_magic
         print("got address {}".format(starting_address))
         number = memory.read(starting_address, ctypes.c_uint16())
         print("got value {}".format(number.value))
@@ -65,6 +67,13 @@ class Test(BaseScript):
             if number.value == 0:
                 continue
             memory.write(addr, ctypes.c_uint16(val))
+
+    def unlimited_movement(self, memory: Memory, control: BaseUI):
+        pointer_value = memory.read(self.pointer_aob.get_bases()[0] + self.pointer_offset, ctypes.c_uint32())
+        if pointer_value.value > 0:
+            addr = (self.pointer_aob.get_bases()[0] + self.pointer_offset) + pointer_value.value - self.movement_magic
+            memory.write(addr, ctypes.c_uint16(1000))
+
 
     def unlimited_resources(self, memory: Memory, control: BaseUI):
         for offset in [x['offset'] for x in self.resource_offsets]:
