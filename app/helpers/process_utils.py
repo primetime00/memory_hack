@@ -1,5 +1,5 @@
 import mem_edit
-import psutil, os
+import psutil, os, zlib
 
 inv = ['root', 'kernoops', 'systemd-resolve', 'systemd-timesync', 'avahi', 'rtkit', 'colord', 'messagebus', 'syslog']
 app = ['Isolated Web', 'WebExtensions', 'xdg-', 'Web Content', 'Socket Process', 'bwrap', 'Privileged Cont']
@@ -21,6 +21,18 @@ def get_process_list() -> {}:
             continue
         pl[name] = pid
     return pl
+
+def get_process_names(additional=None) -> []:
+    if additional is None:
+        additional = []
+    else:
+        additional = [x for x in additional if len(x) > 0]
+    procs = list(reversed([k for k, v in get_process_list().items()]))
+    procs.extend(additional)
+    procs_crc = zlib.crc32(" ".join(sorted(procs)).encode())
+    return list(set(procs)), procs_crc
+
+
 
 def can_attach(pid):
     z = None

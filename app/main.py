@@ -1,6 +1,7 @@
 import falcon
 
 from app.helpers.data_store import DataStore
+from app.helpers.process_utils import get_process_names
 from app.services import AOB, Search, Script
 
 script_instance = Script()
@@ -51,12 +52,14 @@ class AOBResource:
 
 
 class InfoResource:
+    data_store = DataStore()
     def on_post(self, req: falcon.Request, resp: falcon.Response):
         resp.content_type = falcon.MEDIA_JSON
         resp.status = 200
         try:
             if req.media['type'] == 'GET_INFO':
-                resp.media = {'status': 'INFO_GET_SUCCESS', 'process': DataStore().get_process(), 'processes': []}
+                procs, crc = get_process_names([self.data_store.get_process()])
+                resp.media = {'status': 'INFO_GET_SUCCESS', 'process': DataStore().get_process(), 'processes': procs, 'crc': crc}
             if req.media['type'] == 'SET_PROCESS':
                 DataStore().set_process(req.media['process'])
                 resp.media = {'status': 'INFO_SET_SUCCESS', 'process': DataStore().get_process(), 'processes': []}
