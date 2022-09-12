@@ -72,10 +72,7 @@ class BaseScript:
         for item in self.list_ui.ui_list:
             if item.is_enabled():
                 item.process(memory)
-            #if aob.is_found():
-            #    for item in self.list_ui.ui_list:
-            #        if item.is_enabled():
-            #            item.process(memory, aob)
+
 
     def find_address(self, memory, aob: AOB):
         addrs = memory.search_aob(aob.get_aob_string())
@@ -95,7 +92,7 @@ class BaseScript:
             res, old, new = memory.compare(base, aob.get_aob_string())
             if not res:
                 bases.pop()
-                logging.info('aob {} does not match!\n{}\n{}'.format(aob.get_name(), old, new))
+                logging.warning('aob {} does not match!\n{}\n{}'.format(aob.get_name(), old, new))
         if len(bases) == 0:
             logging.info('aob {} has no matches anymore'.format(aob.get_name()))
             self.on_aob_lost(aob)

@@ -84,7 +84,8 @@ class AOBFile():
             raise AOBException('AOB file needs a filename.')
 
 
-    def create_aob(self, size: int, offset:int, aob:str):
+    @staticmethod
+    def create_aob(size: int, offset:int, aob:str):
         res = {'size': size, 'offset': offset, 'aob_string': aob, 'aob_array': aob.split(" ")}
         res['aob_bytes'] = [int(x, 16) if x != '??' else 256 for x in res['aob_array']]
         return res

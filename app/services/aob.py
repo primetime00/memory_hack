@@ -345,7 +345,7 @@ class AOB(MemoryHandler):
                     self.progress.add_constraint(0, total, 1)
                 self.progress.increment(current)
 
-            walker = AOBWalk(self.aob_file, max_size=50, filter_result_size=1)
+            walker = AOBWalk(aob_file=self.aob_file, max_size=50, filter_result_size=1)
             if self.current_value:
                 sz_map = {'byte': AOBWalk.BYTE, '2byte': AOBWalk.BYTE_2, '4byte': AOBWalk.BYTE_4}
                 walker.set_result_value_filter(self.current_value, sz_map[self.current_size], self.memory)
@@ -408,7 +408,7 @@ class AOB(MemoryHandler):
                 self.progress.increment(current)
 
             ##search our AOBs to see if they produce only 1 result.  This may take a little while
-            walker = AOBWalk(self.aob_file, max_size=50, filter_result_size=1)
+            walker = AOBWalk(aob_file=self.aob_file, max_size=50, filter_result_size=1)
             walker.search(self.memory, progress=progress_func)
             self.progress.mark()
             return self.aob_file.count_aob_results()

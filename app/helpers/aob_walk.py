@@ -10,7 +10,7 @@ class AOBWalk:
     BYTE_4 = 4
     ARRAY = 8
     NONE = 0
-    def __init__(self, aob_file: AOBFile, max_size=35, filter_result_size=-1, filter_result_value=(NONE, 0, None)):
+    def __init__(self, aob_file: AOBFile = None, max_size=35, filter_result_size=-1, filter_result_value=(NONE, 0, None)):
         self.aob_file = aob_file
         self.max_size = max_size
 
@@ -23,6 +23,30 @@ class AOBWalk:
         self.filter_result_value = self._set_value(filter_result_value)
         self.operation_control = DataStore().get_operation_control()
 
+
+    def add_aob_string(self, aob_string:str, black_list=('00', '??')):
+        aob_array = aob_string.split(" ")
+        aob_item = AOBFile.create_aob(len(aob_array), 0, aob_string)
+        self.aob_map[aob_item['aob_string']] = {'addresses': [], 'offset': aob_item['offset']}
+        aob = aob_array
+        best_pos = -1
+
+        for i in range(0, len(aob)):
+            if aob[i] not in black_list:
+                best_pos = i
+                break
+
+        for i in range(0, len(aob)):
+            if aob[i] not in ('00', '??', 'FF', '01'):
+                best_pos = i
+
+        if best_pos == -1:
+            raise AOBException("Could not add aob {} to walker".format(aob))
+        else:
+            if aob[best_pos] not in self.aob_tree:
+                self.aob_tree[aob[best_pos]] = []
+            element = {'start': best_pos, 'aob_data': aob_item, 'addresses': []}
+            self.aob_tree[aob[best_pos]].append(element)
 
     def add_normal_aob(self, aob_item, black_list=('00', '??')):
         found = False
@@ -58,8 +82,11 @@ class AOBWalk:
         return self.aob_map
 
     def create(self):
-        self.aob_tree = {}
-        aob_list = self.aob_file.get_aob_list()
+        if self.aob_file:
+            self.aob_tree = {}
+            aob_list = self.aob_file.get_aob_list()
+        else:
+            return
 
         for item in aob_list:
             if len(item['aob_array']) > self.max_size:
@@ -87,11 +114,21 @@ class AOBWalk:
                 memory.handle.read_memory(start, region_buffer)
                 data = bytes(region_buffer)
                 keys = [int(x,16) for x in list(self.aob_tree.keys())]
-                for i in range(0, len(data)):
-                    if self.operation_control.is_control_break():
-                        raise BreakException()
-                    if data[i] in keys:
-                        self.process_match(data, i, data[i], start)
+                pos = 0
+                for k in keys:
+                    while pos >= 0 and pos < size:
+                        if self.operation_control.is_control_break():
+                            raise BreakException()
+                        pos = data.find(k, pos)
+                        if pos > -1:
+                            self.process_match(data, pos, data[pos], start)
+                            pos += 1
+                #data.find(keys[0])
+                #for i in range(0, len(data)):
+                #    if self.operation_control.is_control_break():
+                #        raise BreakException()
+                #    if data[i] in keys:
+                #        self.process_match(data, i, data[i], start)
             except OSError:
                 pass
             finally:
@@ -122,6 +159,7 @@ class AOBWalk:
                     match = False
                     break
             if match:
+                print('found match')
                 b['addresses'].append(global_offset+offset-start)
                 self.aob_map[aob_data['aob_string']]['addresses'].append(global_offset+offset-start)
 
@@ -130,20 +168,24 @@ class AOBWalk:
             return
         mults = [aob for aob, data in self.get_aob_map().items() if len(data['addresses']) > size]
         for m in mults:
-            self.aob_file.remove_aob_string(m)
+            if self.aob_file:
+                self.aob_file.remove_aob_string(m)
             del self.aob_map[m]
-        for b in self.bad_aob:
-            self.aob_file.remove_aob_string(" ".join(b))
+        if self.aob_file:
+            for b in self.bad_aob:
+                self.aob_file.remove_aob_string(" ".join(b))
 
     def remove_zero_matches(self):
         if not self.aob_map:
             return
         zeros = [aob for aob, data in self.get_aob_map().items() if len(data['addresses']) == 0]
         for m in zeros:
-            self.aob_file.remove_aob_string(m)
+            if self.aob_file:
+                self.aob_file.remove_aob_string(m)
             del self.aob_map[m]
-        for b in self.bad_aob:
-            self.aob_file.remove_aob_string(" ".join(b))
+        if self.aob_file:
+            for b in self.bad_aob:
+                self.aob_file.remove_aob_string(" ".join(b))
 
 
     def filter_value(self):
@@ -159,11 +201,13 @@ class AOBWalk:
             try:
                 read = mem.read(read_address, (ctypes.c_byte * len(val))())
             except Exception as e:
-                self.aob_file.remove_aob_string(aob)
+                if self.aob_file:
+                    self.aob_file.remove_aob_string(aob)
                 del self.aob_map[aob]
                 continue
             if read[0:] != val[0:]:
-                self.aob_file.remove_aob_string(aob)
+                if self.aob_file:
+                    self.aob_file.remove_aob_string(aob)
                 del self.aob_map[aob]
 
     def set_result_value_filter(self, value, size, memory):
@@ -185,12 +229,5 @@ class AOBWalk:
         except Exception as e:
             raise AOBException('Could not parse value {}'.format(filter_result_value))
         return filter_result_value[0], val, mem
-
-
-
-
-
-        pass
-
 
 
