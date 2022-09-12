@@ -7,6 +7,23 @@
   <script src="resources/static/onsenui.min.js"></script>
   <script src="resources/static/jquery.js" type="text/javascript"></script>
   <script>
+  jQuery["send"] = function( url, data, callback ) {
+    // shift arguments if data argument was omitted
+    if ( jQuery.isFunction( data ) ) {
+        callback = data;
+        data = undefined;
+    }
+
+    return jQuery.ajax({
+        url: url,
+        type: "POST",
+/*        contentType:"application/json; charset=utf-8",*/
+        dataType: "json",
+        data: data,
+        success: callback
+    });
+  };
+
   var load_count = 0;
   $(document).on('prechange', function(event) {
     $('ons-toolbar .center').innerHTML = event.originalEvent.tabItem.getAttribute('label');
@@ -55,6 +72,34 @@ td {
   border-right: 1px solid #333333;
   border-bottom: 1px solid #333333;
   border-left: 1px solid #CCCCCC;
+}
+.col {
+/*
+  border: 1px solid #ccc;
+  background: #fff;
+  */
+  overflow: hidden;
+  padding: 4px;
+  color: #999;
+}
+
+.page__content {
+  background-color: #f6f6f6;
+  padding: 8px;
+}
+
+.spacer > * + * {
+    margin-left: 30px
+}
+
+h3 {
+  color: #666;
+  font-size: 17px;
+}
+
+div .input_item{
+  display:flex;
+  align-items:center;
 }
   </style>
 

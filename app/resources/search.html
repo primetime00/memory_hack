@@ -3,64 +3,91 @@
 
   ##process_control##
 
-  <h3>Search Size:</h3>
-  <select name="search_size" id="search_size">
-    <option value="byte_1">BYTE</option>
-    <option value="byte_2">2 BYTES</option>
-    <option value="byte_4">4 BYTES</option>
-    <option value="float">FLOAT</option>
-    <option value="array">ARRAY</option>
-  </select>
+  <div id="search_information_block">
+    <ons-row>
+      <ons-col align="center" width="150px" class="col ons-col-inner">Search Size:</ons-col>
+      <ons-col align="center" width="25%" class="col ons-col-inner">
+        <select name="search_size" id="search_size" class="select-input select-input--material">
+          <option value="byte_1">BYTE</option>
+          <option value="byte_2">2 BYTES</option>
+          <option value="byte_4" selected>4 BYTES</option>
+          <option value="float" disabled>FLOAT</option>
+          <option value="array">ARRAY</option>
+        </select>
+      </ons-col>
+      <ons-col align="center" class="col ons-col-inner"></ons-col>
+    </ons-row>
 
-  <div>
-    <h3>Search Type:</h3>
-    <select name="search_type" id="search_type" onchange="search.search_changed(this);">
-      <option value="exact">EXACT</option>
-      <option value="unknown">UNKNOWN</option>
-    </select>
+    <ons-row>
+      <ons-col align="center" width="150px" class="col ons-col-inner">Search Type:</ons-col>
+      <ons-col align="center" width="25%" class="col ons-col-inner">
+        <select name="search_type" id="search_type" class="select-input select-input--material" onchange="search.search_type_changed(this.value);">
+          <option value="exact">EXACT</option>
+          <option value="unknown">UNKNOWN</option>
+        </select>
+      </ons-col>
+      <ons-col align="center" class="col ons-col-inner"></ons-col>
+    </ons-row>
+
+    <ons-row id="search_value_row">
+      <ons-col align="center" width="150px" class="col ons-col-inner">Search Value:</ons-col>
+      <ons-col align="center" width="25%" class="col ons-col-inner">
+        <input type="text" id="search_value" name="search_value" class="text-input text-input--material">
+      </ons-col>
+      <ons-col align="center" class="col ons-col-inner"></ons-col>
+    </ons-row>
+
+    <ons-row id="search_direction_row">
+      <ons-col align="center" width="150px" class="col ons-col-inner">Search Option:</ons-col>
+      <ons-col align="center" width="25%" class="col ons-col-inner">
+        <select name="search_direction" id="search_direction" class="select-input select-input--material">
+          <option value="increase">INCREASE</option>
+          <option value="decrease">DECREASE</option>
+          <option value="unchanged">UNCHANGED</option>
+          <option value="changed">CHANGED</option>
+        </select>
+      </ons-col>
+      <ons-col align="center" class="col ons-col-inner"></ons-col>
+    </ons-row>
+
+    <ons-row>
+      <ons-col align="center" width="150px" class="col ons-col-inner">
+
+      </ons-col>
+      <ons-col align="center" width="25%" class="col ons-col-inner">
+      <section class="spacer">
+        <ons-button id="search_button" onclick="search.on_search_clicked()">Search</ons-button>
+        <ons-button id="search_reset_button" onclick="search.on_reset_clicked()">Reset</ons-button>
+      </section>
+      </ons-col>
+      <ons-col align="center" class="col ons-col-inner"></ons-col>
+    </ons-row>
   </div>
 
-  <div id="search_value_div">
-    <h3>Search Value:</h3>
-    <input type="text" id="search_value" name="search_value">
-  </div>
-
-  <div id="search_direction_div">
-    <h3>Search Option:</h3>
-    <select name="search_direction" id="search_direction">
-      <option value="increase">INCREASE</option>
-      <option value="decrease">DECREASE</option>
-      <option value="unchanged">UNCHANGED</option>
-      <option value="changed">CHANGED</option>
-    </select>
-  </div>
-
-  <button type="button" class="search-button" id="search_button" onclick="search.on_search_clicked()">Search</button>
-  <button type="button" class="reset-button" id="search_reset_button" onclick="search.on_reset_clicked()">Reset</button>
-
-  <br>
   <div id="search_results">
-    <h3>Found <span id="search_num_results"></span> results.</h3>
-  </div>
-  <div id="search_searching">
-    <h2>Searching... <span id="search_progress"></span></h2>
-  </div>
-  <div id="search_errors">
+    <ons-row id="search_progress_row">
+      <ons-col align="center" width="150px" class="col ons-col-inner"></ons-col>
+      <ons-col align="center" width="25%" class="col ons-col-inner">
+        Searching...  <span id="search_progress"></span>
+      </ons-col>
+      <ons-col align="center" class="col ons-col-inner"></ons-col>
+    </ons-row>
 
+    <ons-list id="search_result_list">
+      <ons-list-header>Results (<span id="result_count"></span>) <span id="result_count_disclaimer">Showing first 40.</span></ons-list-header>
+      <ons-list-item>
+          <ons-row>
+            <ons-col align="center" width="190px" class="col ons-col-inner">0xBEADFEEDC1345323</ons-col>
+            <ons-col align="center" width="190px" class="col ons-col-inner"><input type="text" id="result_value_00" name="search_value" class="text-input text-input--material" value="999999999999999999"></ons-col>
+            <ons-col align="center" class="col ons-col-inner">
+              <label class="checkbox checkbox--material" style="padding-left: 10px">
+                <input type="checkbox" id="freze_result_value_00" class="checkbox__input checkbox--material__input">
+                <div class="checkbox__checkmark checkbox--material__checkmark"></div>
+                Freeze
+              </label>
+            </ons-col>
+          </ons-row>
+      </ons-list-item>
+    </ons-list>
   </div>
-  <table id="search_result_table">
-    <thead>
-      <tr>
-        <th>Address</th>
-        <th>Value</th>
-        <th>New Value</th>
-        <th>Write</th>
-      </tr>
-    </thead>
-    <tbody id="search_table_body">
-    </tbody>
-</table>
-  <script>
-    //$("#search_page").on('init', search.ready());
-  </script>
 </ons-page>

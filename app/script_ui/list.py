@@ -1,5 +1,5 @@
 from typing import List
-from app.script_common import ScriptException
+from app.helpers.exceptions import ScriptException
 from app.script_ui._base import BaseUI
 
 class ListUI:

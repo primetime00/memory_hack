@@ -1,95 +1,87 @@
 (function( search, $, undefined ) {
     //Private Property
-    var test = true;
+    var div_search_information_block;
+    var sel_search_size;
+    var sel_search_type;
+    var row_search_value;
+    var inp_search_value;
+    var row_search_direction;
+    var sel_search_direction;
+    var btn_search_button;
+    var btn_reset_button;
+    var div_search_results;
+    var row_search_result_list;
+    var result_count;
+    var result_count_disclaimer;
+    var row_search_progress;
+    var search_progress;
+
+    var li_template = (['<ons-list-item class="result-row">',
+          '<ons-row>',
+            '<ons-col align="center" width="190px" class="col ons-col-inner address">##address##</ons-col>',
+            '<ons-col align="center" width="190px" class="col ons-col-inner"><input type="text" id="result_value_##index##" data-address="##address##" name="search_value" class="text-input text-input--material value" value="##value##" onkeydown="search.result_change(this)"></ons-col>',
+            '<ons-col align="center" class="col ons-col-inner">',
+              '<label class="checkbox checkbox--material" style="padding-left: 10px">',
+                '<input type="checkbox" id="freeze_result_value_##index##" class="checkbox__input checkbox--material__input freeze" data-address="##address##" onclick="search.result_freeze(this)">',
+                '<div class="checkbox__checkmark checkbox--material__checkmark"></div>',
+                'Freeze',
+              '</label>',
+            '</ons-col>',
+          '</ons-row>',
+      '</ons-list-item>',
+    ]).join("\n");
+
+    var current_state = "SEARCH_STATE_START";
+    var current_search_type = "exact";
+    var current_search_round = 0;
+    var current_search_results = []
+    var current_process = ""
+    var initialized = false
+
 
     //Public Property
-    search.test = "Bacon Strips";
 
     //Public Method
-    search.search_changed = function(option) {
-      if (option.value == 'unknown') {
-        $('#search_direction_div').hide()
-        $('#search_value_div').hide()
+    search.search_type_changed = function(option) {
+      current_search_type = option;
+      if (option == 'unknown') {
+        on_unknown_search_selected()
       } else {
-        $('#search_direction_div').hide()
-        $('#search_value_div').show()
+        on_value_search_selected()
       }
     };
 
-    search.write_click = function(obj, index, address) {
-      console.log(index, address)
-      var value = $(`input[name="value_${index}"]`).val();
-        $.ajax
-        ({
-            url: '/search',
-            data: {"write": address, "value": value},
-            type: 'post',
-            success: function(result)
-            {
-
-            }
-        });
-    };
-
-    search.change_found_value = function(txt, index) {
-        $(`#write_button_${index}`).prop("disabled", txt.length == 0)
+    search.result_change = function(ele) {
+        if(event.key === 'Enter') {
+            $.send('/search', {'command': 'SEARCH_WRITE', 'address': ele.dataset.address, 'value': ele.value}, on_search_status)
+            ele.blur()
+        }
+    }
+    search.result_freeze = function(ele) {
+        $.send('/search', {'command': 'SEARCH_FREEZE', 'address': ele.dataset.address, 'freeze': ele.checked}, on_search_status)
     }
 
     search.on_search_clicked = function() {
-        var proc = $("select[class='process_control']").val();
-        var size = $("#search_size").val();
-        var type = $("#search_type").val();
-        var value = $("#search_value").val();
-        if (type == 'unknown') {
-          value = $("#search_direction").val()
-        }
-        $("#search_button").prop("disabled",true);
-
-        $("#search_value").prop("disabled",true);
-        $("#search_reset_button").prop("disabled",true);
-
-        $('#search_results').hide();
-        $('#search_result_table').hide();
-        $('#search_reset_button').prop("disabled",true);
-
-        $.ajax
-        ({
-            url: '/search',
-            data: {"process": proc, "size": size, "type": type, "value": value, "button": true},
-            type: 'post',
-            success: function(result)
-            {
-              setTimeout(get_status, 1000);
-            }
-        });
+        $.send('/search',
+        {   "command": "SEARCH_START",
+            "size": sel_search_size.val(),
+            "type": sel_search_type.val(),
+            "value": inp_search_value.val(),
+            "direction": sel_search_direction.val()
+         }
+        , on_search_status);
+        setup_searching_state()
     };
 
     search.on_reset_clicked = function() {
-        $("select[name='process']").prop("disabled",false);
-        $("#search_size").prop("disabled",false);
-        $("#search_type").prop("disabled",false);
-        $('#search_searching').hide();
-        $("#search_reset_button").prop("disabled",true);
-        $.ajax
-        ({
-            url: '/search',
-            data: {"reset": true},
-            type: 'post',
-            success: function(result)
-            {
-              setTimeout(get_status, 1000);
-              $('#search_direction_div').hide()
-              $('#search_results').hide();
-              $('#search_searching').hide();
-              $('#search_result_table').hide();
-              $('#search_reset_button').prop("disabled",true);
-              $('#search_button').prop("disabled",true);
-            }
-        });
+        $.send('/search', { "command": "SEARCH_RESET" }, on_search_status);
     };
 
     search.on_process_changed = function(process) {
-      search.on_reset_clicked();
+        if (process !== current_process) {
+            current_process = process
+            on_process_changed(process)
+        }
     };
 
     search.ready = function()  {
@@ -101,187 +93,226 @@
       $('#search_result_table').hide();
       $('#search_reset_button').prop("disabled",true);
       $('#search_button').prop("disabled",true);
+
+      row_search_result_list.children("ons-list-item").remove()
+      for (i=0; i<40; i++) {
+        var el = ons.createElement(li_template.replaceAll('##index##', i).replaceAll('##address##', 0).replaceAll('##value##', 0))
+        row_search_result_list.append(el)
+      }
     };
 
     //Private Methods
-   function update_addresses() {
-       $.ajax
-        ({
-            url: '/search',
-            data: {"button": false, "update_address": true},
-            type: 'post',
-            success: function(result)
-            {
-              var status = result.status
-              if (status == 'UPDATE_ADDRESSES') {
-                if (result.addresses.length > 0) {
-                  update_table(result.addresses);
-                  setTimeout(update_addresses, 1000);
-                }
-              }
+    function show(elements, _show=true) {
+        $.each(elements, function(index, element){
+            if (_show) {
+                element.show();
+            } else {
+                element.hide();
             }
         });
-    };
+    }
 
-    function action_status(result) {
-      var status = result.status
-      if (status == 'WAITING_START') {
-        $("select[name='process']").prop("disabled",false);
-        $("#search_size").prop("disabled",false);
-        $("#search_type").prop("disabled",false);
-        $("#search_value").prop("disabled",false);
-        $("#search_reset_button").prop("disabled",true);
+    function hide(elements) {
+        show(elements, false);
+    }
 
-        $('#search_results').hide();
-        $('#search_searching').hide();
-        $('#search_result_table').hide();
-        $('#search_reset_button').prop("disabled",true);
-        $('#search_button').prop("disabled",false);
-        $('#search_errors').hide();
-      }
-      else if (status == 'ERROR') {
-        $("select[name='process']").prop("disabled",false);
-        $("#search_size").prop("disabled",false);
-        $("#search_type").prop("disabled",false);
-        $("#search_value").prop("disabled",false);
-        $("#search_reset_button").prop("disabled",true);
-
-        $('#search_results').hide();
-        $('#search_searching').hide();
-        $('#search_result_table').hide();
-        $('#search_reset_button').prop("disabled",true);
-        $('#search_button').prop("disabled",false);
-        $('#search_errors').text(result.error);
-        $('#search_errors').show();
-      }
-      else if (status == 'SEARCHING') {
-        setTimeout(get_status, 1000);
-        $("select[name='process']").prop("disabled",true);
-        $("#search_size").prop("disabled",true);
-        $("#search_type").prop("disabled",true);
-        $("#search_value").prop("disabled",true);
-        $("#search_reset_button").prop("disabled",true);
-
-        $('#search_searching').show();
-        $('#search_progress').text(result.progress + '%')
-        $('#search_results').hide();
-        $('#search_result_table').hide();
-        $('#search_reset_button').prop("disabled",true);
-        $('#search_errors').hide();
-      }
-      else if (status == 'WAITING_CONTINUE') {
-        $("select[name='process']").prop("disabled",true);
-        $("#search_size").prop("disabled",true);
-        $("#search_type").prop("disabled",true);
-        $("#search_value").prop("disabled",false);
-        $("#search_reset_button").prop("disabled",true);
-
-        $('#search_reset_button').prop("disabled",false);
-        $('#search_button').prop("disabled",false);
-        $('#search_errors').hide();
-        show_results(result)
-      }
-      if (result.process === "") {
-        $('#search_reset_button').prop("disabled",true);
-        $('#search_button').prop("disabled",true);
-      }
-    };
-
-    function get_status() {
-        $.ajax
-        ({
-            url: '/search',
-            data: {"button": false},
-            type: 'post',
-            success: function(result)
-            {
-              action_status(result)
+    function enable(elements, _enable=true) {
+        $.each(elements, function(index, element){
+            if (_enable) {
+                element.removeAttr('disabled');
+            } else {
+                element.attr('disabled', 'disabled')
             }
         });
-    };
+    }
 
-    function show_results(res) {
-      $('#search_searching').hide();
-      if (res.type == 'unknown') {
-        $('#search_value_div').hide()
-        $('#search_direction_div').show()
-        if (res.iteration >= 2) {
-          $('#search_num_results').text(res.count)
-          $('#search_results').show();
-          if (res.count == 0) {
-            $('#search_button').prop("disabled",true);
-          }
+    function disable(elements) {
+        enable(elements, false);
+    }
+
+    function setup_search_type(_shows, _hides) {
+        sel_search_type.val(current_search_type)
+        if (current_search_type === 'exact') {
+            _shows.push(...[row_search_value])
+            _hides.push(...[row_search_direction])
         } else {
-          $('#search_results').hide();
+            if (current_search_round > 0) {
+                _shows.push(row_search_direction)
+            } else {
+                _hides.push(row_search_direction)
+            }
+            _hides.push(...[row_search_value])
         }
-      }
-      else {
-        $('#search_num_results').text(res.count)
-        $('#search_results').show();
-        if (res.count == 0) {
-          $('#search_button').prop("disabled",true);
+    }
+
+    function setup_start_state() {
+        var shows = [div_search_information_block]
+        var hides = [div_search_results]
+        setup_search_type(shows, hides)
+        show(shows)
+        hide(hides)
+        if (current_process === "") {
+            disable([btn_reset_button, btn_search_button, sel_search_size, sel_search_type, inp_search_value, sel_search_direction]);
+        } else {
+            disable([btn_reset_button]);
+            enable([btn_search_button, sel_search_size, sel_search_type, inp_search_value, sel_search_direction]);
         }
-      }
-      $("#search_table_body").empty();
-      if (res.addresses.length > 0) {
-        create_table(res.addresses)
-        $('#search_result_table').show();
-        setTimeout(update_addresses, 1000);
-      }
-    };
+    }
 
-    function create_table(addresses) {
-      $("#search_table_body").empty();
-      $.each(addresses, function( index, address ){
-        $('#search_result_table').append(`<tr name="${address[0]}"><td>${address[0]}</td><td name="address_value">${address[1]}</td><td><input type="text" oninput="search.change_found_value(this.value, ${index})" name="value_${index}"></input></td><td><button disabled type="button" class="write-button" id="write_button_${index}" onclick="search.write_click(this, ${index}, ${address})">Write</button></td></tr>`);
-      });
-    };
+    function setup_searching_state(result = {'progress': 0}) {
+        progress = result.progress
+        var shows = [div_search_information_block, row_search_progress, div_search_results]
+        var hides = [row_search_result_list]
+        setup_search_type(shows, hides)
+        show(shows)
+        hide(hides)
+        disable([btn_reset_button, btn_search_button, sel_search_size, sel_search_type, inp_search_value, sel_search_direction]);
+        search_progress.text(progress+'%')
+    }
 
-    function update_table(addresses) {
-     $.each(addresses, function( index, address ){
-        var s = $("#search_result_table").find("tbody tr").eq(index).children().eq(1)
-        s.text(address[1])
-      });
-    };
+    function setup_continue_state(result) {
+        var shows = [div_search_information_block, div_search_results, row_search_result_list]
+        var hides = [row_search_progress]
+        var enables = [btn_reset_button, inp_search_value, sel_search_direction]
+        var disables = [sel_search_type, sel_search_size]
+        var last_search = result.last_search
+        setup_search_type(shows, hides)
+        if (last_search == 'UNKNOWN_INITIAL') {
+            result_count.text('ready after next search')
+            hides.push(result_count_disclaimer)
+            enables.push(btn_search_button)
+        } else {
+            result_count.text(result.number_of_results)
+            if (result.number_of_results > 40) {
+                shows.push(result_count_disclaimer)
+            } else {
+                hides.push(result_count_disclaimer)
+            }
+            if (result.number_of_results == 0) {
+                disables.push(btn_search_button)
+            } else {
+                enables.push(btn_search_button)
+            }
+        }
+        enable(enables);
+        disable(disables)
+        show(shows);
+        hide(hides);
+        populate_results()
+    }
+
+    function on_search_status(result) {
+        current_state = result.state || current_state
+        current_search_type = result.search_type || current_search_type
+        current_search_round = result.search_round || current_search_round
+        current_search_results = result.search_results || current_search_results
+        var repeat = result.repeat || 0
+        var error = result.error || ""
+        if (!initialized) {
+            initialized = true
+        }
+        switch (result.state) {
+            case 'SEARCH_STATE_START':
+                setup_start_state()
+                break;
+            case 'SEARCH_STATE_SEARCHING':
+                setup_searching_state(result)
+                break;
+            case 'SEARCH_STATE_CONTINUE':
+                setup_continue_state(result)
+                break;
+        }
+        if (repeat > 0) {
+            setTimeout(function() {$.send('/search', { "command": "SEARCH_STATUS" }, on_search_status);}, repeat)
+        }
+        if (error.length > 0) {
+            ons.notification.toast(error, { timeout: 5000, animation: 'fall' })
+        }
+    }
+
+    function populate_results() {
+        var elements = $(".result-row")
+        for (i=0; i<40; i++) {
+            var el = $(elements[i])
+            if (i < current_search_results.length) {
+                var item = current_search_results[i]
+                var address_element = el.find(".address")
+                var value_element = el.find(".value")
+                var freeze_element = el.find(".freeze")
+                if (value_element.is(":focus")) {
+                    continue
+                }
+                address_element.text((item.address).toString(16).toUpperCase().padStart(16, '0'))
+                value_element.attr('data-address', item.address)
+                freeze_element.attr('data-address', item.address)
+                value_element.val(item.value)
+                el.show()
+            } else {
+                el.hide()
+            }
+
+        }
+    }
 
     function initialize() {
-        $.ajax
-        ({
-            url: '/search',
-            data: {"initialize": true},
-            type: 'post',
-            success: function(result)
-            {
-              on_ready(result)
-            }
-        });
+        div_search_information_block = $("#search_information_block")
+        sel_search_size = $("#search_size");
+        sel_search_type = $("#search_type");
+        row_search_value = $("#search_value_row");
+        inp_search_value = $("#search_value");
+        row_search_direction = $("#search_direction_row");
+        sel_search_direction = $("#search_direction");
+        btn_search_button = $("#search_button");
+        btn_reset_button = $("#search_reset_button");
+        div_search_results = $("#search_results");
+        row_search_result_list = $("#search_result_list");
+        result_count = $("#result_count")
+        result_count_disclaimer = $("#result_count_disclaimer")
+        row_search_progress = $("#search_progress_row")
+        search_progress = $("#search_progress")
+
+        $.send('/search', { "command": "SEARCH_INITIALIZE" }, on_search_status);
     };
 
-    function on_ready(data) {
-      action_status(data)
-      if (data.process) {
-        $("select[class='process_control']").val(data.process);
-      }
-      if (data.type) {
-        $("#search_type").val(data.type);
-      }
-      if (data.size) {
-        $("#search_size").val(data.size);
-      }
-      if (data.type == 'unknown') {
-        $('#search_value_div').hide()
-        $('#search_direction_div').show()
-        if (data.value) {
-          $("#search_direction").val(data.value);
+    function on_unknown_search_selected() {
+        switch (current_state) {
+            case 'SEARCH_STATE_START':
+                hide([row_search_value, row_search_direction])
+                disable([$(sel_search_size.children("[value='array']"))])
+                break;
+            case 'SEARCH_STATE_SEARCHING':
+                break;
+            case 'SEARCH_STATE_CONTINUE':
+                break;
         }
-      }
-      else {
-        $('#search_direction_div').hide()
-        $('#search_value_div').show()
-        if (data.value) {
-          $("#search_value").val(data.value);
+    }
+
+    function on_value_search_selected() {
+        switch (current_state) {
+            case 'SEARCH_STATE_START':
+                hide([row_search_direction])
+                show([row_search_value])
+                enable([$(sel_search_size.children("[value='array']"))])
+                break;
+            case 'SEARCH_STATE_SEARCHING':
+                break;
+            case 'SEARCH_STATE_CONTINUE':
+                break;
         }
-      }
-    };
+    }
+
+    function on_process_changed(process) {
+        switch (current_state) {
+            case 'SEARCH_STATE_START':
+                setup_start_state()
+                break;
+            case 'SEARCH_STATE_SEARCHING':
+                $.send('/search', { "command": "SEARCH_RESET" }, on_search_status);
+                break;
+            case 'SEARCH_STATE_CONTINUE':
+                $.send('/search', { "command": "SEARCH_RESET" }, on_search_status);
+                break;
+        }
+    }
 
 }( window.search = window.search || {}, jQuery ));

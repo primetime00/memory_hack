@@ -1,7 +1,8 @@
 (function( process_control, $, undefined ) {
     //Private Property
-    process_crc = 0
-    process_list = []
+    var iteration = 0
+    var process_crc = 0
+    var process_list = []
 
 
     //Public Property
@@ -21,7 +22,7 @@
                     select_process('_null');
                     return;
                   }
-                  var pctrls = $("select[class='process_control']");
+                  var pctrls = $("select.process_control");
                   $.each(pctrls , function (index, ctrl) {
                     $(ctrl).val($(_proc).val())
                   });
@@ -41,17 +42,22 @@
     };
 
     function get_info() {
-        $.post('/info', { "type": "GET_INFO" }, populate_control);
+        $.post('/info', { "type": "GET_INFO", 'iteration': iteration }, populate_control);
+        iteration += 1
         setTimeout(get_info, 3000)
     }
 
     function populate_control(result) {
-        if (result.crc != process_crc) {
+        var process = result.process
+        search.on_process_changed(process);
+        aob.on_info_process(process);
+
+        if (result.crc != 0 && result.crc != process_crc) {
             process_crc = result.crc
             process_list = result.processes
             populate_processes(result.processes)
         }
-        var pctrls = $("select[class='process_control']");
+        var pctrls = $("select.process_control");
         $.each(pctrls , function (index, ctrl) {
           var text = $(ctrl).children(':selected').text()
           if (result.process != text) {
@@ -61,7 +67,7 @@
     };
 
     function populate_processes(procs) {
-      var pctrls = $("select[class='process_control']");
+      var pctrls = $("select.process_control");
       $.each(pctrls , function (index, ctrl) {
         $(ctrl).empty()
         $(ctrl).append($('<option>', { value: "_null", text: "" }));
@@ -72,7 +78,7 @@
     }
 
     function select_process(val) {
-        var pctrls = $("select[class='process_control']");
+        var pctrls = $("select.process_control");
                   $.each(pctrls , function (index, ctrl) {
                     $(ctrl).val("_null")
                 });

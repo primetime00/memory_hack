@@ -19,6 +19,8 @@ class SingletonMeta(type):
 
 
 from app.helpers.memory import Memory
+from app.helpers.operation_control import OperationControl
+import psutil
 
 
 class DataStore(metaclass=SingletonMeta):
@@ -26,6 +28,7 @@ class DataStore(metaclass=SingletonMeta):
         self.process = ""
         self.process_classes = []
         self.memory = Memory()
+        self.operation_control = OperationControl()
 
     def add_memory_class(self, cls_inst):
         self.process_classes.append(cls_inst)
@@ -36,12 +39,18 @@ class DataStore(metaclass=SingletonMeta):
     def get_memory_handle(self):
         return self.memory.handle
 
+    def get_operation_control(self):
+        return self.operation_control
+
     def set_process(self, p:str):
         if self.memory.handle:
+            self.operation_control.control_break()
             for c in self.process_classes:
                 c.p_release()
+            self.operation_control.clear_control_break()
         if self.memory.handle:
-            self.memory.handle.close()
+            if psutil.Process(self.memory.handle.pid).status() != 'zombie':
+                self.memory.handle.close()
             self.memory.handle = None
         if p.strip():
             self.memory.reset()

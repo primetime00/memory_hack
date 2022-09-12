@@ -4,12 +4,14 @@ import falcon
 
 from falcon_multipart.middleware import MultipartMiddleware
 from app import ScriptResource, SearchResource, MainResource, AOBResource, InfoResource
+from app.main import initialize
 from wsgiref.simple_server import make_server
 
 if __name__ == '__main__':
     pt = Path(__file__).parent.joinpath('app')
     os.chdir(pt)
     app = falcon.App(middleware=[MultipartMiddleware()])
+    initialize()
     app.add_route('/', MainResource())
     app.add_route('/search', SearchResource())
     app.add_route('/script', ScriptResource())

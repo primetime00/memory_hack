@@ -11,7 +11,8 @@ from falcon import Request, Response
 
 from app.helpers import MemoryEditor
 from app.helpers import memory_utils, process_utils
-from app.script_common import ScriptException, BaseScript
+from app.helpers.exceptions import ScriptException
+from app.script_common.base_script import  BaseScript
 
 
 class Script:

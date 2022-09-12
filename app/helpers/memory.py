@@ -70,6 +70,7 @@ class Memory:
 
     def search_aob(self, aob:str, addresses=None): #format: 00 AA ?? 00 0A ?? 0B
         search_items = []
+        self.search_data['total'] = -1
         values = aob.replace(" ", "").split('??')
         gap = 0
         for i in range(0, len(values)):
@@ -80,6 +81,8 @@ class Memory:
                 byte_array = bytearray.fromhex(value)
                 search_items.append({'buffer': (ctypes.c_byte * len(byte_array))(*byte_array), 'gap': gap})
                 gap = 1
+        if not addresses:
+            self.search_data['total'] = self.get_total_memory()
         return self.handle.search_all_wildcards(search_items, addresses=addresses, search_data=self.search_data)
 
     def compare(self, addr:int, aob:str):
@@ -113,6 +116,10 @@ class Memory:
         self.search_data = {'break': False, 'total': 0, 'current': 0}
 
 
+    def has_memory_files(self):
+        mem_path = Path('.memory')
+        return mem_path.exists() and mem_path.glob('_mem*')
+
     def store_memory(self):
         mem_path = Path('.memory')
         self.search_data['total'] = 0
@@ -142,12 +149,12 @@ class Memory:
         self.search_data['current'] = 0
         if previous_addresses:
             self.search_data['total'] = len(previous_addresses)
-            for (address, current, first) in previous_addresses:
+            for item in previous_addresses:
                 try:
                     if self.search_data['break']:
                         return []
                     region_buffer = (ctypes.c_byte*sz)()
-                    self.handle.read_memory(address, region_buffer)
+                    self.handle.read_memory(item['address'], region_buffer)
                     read_data = bytes(region_buffer)
                     try:
                         nv = int.from_bytes(read_data, byteorder='little')
@@ -155,8 +162,8 @@ class Memory:
                         print('Error {}'.format(sz))
                         print(read_data[0:sz])
                         continue
-                    if comparer(nv, current):
-                        addresses.append({'address': address, 'first': first, 'current': nv})
+                    if comparer(nv, item['value']):
+                        addresses.append({'address': item['address'], 'first': item['first'], 'value': nv})
                     self.search_data['current'] += 1
                 except OSError:
                     pass
@@ -168,7 +175,6 @@ class Memory:
                     pt = Path('.memory/_mem_{}_{}'.format(start, stop))
                     if not pt.exists():
                         continue
-                    print('reading {}'.format(pt))
                     region_buffer = (ctypes.c_byte * (stop - start))()
                     self.handle.read_memory(start, region_buffer)
                     with open(pt, 'rb') as f:
@@ -188,10 +194,17 @@ class Memory:
             ov = int.from_bytes(byte_data[i: i+raw_size], byteorder='little')
             nv = int.from_bytes(live_data[i: i+raw_size], byteorder='little')
             if comparer(nv, ov):
-                addresses.append({'address': start + i, 'first': ov, 'current': nv})
+                addresses.append({'address': start + i, 'first': ov, 'value': nv})
             self.search_data['current'] += 1
-        print('found {} results'.format(len(addresses)))
         return addresses
+
+    def initialize_search(self):
+        mem_path = Path('.memory')
+        self.search_data['total'] = 0
+        self.search_data['current'] = 0
+        if mem_path.absolute().exists():
+            shutil.rmtree(mem_path.absolute())
+
 
     def get_total_memory(self):
         t = 0

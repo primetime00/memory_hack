@@ -29,7 +29,9 @@ def bytes_to_aobstr(bts: ctypes.Array):
 
 
 
-def aob_size(aob:str):
+def aob_size(aob:str, wildcard=False):
+    if wildcard:
+        aob = aob.replace("??", "00")
     values = aob.replace(" ", "").split('??')
     sz = 0
     for i in range(0, len(values)):
@@ -41,8 +43,11 @@ def aob_size(aob:str):
             sz += len(byte_array)
     return sz
 
-def value_to_hex(value: int):
-    return '0x{:X}'.format(value)
+def value_to_hex(value: int, aob=False):
+    if not aob:
+        return '0x{:X}'.format(value)
+    return '{0:0{1}X}'.format((value + (1 << 8)) % (1 << 8), 2)
+
 
 
 def string_to_address(address_string: str, assume_hex=True):
@@ -54,7 +59,6 @@ def string_to_address(address_string: str, assume_hex=True):
     else:
         address = int(address_string, 10)
     return address
-
 
 
 typeToCType = {
