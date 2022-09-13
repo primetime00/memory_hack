@@ -28,7 +28,7 @@ class MainResource:
             elif aob_instance.is_running():
                 resp.text = ac.read().replace('#search_active#', '').replace('#aob_active#', 'active').replace('#script_active#', '')
             else:
-                resp.text = ac.read().replace('#search_active#', '').replace('#aob_active#', 'active').replace('#script_active#', '')
+                resp.text = ac.read().replace('#search_active#', '').replace('#aob_active#', '').replace('#script_active#', '')
 
 class SearchResource:
     def on_get(self, req, resp):
