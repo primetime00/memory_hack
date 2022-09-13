@@ -98,7 +98,7 @@ diff -uN -x '*.md' -x VERSION.py ./abstract.py /home/ryan/PycharmProjects/mem_re
      @classmethod
 diff -uN -x '*.md' -x VERSION.py ./linux.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux.py
 --- ./linux.py	2022-09-12 22:04:06.290584808 -0400
-+++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux.py	2022-08-01 14:12:56.661290991 -0400
++++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux.py	2022-09-13 10:48:40.633411290 -0400
 @@ -58,7 +58,9 @@
  
      def close(self):
@@ -109,6 +109,15 @@ diff -uN -x '*.md' -x VERSION.py ./linux.py /home/ryan/PycharmProjects/mem_remot
          self.pid = None
  
      def write_memory(self, base_address: int, write_buffer: ctypes_buffer_t):
+@@ -111,6 +113,8 @@
+         regions = []
+         with open('/proc/{}/maps'.format(self.pid), 'r') as maps:
+             for line in maps:
++                if "/dev/dri/" in line:
++                    continue
+                 bounds, privileges = line.split()[0:2]
+ 
+                 if 'r' not in privileges:
 Common subdirectories: ./__pycache__ and /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/__pycache__
 diff -uN -x '*.md' -x VERSION.py ./utils.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/utils.py
 --- ./utils.py	2022-09-12 22:04:06.290584808 -0400
