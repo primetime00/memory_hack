@@ -132,7 +132,7 @@ class AOBFile():
         self.validate()
         path = self.directory.joinpath('{}'.format(self.filename))
         self.valid = len(self.aob_list)
-        with open(path, "wt") as f:
+        with open(path.absolute(), "wt") as f:
             try:
                 f.write('Process: {}\n'.format(self.process))
                 f.write('Name: {}\n'.format(self.name))
