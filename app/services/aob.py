@@ -36,6 +36,9 @@ class AOB(MemoryHandler):
         self.current_value = None
         self.current_value_size = None
 
+        if not AOB.directory.exists():
+            os.mkdir(AOB.directory)
+
         self.reset()
         self.delete_memory()
 
