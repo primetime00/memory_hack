@@ -1,5 +1,5 @@
 diff -uN -x '*.md' -x VERSION.py ./abstract.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/abstract.py
---- ./abstract.py	2022-09-12 16:33:27.182874996 -0400
+--- ./abstract.py	2022-09-12 22:04:06.290584808 -0400
 +++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/abstract.py	2022-09-04 23:20:02.672552588 -0400
 @@ -267,6 +267,7 @@
                           addresses: List[int],
@@ -96,22 +96,22 @@ diff -uN -x '*.md' -x VERSION.py ./abstract.py /home/ryan/PycharmProjects/mem_re
          return found
  
      @classmethod
-diff -uN -x '*.md' -x VERSION.py ./__init__.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/__init__.py
---- ./__init__.py	2022-09-12 16:33:27.182874996 -0400
-+++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/__init__.py	2022-08-01 09:13:24.822050728 -0400
-@@ -17,7 +17,8 @@
+diff -uN -x '*.md' -x VERSION.py ./linux.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux.py
+--- ./linux.py	2022-09-12 22:04:06.290584808 -0400
++++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux.py	2022-08-01 14:12:56.661290991 -0400
+@@ -58,7 +58,9 @@
  
+     def close(self):
+         os.kill(self.pid, signal.SIGSTOP)
++        os.waitpid(self.pid, 0)
+         ptrace(ptrace_commands['PTRACE_DETACH'], self.pid, 0, 0)
++        os.kill(self.pid, signal.SIGCONT)
+         self.pid = None
  
- __author__ = 'Jan Petykiewicz'
--__version__ = '0.7'
-+
-+from .VERSION import __version__
- version = __version__       # legacy compatibility
- 
- 
+     def write_memory(self, base_address: int, write_buffer: ctypes_buffer_t):
 Common subdirectories: ./__pycache__ and /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/__pycache__
 diff -uN -x '*.md' -x VERSION.py ./utils.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/utils.py
---- ./utils.py	2022-09-12 16:33:27.182874996 -0400
+--- ./utils.py	2022-09-12 22:04:06.290584808 -0400
 +++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/utils.py	2022-09-04 23:21:30.140744606 -0400
 @@ -23,8 +23,49 @@
      pass
@@ -198,7 +198,7 @@ diff -uN -x '*.md' -x VERSION.py ./utils.py /home/ryan/PycharmProjects/mem_remot
  
  
 diff -uN -x '*.md' -x VERSION.py ./windows.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/windows.py
---- ./windows.py	2022-09-12 16:33:27.182874996 -0400
+--- ./windows.py	2022-09-12 22:04:06.290584808 -0400
 +++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/windows.py	2022-09-12 16:37:18.383199347 -0400
 @@ -279,7 +279,7 @@
          page_ptr = start
