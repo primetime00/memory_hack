@@ -67,23 +67,61 @@ class Memory:
             return start, end
         return -1, -1
 
+    @staticmethod
+    def _ss_cmp(aob: str):
+        if not aob:
+            return -1
+        if all(x == 'FF' or x == '00' for x in aob.split(' ')):
+            return 0
+        size = len(aob.split(" "))
+        zero_percent = (aob.count('00') / size) * 0.95
+        ff_percent = (aob.count('FF') / size) * 0.75
+        size -= (size * zero_percent)
+        size -= (size * ff_percent)
+        return size
 
     def search_aob(self, aob:str, addresses=None): #format: 00 AA ?? 00 0A ?? 0B
-        search_items = []
-        self.search_data['total'] = -1
-        values = aob.replace(" ", "").split('??')
-        gap = 0
-        for i in range(0, len(values)):
-            value = values[i]
-            if value == '':
-                gap += 1
-            else:
-                byte_array = bytearray.fromhex(value)
-                search_items.append({'buffer': (ctypes.c_byte * len(byte_array))(*byte_array), 'gap': gap})
-                gap = 1
+        has_wildcard = '??' in aob
+        array_pos = 0
+        max_item = aob.split(" ")
+        if has_wildcard:
+            normals = [x.strip() for x in aob.split('??')]
+            max_item = max(normals, key=self._ss_cmp)
+            array_pos = int(aob.index(max_item) / 3)
+            byte_array = bytearray.fromhex(max_item)
+            byte_data = (ctypes.c_byte * len(byte_array))(*byte_array)
+        else:
+            byte_array = bytearray.fromhex(max_item)
+            byte_data = (ctypes.c_byte * len(byte_array))(*byte_array)
+        aob_bytes = [int(x, 16) if x != '??' else 256 for x in aob.split(" ")]
         if not addresses:
-            self.search_data['total'] = self.get_total_memory()
-        return self.handle.search_all_wildcards(search_items, addresses=addresses, search_data=self.search_data)
+            if has_wildcard:
+                addrs = [x-array_pos for x in self.handle.search_all_memory(byte_data) if x-array_pos >= 0]
+                for i in range(len(addrs)-1, -1, -1):
+                    addr = addrs[i]
+                    mem = self.handle.read_memory(addr, (ctypes.c_ubyte * len(aob_bytes))())
+                    for j in range(0, len(aob_bytes)):
+                        if aob_bytes[j] == 256:
+                            continue
+                        if aob_bytes[j] != mem[j]:
+                            addrs.pop()
+                            break
+            else:
+                addrs = self.handle.search_all_memory(byte_data)
+        else:
+            if has_wildcard:
+                for i in range(len(addresses)-1, -1, -1):
+                    addr = addresses[i]
+                    mem = self.handle.read_memory(addr, (ctypes.c_ubyte * len(aob_bytes))())
+                    for j in range(0, len(aob_bytes)):
+                        if aob_bytes[j] == 256:
+                            continue
+                        if aob_bytes[j] != mem[j]:
+                            addresses.pop()
+                addrs = addresses
+            else:
+                addrs = self.handle.search_addresses(addresses, byte_data)
+        return addrs
 
     def compare(self, addr:int, aob:str):
         res = True

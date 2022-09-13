@@ -159,7 +159,6 @@ class AOBWalk:
                     match = False
                     break
             if match:
-                print('found match')
                 b['addresses'].append(global_offset+offset-start)
                 self.aob_map[aob_data['aob_string']]['addresses'].append(global_offset+offset-start)
 
