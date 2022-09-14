@@ -1,5 +1,6 @@
 import inspect
 import logging
+import sys
 import traceback
 from importlib import import_module
 from pathlib import Path
@@ -12,7 +13,7 @@ from falcon import Request, Response
 from app.helpers import MemoryEditor
 from app.helpers import memory_utils, process_utils
 from app.helpers.exceptions import ScriptException
-from app.script_common.base_script import  BaseScript
+from app.script_common.base_script import BaseScript
 
 
 class Script:
@@ -23,6 +24,7 @@ class Script:
         self.current_script_obj: BaseScript = None
         self.error = ""
         self.script_thread: Script.ScriptThread = None
+        self.mod_name = ""
 
     def get_script_list(self):
         return [x.stem for x in Script.directory.glob('*.py') if not x.stem.startswith('__')]
@@ -54,6 +56,7 @@ class Script:
             elif script_type == "SCRIPT_UPLOAD_FILE":
                 self.handle_script_upload(req, resp)
         except ScriptException as e:
+            self.unload_script()
             resp.media = self.send_error(e)
             if e.is_from_thread():
                 self.script_thread = None
@@ -152,13 +155,16 @@ class Script:
             self.current_script_obj.on_unload()
         self.current_script_obj = None
         self.current_script = ""
+        if self.mod_name:
+            del sys.modules[self.mod_name]
+            self.mod_name = ""
 
     def load_script(self, name):
-        mod_name = 'app.scripts.{}'.format(name)
+        self.mod_name = 'app.scripts.{}'.format(name)
         try:
-            mod = import_module(mod_name)
+            mod = import_module(self.mod_name)
             for cls, obj in inspect.getmembers(mod):
-                if inspect.isclass(obj) and obj.__module__ == mod_name:
+                if inspect.isclass(obj) and obj.__module__ == self.mod_name:
                     logging.info('Starting {}'.format(name))
                     bs: BaseScript = getattr(mod, cls)()
                     bs.on_load()
@@ -221,6 +227,7 @@ class Script:
                     while self.running:
                         if not memory_utils.is_process_valid(memory.pid):
                             logging.warning("Process is lost")
+                            self.script.process_lost()
                             break
                         self.script.process(memory)
                         sleep(self.script.get_speed())

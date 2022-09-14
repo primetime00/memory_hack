@@ -3,6 +3,7 @@ class AOB:
         self.name = name
         self.aob_string = aob_str
         self.bases = []
+        self._last_found = -1
 
     def get_aob_string(self):
         return self.aob_string
@@ -18,8 +19,14 @@ class AOB:
 
     def set_bases(self, base_list):
         self.bases = base_list
+        self._last_found = len(base_list)
 
     def clear_bases(self):
         self.bases.clear()
+        self._last_found = 0
+
+    def will_warn(self):
+        return self._last_found != 0
+
 
 

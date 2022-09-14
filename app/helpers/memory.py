@@ -129,7 +129,7 @@ class Memory:
         new_values = []
         mem = self.handle.read_memory(addr, (ctypes.c_byte * len(values))())
         for i in range(0, len(mem)):
-            new_values.append(hex((mem[i] + (1 << 8)) % (1 << 8))[2:].upper())
+            new_values.append('{0:0{1}X}'.format((mem[i] + (1 << 8)) % (1 << 8), 2))
             if values[i] == '??':
                 continue
             orig = bytes.fromhex(values[i])

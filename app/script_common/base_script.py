@@ -14,10 +14,11 @@ class BaseScript:
     aobs = set()
 
     def on_load(self):
+        self.aobs.clear()
         pass
 
     def on_unload(self):
-        print('unload stub')
+        self.aobs.clear()
 
     def add_ui_element(self, element: BaseUI):
         self.list_ui.add(element)
@@ -38,6 +39,9 @@ class BaseScript:
 
     def build_ui(self):
         pass
+
+    def process_lost(self):
+        self.aobs.clear()
 
     def add_aob(self, aob: AOB):
         self.aobs.add(aob)
@@ -77,7 +81,8 @@ class BaseScript:
     def find_address(self, memory, aob: AOB):
         addrs = memory.search_aob(aob.get_aob_string())
         if len(addrs) == 0:
-            logging.warning('Cannot find aob {} [{}]'.format(aob.get_name(), aob.get_aob_string()))
+            if aob.will_warn():
+                logging.warning('Cannot find aob {} [{}]'.format(aob.get_name(), aob.get_aob_string()))
             aob.clear_bases()
         elif len(addrs) > 1:
             logging.warning('aob has multiple matches [{}] {} [{}]'.format(len(addrs), aob.get_name(), aob.get_aob_string()))
