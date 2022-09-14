@@ -96,7 +96,7 @@ class BaseScript:
             base = bases[i]
             res, old, new = memory.compare(base, aob.get_aob_string())
             if not res:
-                bases.pop()
+                bases.pop(i)
                 logging.warning('aob {} does not match!\n{}\n{}'.format(aob.get_name(), old, new))
         if len(bases) == 0:
             logging.info('aob {} has no matches anymore'.format(aob.get_name()))

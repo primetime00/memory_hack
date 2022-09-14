@@ -70,6 +70,6 @@ typeToCType = {
     ('byte_4', False):  ctypes.c_uint32,
     ('float', True):    ctypes.c_float,
     ('float', False):   ctypes.c_float,
-    ('array', True):    ctypes.c_byte,
-    ('array', False):   ctypes.c_byte
+    ('array', True):    ctypes.c_ubyte,
+    ('array', False):   ctypes.c_ubyte
 }

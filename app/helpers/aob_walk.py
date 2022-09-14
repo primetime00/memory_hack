@@ -22,6 +22,7 @@ class AOBWalk:
         self.filter_result_size = filter_result_size
         self.filter_result_value = self._set_value(filter_result_value)
         self.operation_control = DataStore().get_operation_control()
+        self.matches = 0
 
 
     def add_aob_string(self, aob_string:str, black_list=('00', '??')):
@@ -101,6 +102,7 @@ class AOBWalk:
 
     def search(self, memory: MemoryEditor, progress=None):
         self.create()
+        self.matches = 0
         if len(self.aob_tree) == 0:
             raise AOBException('No AOBs to be searched')
         total = len(memory.handle.list_mapped_regions())
@@ -115,20 +117,20 @@ class AOBWalk:
                 data = bytes(region_buffer)
                 keys = [int(x,16) for x in list(self.aob_tree.keys())]
                 pos = 0
-                for k in keys:
-                    while pos >= 0 and pos < size:
-                        if self.operation_control.is_control_break():
-                            raise BreakException()
-                        pos = data.find(k, pos)
-                        if pos > -1:
-                            self.process_match(data, pos, data[pos], start)
-                            pos += 1
+                #for k in keys:
+                #    while pos >= 0 and pos < size:
+                #        if self.operation_control.is_control_break():
+                #            raise BreakException()
+                #        pos = data.find(k, pos)
+                #        if pos > -1:
+                #            self.process_match(data, pos, data[pos], start)
+                #            pos += 1
                 #data.find(keys[0])
-                #for i in range(0, len(data)):
-                #    if self.operation_control.is_control_break():
-                #        raise BreakException()
-                #    if data[i] in keys:
-                #        self.process_match(data, i, data[i], start)
+                for i in range(0, len(data)):
+                    if self.operation_control.is_control_break():
+                        raise BreakException()
+                    if data[i] in keys:
+                        self.process_match(data, i, data[i], start)
             except OSError:
                 pass
             finally:
@@ -159,6 +161,10 @@ class AOBWalk:
                     match = False
                     break
             if match:
+                self.matches += 1
+                if self.matches % 100 == 0:
+                    print('matches:', self.matches)
+
                 b['addresses'].append(global_offset+offset-start)
                 self.aob_map[aob_data['aob_string']]['addresses'].append(global_offset+offset-start)
 

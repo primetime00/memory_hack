@@ -91,7 +91,7 @@ class Memory:
             byte_array = bytearray.fromhex(max_item)
             byte_data = (ctypes.c_byte * len(byte_array))(*byte_array)
         else:
-            byte_array = bytearray.fromhex(max_item)
+            byte_array = bytearray.fromhex(" ".join(max_item))
             byte_data = (ctypes.c_byte * len(byte_array))(*byte_array)
         aob_bytes = [int(x, 16) if x != '??' else 256 for x in aob.split(" ")]
         if not addresses:
@@ -104,7 +104,7 @@ class Memory:
                         if aob_bytes[j] == 256:
                             continue
                         if aob_bytes[j] != mem[j]:
-                            addrs.pop()
+                            addrs.pop(i)
                             break
             else:
                 addrs = self.handle.search_all_memory(byte_data)
@@ -117,7 +117,7 @@ class Memory:
                         if aob_bytes[j] == 256:
                             continue
                         if aob_bytes[j] != mem[j]:
-                            addresses.pop()
+                            addresses.pop(i)
                 addrs = addresses
             else:
                 addrs = self.handle.search_addresses(addresses, byte_data)

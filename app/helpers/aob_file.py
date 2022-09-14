@@ -121,6 +121,10 @@ class AOBFile():
         offset = aob_item['offset']
         aobs = self.create_aob_from_array(offset, new_aob)
         self.aob_list.pop(index)
+        for i in range(len(aobs)-1, -1, -1):
+            aob = aobs[i]
+            if all(x == '??' or x == '00' for x in aob['aob_array']):
+                aobs.pop(i)
         if aobs:
             self.aob_list.extend(aobs)
         else:
@@ -242,13 +246,19 @@ class AOBFile():
             try:
                 pos = aob_array.index('??', pos)
                 if all(bt == '??' for bt in aob_array[pos:pos + wildcard_length]): #we need to divide
-                    aob_groups.append({'start': start, 'aob': aob_array[start:pos]})
+                    new_aob = aob_array[start:pos]
+                    if len(new_aob) > 0:
+                        new_aob, start2, len2 = self.strip(new_aob)
+                        aob_groups.append({'start': start+start2, 'aob': new_aob})
                     start = pos+wildcard_length+1
                     pos = start
                 else:
                     pos += 1
             except ValueError: #none/no more found
-                aob_groups.append({'start': start, 'aob': aob_array[start:]})
+                new_aob = aob_array[start:]
+                if len(new_aob) > 0:
+                    new_aob, start2, len2 = self.strip(new_aob)
+                    aob_groups.append({'start': start + start2, 'aob': new_aob})
                 return aob_groups
 
     def remove_aob_string(self, aob_string):
@@ -262,6 +272,34 @@ class AOBFile():
     def get_memory_file(self):
         path = self.directory.joinpath('{}.mem'.format(Path(self.filename).stem))
         return path
+
+    def remove_dupes(self):
+        dupe = {}
+        for i in range(len(self.aob_list)-1, -1, -1):
+            aob = self.aob_list[i]
+            if len(aob['aob_string']) > 100:
+                continue
+            if aob['aob_string'] not in dupe:
+                dupe[aob['aob_string']] = 1
+            else:
+                dupe[aob['aob_string']] = 2
+                self.aob_list.pop(i)
+
+        for i in range(len(self.aob_list)-1, -1, -1):
+            aob = self.aob_list[i]
+            if len(aob['aob_string']) > 100:
+                continue
+            if aob['aob_string'] in dupe and dupe[aob['aob_string']] > 1:
+                self.aob_list.pop(i)
+        self.valid = len(self.aob_list)
+
+
+
+
+
+
+
+
 
 
 

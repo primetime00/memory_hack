@@ -167,8 +167,8 @@
     }
 
     aob.aob_upload_file_changed = function(file) {
-        if (file.size > 400000) {
-            ons.notification.toast('File must be under 400KB', { timeout: 2000, animation: 'fall' })
+        if (file.size > 600000) {
+            ons.notification.toast('File must be under 600KB', { timeout: 2000, animation: 'fall' })
             return
         } else if (file.size <= 20) {
             ons.notification.toast('AOB file is too small.', { timeout: 2000, animation: 'fall' })
