@@ -9,7 +9,7 @@ from typing import List
 class AOBFile():
     _pattern = re.compile('^Size: (\d+)\s*Offset: (-?[0-9A-F]+)\s*([0-9A-F ?]+)$')
     smallest_run = 5
-    consecutive_wildcards = 10
+    consecutive_wildcards = 5
     header = ['Process: ', 'Name: ', 'Range: ', 'Offset: ', 'Length: ', 'Valid: ']
 
     def __init__(self, directory: Path = Path('.aob'), filename=None):

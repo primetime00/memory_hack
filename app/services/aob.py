@@ -409,18 +409,6 @@ class AOB(MemoryHandler):
                     self.aob_file.modify_index_array(i, new_aob)
             self.aob_file.remove_dupes()
             self.progress.mark()
-            def progress_func(current, total):
-                if current == 0:
-                    self.progress.add_constraint(0, total, 0.55)
-                self.progress.increment(current)
-
-            ##search our AOBs to see if they produce only 1 result.  This may take a little while
-            try:
-                walker = AOBWalk(aob_file=self.aob_file, max_size=50, filter_result_size=1)
-                walker.search(self.memory, progress=progress_func)
-                self.progress.mark()
-            except AOBException as e:
-                logging.info(e.get_message())
             return self.aob_file.count_aob_results()
 
         def compare_data(self, new_data, old_data) -> int:
