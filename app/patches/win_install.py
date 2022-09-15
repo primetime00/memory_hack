@@ -1,4 +1,4 @@
-import os, sys, stat
+import os, sys
 import shutil
 import subprocess
 import zipfile
@@ -36,25 +36,25 @@ def extract_source():
 def create_venv():
     print('creating virtual environment...')
     os.makedirs('venv', exist_ok=True)
-    venv.create('./venv', with_pip=True)
-    subprocess.check_call(['./venv/bin/python3', "-m", "pip", "install", "-r", "app/patches/requirements.txt"])
+    venv.create('.\\venv', with_pip=True)
+    subprocess.check_call(['.\\venv\\Scripts\\python.exe', "-m", "pip", "install", "-r", "app\\patches\\requirements.txt"])
+    subprocess.check_call(['.\\venv\\Scripts\\python.exe', "-m", "pip", "install", "patch"])
+
 
 def patch_mem_edit():
     print('patching memory editor')
-    patch_path = Path("./app/patches/mem_edit.patch")
-    lib_path = Path("venv/lib/python3.10/site-packages/mem_edit")
-    subprocess.check_call(['/usr/bin/patch', "-p0", "-d", str(lib_path.absolute()), "-i", str(patch_path.absolute())])
+    patch_path = Path(".\\app\\patches\\mem_edit.patch")
+    lib_path = Path("venv\\Lib\\site-packages\\mem_edit")
+    subprocess.check_call(['.\\venv\\Scripts\\python.exe', "-m", "patch", "-p0", "-d", str(lib_path.absolute()), str(patch_path.absolute())])
 
 def extract_onsen():
     print('extracting front-end...')
-    with zipfile.ZipFile("app/resources/static/onsen.zip","r") as zip_ref:
-        zip_ref.extractall("app/resources/static/")
+    with zipfile.ZipFile("app\\resources\\static\\onsen.zip","r") as zip_ref:
+        zip_ref.extractall("app\\resources\\static\\")
 
 def create_run_script():
-    with open('run.sh', 'wt') as fp:
-        fp.write("#!/bin/bash\n")
-        fp.write("{} {}\n".format(Path('venv/bin/python3').absolute(), Path('mem_manip.py').absolute()))
-    os.chmod('run.sh', stat.S_IRWXU)
+    with open('run.bat', 'wt') as fp:
+        fp.write("{} {}\n".format(Path('venv\\Scripts\\python.exe').absolute(), Path('mem_manip.py').absolute()))
 
 def installed():
     app_path = Path("./app")
@@ -133,3 +133,7 @@ def wants_uninstall():
 
 download_source()
 extract_source()
+create_venv()
+patch_mem_edit()
+extract_onsen()
+create_run_script()

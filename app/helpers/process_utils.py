@@ -1,4 +1,4 @@
-import mem_edit
+import mem_edit, platform
 import psutil, os, zlib
 
 inv = ['root', 'kernoops', 'systemd-resolve', 'systemd-timesync', 'avahi', 'rtkit', 'colord', 'messagebus', 'syslog']
@@ -15,8 +15,9 @@ def _is_zombied(pid):
 def _is_bad_proc(proc):
     if proc.status() == 'zombie':
         return True
-    if proc.username() in inv:
-        return True
+    if platform.system() != 'Windows':
+        if proc.username() in inv:
+            return True
     if proc.pid == os.getpid():
         return True
     if not can_attach(proc.pid):
