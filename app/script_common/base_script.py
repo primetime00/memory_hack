@@ -59,13 +59,22 @@ class BaseScript:
         item = self.list_ui.get_id(id)
         item.base_handle_interaction(data)
 
-    def on_aob_lost(self, aob: AOB):
+    def _on_aob_lost(self, aob: AOB):
+        self.on_aob_lost(aob)
         for item in self.list_ui.ui_list:
             item.update_status()
 
-    def on_aob_found(self, aob: AOB):
+    def on_aob_lost(self, aob: AOB):
+        pass
+
+    def _on_aob_found(self, aob: AOB, memory: Memory):
+        self.on_aob_found(aob, memory)
         for item in self.list_ui.ui_list:
             item.update_status()
+
+    def on_aob_found(self, aob: AOB, memory: Memory):
+        pass
+
 
     def process(self, memory: Memory):
         for aob in self.aobs:
@@ -87,7 +96,7 @@ class BaseScript:
         elif len(addrs) > 1:
             logging.warning('aob has multiple matches [{}] {} [{}]'.format(len(addrs), aob.get_name(), aob.get_aob_string()))
         aob.set_bases(addrs)
-        self.on_aob_found(aob)
+        self._on_aob_found(aob, memory)
 
     def compare_aob(self, memory, aob:AOB):
         bases = aob.get_bases()
@@ -100,4 +109,4 @@ class BaseScript:
                 logging.warning('aob {} does not match!\n{}\n{}'.format(aob.get_name(), old, new))
         if len(bases) == 0:
             logging.info('aob {} has no matches anymore'.format(aob.get_name()))
-            self.on_aob_lost(aob)
+            self._on_aob_lost(aob)

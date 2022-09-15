@@ -29,7 +29,7 @@ class AOBFile():
     def read_stream(self, handle):
         try:
             for line in handle.readlines():
-                line = line.replace('\n', '')
+                line = line.replace('\n', '').strip()
                 if line.startswith('Process: '):
                     self.process = line[9:]
                 elif line.startswith('Name: '):
