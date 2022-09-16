@@ -116,6 +116,14 @@ def has_service():
     except Exception as e:
         return False
 
+def wait_for_service_uninstall(timeout=10):
+    t = time.time()
+    while has_service():
+        if time.time() - t > timeout:
+            break
+        time.sleep(0.6)
+    return has_service()
+
 def wait_for_service(timeout=10):
     t = time.time()
     while not service_running():
@@ -190,16 +198,23 @@ elif '--service_remove' in sys.argv:
     if not is_admin():
         get_sudo('--service_remove')
     uninstall_service()
+    exit(0)
 elif '--service_run' in  sys.argv:
     if os.geteuid() != 0:
         get_sudo('--service_run')
     print("Running service...")
     run_service()
+    exit(0)
 
 
 if installed():
     print("Installation already detected.")
     if wants_uninstall():
+        if has_service():
+            if not is_admin():
+                print('removing service')
+                get_sudo('--service_remove')
+                wait_for_service_uninstall()
         uninstall_files()
         print("Uninstall is complete!")
         exit(0)
