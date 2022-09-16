@@ -111,7 +111,7 @@ def remove_service():
 
 def has_service():
     try:
-        subprocess.check_call(["nssm.exe", "status", "MemManipService"], stderr=open(os.devnull, 'wb'))
+        subprocess.check_call(["nssm.exe", "status", "MemManipService"], stderr=open(os.devnull, 'wb'), stdout=open(os.devnull, 'wb'))
         return True
     except Exception as e:
         return False
@@ -156,7 +156,7 @@ def uninstall_service():
     print("Removing service...")
     try:
         subprocess.check_call(["nssm.exe", "stop", "MemManipService"])
-        subprocess.check_call(["nssm.exe", "remove", "MemManipService"])
+        subprocess.check_call(["nssm.exe", "remove", "MemManipService", "confirm"])
     except Exception as e:
         print(e)
 
