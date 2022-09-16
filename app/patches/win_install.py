@@ -134,7 +134,6 @@ def wait_for_service(timeout=10):
 
 def service_running():
     try:
-        #stat = subprocess.check_call(["nssm.exe", "status", "MemManipService"], stderr=open(os.devnull, 'wb'))
         v = subprocess.check_output(["nssm.exe", "status", "MemManipService"], stderr=open(os.devnull, 'wb')).decode('UTF-8').replace('\x00', '').strip()
         if v == 'SERVICE_STOPPED':
             return False
@@ -166,6 +165,9 @@ def uninstall_files():
     os.unlink(str(Path('mem_manip.py').absolute()))
     if Path('run.bat').exists():
         os.unlink(str(Path('run.bat').absolute()))
+    for item in Path('.\\').glob('nssm.*'):
+        os.unlink(str(item.absolute()))
+
 
 def wants_service():
     return question('\nWould you like to install Memory Manipulator as a service?')
@@ -175,18 +177,6 @@ def wants_service_run():
 
 def wants_uninstall():
     return question('Would you like to uninstall Memory Manipulator?')
-
-
-#extract_nssm()
-#if wants_service():
-#    get_sudo('--service_install')
-#else:
-#    print("Installation complete.  You can manually start Memory Manipulator by running\n'./run.bat'")
-
-#install_service()
-#run_service()
-#exit(0)
-
 
 if '--service_install' in sys.argv:
     if not is_admin():
