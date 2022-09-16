@@ -1,4 +1,4 @@
-diff -uN -x '*.md' -x VERSION.py ./abstract.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/abstract.py
+diff -uN ./abstract.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/abstract.py
 --- ./abstract.py	2022-09-12 22:04:06.290584808 -0400
 +++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/abstract.py	2022-09-04 23:20:02.672552588 -0400
 @@ -267,6 +267,7 @@
@@ -96,7 +96,7 @@ diff -uN -x '*.md' -x VERSION.py ./abstract.py /home/ryan/PycharmProjects/mem_re
          return found
  
      @classmethod
-diff -uN -x '*.md' -x VERSION.py ./linux.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux.py
+diff -uN ./linux.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux.py
 --- ./linux.py	2022-09-12 22:04:06.290584808 -0400
 +++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux.py	2022-09-13 10:48:40.633411290 -0400
 @@ -58,7 +58,9 @@
@@ -119,9 +119,9 @@ diff -uN -x '*.md' -x VERSION.py ./linux.py /home/ryan/PycharmProjects/mem_remot
  
                  if 'r' not in privileges:
 Common subdirectories: ./__pycache__ and /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/__pycache__
-diff -uN -x '*.md' -x VERSION.py ./utils.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/utils.py
+diff -uN ./utils.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/utils.py
 --- ./utils.py	2022-09-12 22:04:06.290584808 -0400
-+++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/utils.py	2022-09-04 23:21:30.140744606 -0400
++++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/utils.py	2022-09-14 18:53:39.982372444 -0400
 @@ -23,8 +23,49 @@
      pass
  
@@ -160,7 +160,7 @@ diff -uN -x '*.md' -x VERSION.py ./utils.py /home/ryan/PycharmProjects/mem_remot
 +            found_item = found[j]
 +            result = haystack.find(needle, found_item+sz+next_needle['gap'], found_item+sz+next_needle['gap']+len(needle))
 +            if result == -1:
-+                found.pop()
++                found.pop(j)
 +                if len(found) == 0:
 +                    return []
 +        sz += len(needle) + next_needle['gap']
@@ -206,10 +206,31 @@ diff -uN -x '*.md' -x VERSION.py ./utils.py /home/ryan/PycharmProjects/mem_remot
      return found
  
  
-diff -uN -x '*.md' -x VERSION.py ./windows.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/windows.py
+diff -uN ./windows.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/windows.py
 --- ./windows.py	2022-09-12 22:04:06.290584808 -0400
-+++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/windows.py	2022-09-12 16:37:18.383199347 -0400
-@@ -279,7 +279,7 @@
++++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/windows.py	2022-09-16 16:00:19.662437213 -0400
+@@ -134,6 +134,7 @@
+ 
+ class Process(AbstractProcess):
+     process_handle = None
++    pid = None
+ 
+     def __init__(self, process_id: int):
+         process_handle = ctypes.windll.kernel32.OpenProcess(
+@@ -146,10 +147,12 @@
+             raise MemEditError('Couldn\'t open process {}'.format(process_id))
+ 
+         self.process_handle = process_handle
++        self.pid = process_id
+ 
+     def close(self):
+         ctypes.windll.kernel32.CloseHandle(self.process_handle)
+         self.process_handle = None
++        self.pid = None
+ 
+     def write_memory(self, base_address: int, write_buffer: ctypes_buffer_t):
+         try:
+@@ -279,7 +282,7 @@
          page_ptr = start
          while page_ptr < stop:
              page_info = get_mem_info(page_ptr)
