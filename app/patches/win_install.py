@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, ctypes
 import shutil
 import subprocess
 import zipfile
@@ -17,6 +17,20 @@ def download_source():
     # Download remote and save locally
     print('downloading source')
     request.urlretrieve(remote_url, local_file)
+
+def download_nssm():
+    remote_url = 'https://nssm.cc/release/nssm-2.24.zip'
+    local_file = 'nssm.zip'
+    request.urlretrieve(remote_url, local_file)
+
+def extract_nssm():
+    print('extracting nssm...')
+    with zipfile.ZipFile("nssm.zip","r") as zip_ref:
+        for x in zip_ref.infolist():
+            if 'win64/nssm.exe' in x.filename:
+                data = zip_ref.read(x)
+                data_path = Path('.\\').joinpath('nssm.exe')
+                data_path.write_bytes(data)
 
 def extract_source():
     print('extracting...')
@@ -57,30 +71,30 @@ def create_run_script():
         fp.write("{} {}\n".format(Path('venv\\Scripts\\python.exe').absolute(), Path('mem_manip.py').absolute()))
 
 def installed():
-    app_path = Path("./app")
-    prog_path = Path("./mem_manip.py")
+    app_path = Path(".\\app")
+    prog_path = Path(".\\mem_manip.py")
     return app_path.exists() and prog_path.exists()
 
+def is_admin():
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin()
+    except:
+        return False
+
 def get_sudo(service_type):
-    euid = os.geteuid()
-    if euid != 0:
-        print("Running sudo...")
-        args = ['sudo', sys.executable] + [str(Path('app/patches/install.py').absolute())] + [service_type] + [os.environ]
-        os.execlpe('sudo', *args)
+    if not is_admin():
+        print("Running admin...")
+        args = [str(Path('app/patches/win_install.py').absolute()), service_type]
+        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(args), None, 1)
 
 def run_service():
-    subprocess.check_call(['/usr/bin/systemctl', "daemon-reload"])
-    subprocess.check_call(['/usr/bin/systemctl', "enable", "mem_manip.service"])
-    subprocess.check_call(['/usr/bin/systemctl', "start", "mem_manip.service"])
+    subprocess.check_call(["nssm.exe", "start", "MemManipService"])
 
 def install_service():
     print('installing service!')
-    with open("app/patches/service.stub", "rt") as fp:
-        data = fp.read().replace('#venv#', str(Path('venv/bin/python3').absolute())).replace('#script#', str(Path('mem_manip.py').absolute()))
-    with open("/etc/systemd/system/mem_manip.service", "wt") as fp:
-        fp.write(data)
-    run_service()
-
+    exe_path = Path('.\\venv\\Scripts\\python.exe').absolute()
+    scr_path = Path('.\\mem_manip.py').absolute()
+    subprocess.check_call(["nssm.exe", "install", "MemManipService", str(exe_path), str(scr_path)])
 
 def remove_service():
     subprocess.check_call(['/usr/bin/systemctl', "stop", "mem_manip.service"])
@@ -116,8 +130,8 @@ def uninstall_files():
     shutil.rmtree(str(Path('app').absolute()))
     shutil.rmtree(str(Path('venv').absolute()))
     os.unlink(str(Path('mem_manip.py').absolute()))
-    if Path('run.sh').exists():
-        os.unlink(str(Path('run.sh').absolute()))
+    if Path('run.bat').exists():
+        os.unlink(str(Path('run.bat').absolute()))
 
 def wants_service():
     return question('\nWould you like to install Memory Manipulator as a service?')
@@ -129,11 +143,27 @@ def wants_uninstall():
     return question('Would you like to uninstall Memory Manipulator?')
 
 
+#extract_nssm()
+#if wants_service():
+#    get_sudo('--service_install')
+#else:
+#    print("Installation complete.  You can manually start Memory Manipulator by running\n'./run.bat'")
 
+#install_service()
+#run_service()
+#exit(0)
 
-download_source()
-extract_source()
-create_venv()
-patch_mem_edit()
-extract_onsen()
-create_run_script()
+if installed():
+    print("Installation already detected.")
+    if wants_uninstall():
+        uninstall_files()
+        print("Uninstall is complete!")
+        exit(0)
+else:
+    download_source()
+    download_nssm()
+    extract_source()
+    create_venv()
+    patch_mem_edit()
+    extract_onsen()
+    create_run_script()
