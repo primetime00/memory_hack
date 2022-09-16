@@ -242,7 +242,10 @@
                 if (value_element.is(":focus")) {
                     continue
                 }
-                address_element.text((item.address).toString(16).toUpperCase().padStart(16, '0'))
+                var addr = (item.address).toString(16).toUpperCase().padStart(16, '0')
+                if (address_element.text() !== addr) {
+                    address_element.text((item.address).toString(16).toUpperCase().padStart(16, '0'))
+                }
                 value_element.attr('data-address', item.address)
                 freeze_element.attr('data-address', item.address)
                 value_element.val(item.value)

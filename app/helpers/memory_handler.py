@@ -12,6 +12,12 @@ class MemoryHandler:
         self.memory = memory
         self.set(memory, process)
 
+    def p_error(self):
+        self.error()
+
+    def error(self):
+        pass
+
     def release(self):
         pass
 

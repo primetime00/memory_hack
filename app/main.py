@@ -75,6 +75,11 @@ class InfoResource:
                 current_proc = self.data_store.get_process()
                 procs, crc = self.get_process_and_crc(iteration)
                 resp.media = {'status': 'INFO_GET_SUCCESS', 'process': current_proc, 'processes': procs, 'crc': crc}
+            if req.media['type'] == 'IS_ALIVE':
+                if self.data_store.pid == 0:
+                    resp.media = {'alive': False}
+                else:
+                    resp.media = {'alive': True}
             if req.media['type'] == 'SET_PROCESS':
                 self.data_store.set_process(req.media['process'])
                 procs, crc = self.get_process_and_crc()

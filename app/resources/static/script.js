@@ -47,7 +47,6 @@
     }
 
     script.script_upload_file_changed = function(file) {
-        console.log('here', file.name)
         var fname = file.name
         var ext = fname.slice((fname.lastIndexOf(".") - 1 >>> 0) + 2)
         if (ext.toLowerCase() != 'py') {
@@ -143,7 +142,6 @@
     }
 
     function post_interact(id, data) {
-        console.log('post', data)
         $.ajax ({
             url: "/script",
             type: "POST",

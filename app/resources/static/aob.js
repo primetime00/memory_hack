@@ -35,7 +35,7 @@
     var current_name = ""
     var current_select = ""
 
-    var row_item_template = '<ons-row class="result_row" id="result_##count##"><ons-col align="center" width="75px" class="col ons-col-inner" id="result_size_##count##">##size##</ons-col><ons-col align="center" width="100px" class="col ons-col-inner" id="result_offset_##count##">##offset##</ons-col> <ons-col align="center" width="50%" class="col ons-col-inner" id="result_aob_##count##">##aob##</ons-col></ons-row>'
+    var row_item_template = '<ons-row class="result_row" id="result_##count##"><ons-col align="center" width="75px" class="col ons-col-inner aob_size" id="result_size_##count##">##size##</ons-col><ons-col align="center" width="100px" class="col ons-col-inner aob_offset" id="result_offset_##count##">##offset##</ons-col> <ons-col align="center" width="50%" class="col ons-col-inner aob" id="result_aob_##count##">##aob##</ons-col></ons-row>'
 
     //Public Property
     aob.test = "Bacon Strips";
@@ -230,7 +230,6 @@
         var repeat = result.repeat || 0
         var error = result.error || ""
         var message = result.message || ""
-        console.log(result)
         switch (current_state) {
             case 'AOB_STATE_START':
                 setup_start_state()

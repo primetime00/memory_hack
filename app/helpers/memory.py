@@ -197,8 +197,6 @@ class Memory:
                     try:
                         nv = int.from_bytes(read_data, byteorder='little')
                     except Exception as e:
-                        print('Error {}'.format(sz))
-                        print(read_data[0:sz])
                         continue
                     if comparer(nv, item['value']):
                         addresses.append({'address': item['address'], 'first': item['first'], 'value': nv})

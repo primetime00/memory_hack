@@ -22,7 +22,6 @@ class AOBWalk:
         self.filter_result_size = filter_result_size
         self.filter_result_value = self._set_value(filter_result_value)
         self.operation_control = DataStore().get_operation_control()
-        self.matches = 0
 
 
     def add_aob_string(self, aob_string:str, black_list=('00', '??')):
@@ -102,7 +101,6 @@ class AOBWalk:
 
     def search(self, memory: MemoryEditor, progress=None):
         self.create()
-        self.matches = 0
         if len(self.aob_tree) == 0:
             raise AOBException('No AOBs to be searched')
         total = len(memory.handle.list_mapped_regions())
@@ -161,10 +159,6 @@ class AOBWalk:
                     match = False
                     break
             if match:
-                self.matches += 1
-                if self.matches % 100 == 0:
-                    print('matches:', self.matches)
-
                 b['addresses'].append(global_offset+offset-start)
                 self.aob_map[aob_data['aob_string']]['addresses'].append(global_offset+offset-start)
 

@@ -28,6 +28,7 @@
                   });
                   search.on_process_changed(value);
                   aob.on_process_changed(value);
+                  setTimeout(check_alive, 1000)
                 }
             });
     };
@@ -79,9 +80,19 @@
 
     function select_process(val) {
         var pctrls = $("select.process_control");
-                  $.each(pctrls , function (index, ctrl) {
-                    $(ctrl).val("_null")
-                });
+        $.each(pctrls , function (index, ctrl) {
+            $(ctrl).val("_null")
+        });
+    }
+
+    function check_alive() {
+        $.send('/info', {'type': 'IS_ALIVE'}, function(res) {
+            if (res.alive) {
+                setTimeout(check_alive, 1000)
+            } else{
+                select_process('_null');
+            }
+        });
     }
 
 }( window.process_control = window.process_control || {}, jQuery ));

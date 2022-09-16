@@ -36,6 +36,9 @@ class Search(MemoryHandler):
     def release(self):
         self.reset()
 
+    def p_error(self):
+        self.reset()
+
     def set(self, handler, process):
         self.memory.initialize_search()
 
@@ -101,7 +104,6 @@ class Search(MemoryHandler):
 
     def handle_initialization(self, req: Request, resp: Response):
         #We just loaded the page. Check if search is idle, running, or finished
-        state = 'SEARCH_STATE_UNKNOWN'
         if self.is_ready_for_start():
             resp.media['state'] = 'SEARCH_STATE_START'
             resp.media['repeat'] = 0
@@ -118,6 +120,9 @@ class Search(MemoryHandler):
             resp.media['last_search'] = self.last_search
             resp.media['search_round'] = self.round
             resp.media['repeat'] = 1000 if self.search_addresses else 0
+            if self.update_thread and not self.update_thread.is_alive() and self.update_thread.error:
+                resp.media['error'] = self.update_thread.error
+                self.update_thread = None
 
 
     def handle_reset(self, req: Request, resp: Response):
@@ -271,30 +276,36 @@ class Search(MemoryHandler):
             self.error = ""
 
         def _loop(self):
-            while not self.stop:
-                self.lock.acquire()
-                if len(self.write_list) > 0:
-                    for item in self.write_list:
-                        self.memory.handle.write_memory(item[0], item[1])
-                    self.write_list.clear()
-                if len(self.freeze_list) > 0:
-                    for addr, value in self.freeze_list.items():
-                        self.memory.handle.write_memory(addr, value)
-                for i in range(0, len(self.addresses)):
+            try:
+                while not self.stop:
+                    self.lock.acquire()
+                    if len(self.write_list) > 0:
+                        for item in self.write_list:
+                            self.memory.handle.write_memory(item[0], item[1])
+                        self.write_list.clear()
+                    if len(self.freeze_list) > 0:
+                        for addr, value in self.freeze_list.items():
+                            self.memory.handle.write_memory(addr, value)
+                    for i in range(0, len(self.addresses)):
+                        if self.stop:
+                            self.lock.release()
+                            return
+                        addr = self.addresses[i]
+                        sr = self.memory.read(addr['address'], self.type())
+                        if isinstance(sr, ctypes.Array):
+                            byte_str = ' '.join(memory_utils.bytes_to_aob(sr))
+                            self.addresses[i]['value'] = byte_str
+                        else:
+                            self.addresses[i]['value'] = sr.value
+                    self.lock.release()
                     if self.stop:
-                        self.lock.release()
-                        return
-                    addr = self.addresses[i]
-                    sr = self.memory.read(addr['address'], self.type())
-                    if isinstance(sr, ctypes.Array):
-                        byte_str = ' '.join(memory_utils.bytes_to_aob(sr))
-                        self.addresses[i]['value'] = byte_str
-                    else:
-                        self.addresses[i]['value'] = sr.value
-                self.lock.release()
-                if self.stop:
-                    break
-                time.sleep(1)
+                        break
+                    time.sleep(1)
+            except Exception as e:
+                self.error = str(e)
+            finally:
+                if self.lock.locked():
+                    self.lock.release()
 
         def process(self):
             try:
