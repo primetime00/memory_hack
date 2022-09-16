@@ -7,6 +7,8 @@ from urllib import request
 
 import venv
 
+#run with: python3 <(wget -qO- https://github.com/primetime00/memory_hack/raw/master/app/patches/install.py)
+
 cwd = Path(os.getcwd())
 zip_dir_name = 'memory_hack-master'
 

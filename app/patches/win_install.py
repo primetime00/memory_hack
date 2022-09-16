@@ -8,6 +8,9 @@ from urllib import request
 
 import venv
 
+
+#run with: powershell -Command "(new-object System.Net.WebClient).DownloadFile('https://github.com/primetime00/memory_hack/raw/master/app/patches/win_install.py','install.py')"
+
 cwd = Path(os.getcwd())
 zip_dir_name = 'memory_hack-master'
 
