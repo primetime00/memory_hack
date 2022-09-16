@@ -1,6 +1,7 @@
 import os, sys, ctypes
 import shutil
 import subprocess
+import time
 import zipfile
 from pathlib import Path
 from urllib import request
@@ -88,13 +89,19 @@ def get_sudo(service_type):
         ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(args), None, 1)
 
 def run_service():
-    subprocess.check_call(["nssm.exe", "start", "MemManipService"])
+    try:
+        subprocess.check_call(["nssm.exe", "start", "MemManipService"])
+    except Exception as e:
+        print(e)
 
 def install_service():
     print('installing service!')
     exe_path = Path('.\\venv\\Scripts\\python.exe').absolute()
     scr_path = Path('.\\mem_manip.py').absolute()
-    subprocess.check_call(["nssm.exe", "install", "MemManipService", str(exe_path), str(scr_path)])
+    try:
+        subprocess.check_call(["nssm.exe", "install", "MemManipService", str(exe_path), str(scr_path)])
+    except Exception as e:
+        print(e)
 
 def remove_service():
     subprocess.check_call(['/usr/bin/systemctl', "stop", "mem_manip.service"])
@@ -103,13 +110,29 @@ def remove_service():
     os.unlink("/etc/systemd/system/mem_manip.service")
 
 def has_service():
-    if Path("/etc/systemd/system/mem_manip.service").exists():
+    try:
+        subprocess.check_call(["nssm.exe", "status", "MemManipService"], stderr=open(os.devnull, 'wb'))
         return True
-    return False
+    except Exception as e:
+        return False
+
+def wait_for_service(timeout=10):
+    t = time.time()
+    while not service_running():
+        if time.time() - t > timeout:
+            break
+        time.sleep(0.6)
+    return service_running()
 
 def service_running():
-    stat = subprocess.call(["systemctl", "is-active", "--quiet", "mem_manip.service"])
-    return stat == 0
+    try:
+        #stat = subprocess.check_call(["nssm.exe", "status", "MemManipService"], stderr=open(os.devnull, 'wb'))
+        v = subprocess.check_output(["nssm.exe", "status", "MemManipService"], stderr=open(os.devnull, 'wb')).decode('UTF-8').replace('\x00', '').strip()
+        if v == 'SERVICE_STOPPED':
+            return False
+        return True
+    except Exception as e:
+        return False
 
 def question(question):
     reply = None
@@ -123,8 +146,11 @@ def question(question):
 
 def uninstall_service():
     print("Removing service...")
-    remove_service()
-    Path("/etc/systemd/system/mem_manip.service").unlink(missing_ok=True)
+    try:
+        subprocess.check_call(["nssm.exe", "stop", "MemManipService"])
+        subprocess.check_call(["nssm.exe", "remove", "MemManipService"])
+    except Exception as e:
+        print(e)
 
 def uninstall_files():
     shutil.rmtree(str(Path('app').absolute()))
@@ -153,6 +179,24 @@ def wants_uninstall():
 #run_service()
 #exit(0)
 
+
+if '--service_install' in sys.argv:
+    if not is_admin():
+        get_sudo('--service_install')
+    install_service()
+    run_service()
+    exit(0)
+elif '--service_remove' in sys.argv:
+    if not is_admin():
+        get_sudo('--service_remove')
+    uninstall_service()
+elif '--service_run' in  sys.argv:
+    if os.geteuid() != 0:
+        get_sudo('--service_run')
+    print("Running service...")
+    run_service()
+
+
 if installed():
     print("Installation already detected.")
     if wants_uninstall():
@@ -162,8 +206,32 @@ if installed():
 else:
     download_source()
     download_nssm()
+    extract_nssm()
     extract_source()
     create_venv()
     patch_mem_edit()
     extract_onsen()
     create_run_script()
+if has_service():
+    print("Service is already installed.")
+    if service_running():
+        print("Service is already running.")
+    else:
+        print("Service is installed, but not running.")
+        if wants_service_run():
+            if not is_admin():
+                get_sudo('--service_run')
+                if not wait_for_service():
+                    print("Could not run service.")
+                else:
+                    print("Service is running.\nYou can test by accessing http://localhost:5000.")
+else:
+    if wants_service():
+        get_sudo('--service_install')
+        if not wait_for_service():
+            print("Could not run/install service.")
+        else:
+            print("Service is running.\nYou can test by accessing http://localhost:5000.")
+    else:
+        print("Installation complete.  You can manually start Memory Manipulator by running\n'./run.bat'")
+
