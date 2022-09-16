@@ -274,9 +274,9 @@
     function setup_state_info(shows, hides) {
         if (current_process === "" || current_state == 'AOB_STATE_SEARCHING') {
             disable([btn_search, inp_aob_name, sel_aob_name, sel_aob_search_type, inp_address_value, inp_aob_range]);
-        } else {
-            enable([btn_search, inp_aob_name, sel_aob_name, sel_aob_search_type, inp_address_value, inp_aob_range]);
+            return
         }
+        enable([btn_search, inp_aob_name, sel_aob_name, sel_aob_search_type, inp_address_value, inp_aob_range]);
         if (inp_aob_name.val() === "") {
             disable([btn_search, sel_aob_search_type, inp_address_value, inp_aob_range]);
         }

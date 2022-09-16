@@ -91,6 +91,9 @@
                 setTimeout(check_alive, 1000)
             } else{
                 select_process('_null');
+                search.on_process_changed('');
+                aob.on_process_changed('');
+
             }
         });
     }

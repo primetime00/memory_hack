@@ -13,9 +13,9 @@ class MemoryHandler:
         self.set(memory, process)
 
     def p_error(self):
-        self.error()
+        self.process_error()
 
-    def error(self):
+    def process_error(self):
         pass
 
     def release(self):

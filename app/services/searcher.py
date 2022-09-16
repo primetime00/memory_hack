@@ -36,7 +36,7 @@ class Search(MemoryHandler):
     def release(self):
         self.reset()
 
-    def p_error(self):
+    def process_error(self):
         self.reset()
 
     def set(self, handler, process):

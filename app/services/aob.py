@@ -45,6 +45,9 @@ class AOB(MemoryHandler):
     def release(self):
         self.reset()
 
+    def process_error(self):
+        self.reset()
+
     def reset(self):
         if self.aob_work_thread and self.aob_work_thread.is_alive():
             self.memory.break_search()
