@@ -1,5 +1,6 @@
 from app.helpers.exceptions import AOBException, BreakException
-from app.helpers import MemoryEditor, DataStore
+from mem_edit import Process
+from app.helpers.data_store import DataStore
 from app.helpers.aob_file import AOBFile
 from app.helpers.memory_utils import value_to_bytes
 import ctypes
@@ -99,19 +100,16 @@ class AOBWalk:
         if len(self.aob_tree) == 0:
             raise AOBException('No AOBs could be created.')
 
-    def search(self, memory: MemoryEditor, progress=None):
+    def search(self, memory: Process, progress=None):
         self.create()
         if len(self.aob_tree) == 0:
             raise AOBException('No AOBs to be searched')
-        total = len(memory.handle.list_mapped_regions())
         index = 0
-        for start, end in memory.handle.list_mapped_regions():
+        for start, end in memory.list_mapped_regions():
             try:
-                if progress:
-                    progress(index, total)
                 size = end-start
                 region_buffer = (ctypes.c_byte * size)()
-                memory.handle.read_memory(start, region_buffer)
+                memory.read_memory(start, region_buffer)
                 data = bytes(region_buffer)
                 keys = [int(x,16) for x in list(self.aob_tree.keys())]
                 pos = 0
@@ -129,8 +127,11 @@ class AOBWalk:
                         raise BreakException()
                     if data[i] in keys:
                         self.process_match(data, i, data[i], start)
+                    if progress:
+                        progress.increment(1)
             except OSError:
-                pass
+                if progress:
+                    progress.increment(end-start)
             finally:
                 index += 1
         self.filter()

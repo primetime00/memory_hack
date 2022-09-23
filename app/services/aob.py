@@ -16,7 +16,7 @@ class AOB(MemoryHandler):
     directory = Path('.aob')
 
     def __init__(self):
-        super().__init__()
+        super().__init__('aob')
         self.handle_map = {
             "AOB_INITIALIZE": self.handle_initialization,
             "AOB_SELECT": self.handle_select,

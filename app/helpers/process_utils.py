@@ -89,3 +89,11 @@ def valid_processes(proc_list):
     return None, -1
 
 
+def is_pid_valid(pid):
+    try:
+        psutil.Process(pid)
+    except psutil.NoSuchProcess:
+        return False
+    except psutil.AccessDenied:
+        return False
+    return True

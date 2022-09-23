@@ -1,40 +1,27 @@
 (function( process_control, $, undefined ) {
     //Private Property
-    var iteration = 0
-    var process_crc = 0
-    var process_list = []
+    var process_map = {}
+    var last_update_time = -1
+    var request_id = 0
 
 
     //Public Property
 
     //Public Method
-    process_control.process_changed = function(_proc) {
-        var value = _proc[_proc.selectedIndex].text
-        $.ajax
-            ({
-                url: '/info',
-                data: {'type': 'SET_PROCESS', 'process': value},
-                type: 'post',
-                success: function(result)
-                {
-                  if (result.status == 'INFO_ERROR') {
-                    ons.notification.toast(result.error, { timeout: 2000, animation: 'fall' })
-                    select_process('_null');
-                    return;
-                  }
-                  var pctrls = $("select.process_control");
-                  $.each(pctrls , function (index, ctrl) {
-                    $(ctrl).val($(_proc).val())
-                  });
-                  search.on_process_changed(value);
-                  aob.on_process_changed(value);
-                  setTimeout(check_alive, 1000)
-                }
-            });
-    };
-
     process_control.ready = function() {
         on_ready();
+    }
+
+    process_control.get_process_list = function() {
+        process_list = []
+        for (var m in process_map) {
+            process_list.push(process_map[m].name)
+        }
+        return process_list
+    }
+
+    process_control.request_process = function(process, service, ret_function) {
+        $.send('/info', { "command": "REQUEST_PROCESS", 'process': process, 'service': service}, ret_function)
     }
 
     //Private Methods
@@ -43,59 +30,24 @@
     };
 
     function get_info() {
-        $.post('/info', { "type": "GET_INFO", 'iteration': iteration }, populate_control);
-        iteration += 1
-        setTimeout(get_info, 3000)
-    }
-
-    function populate_control(result) {
-        var process = result.process
-        search.on_process_changed(process);
-        aob.on_info_process(process);
-
-        if (result.crc != 0 && result.crc != process_crc) {
-            process_crc = result.crc
-            process_list = result.processes
-            populate_processes(result.processes)
-        }
-        var pctrls = $("select.process_control");
-        $.each(pctrls , function (index, ctrl) {
-          var text = $(ctrl).children(':selected').text()
-          if (result.process != text) {
-            $(ctrl).val(result.process == "" ? "_null"  : result.process )
-          }
-        });
-    };
-
-    function populate_processes(procs) {
-      var pctrls = $("select.process_control");
-      $.each(pctrls , function (index, ctrl) {
-        $(ctrl).empty()
-        $(ctrl).append($('<option>', { value: "_null", text: "" }));
-        $.each(procs , function (index, value) {
-            $(ctrl).append($('<option>', { value: value, text: value }));
-        });
-      });
-    }
-
-    function select_process(val) {
-        var pctrls = $("select.process_control");
-        $.each(pctrls , function (index, ctrl) {
-            $(ctrl).val("_null")
-        });
-    }
-
-    function check_alive() {
-        $.send('/info', {'type': 'IS_ALIVE'}, function(res) {
-            if (res.alive) {
-                setTimeout(check_alive, 1000)
-            } else{
-                select_process('_null');
-                search.on_process_changed('');
-                aob.on_process_changed('');
-
+        $.post('/info', { "command": "GET_PROCESSES", 'id': request_id}, function(result)
+        {
+            request_id += 1
+            if (result.hasOwnProperty('set')) {
+                search.on_update_process_list(result.set, []);
+            }
+            else {
+                if (result.add.length > 0 || result.remove.length > 0) {
+                    search.on_update_process_list(result.add, result.remove);
+                }
+            }
+            for (const service of result.services) {
+                if (service.name === 'search') {
+                    search.on_update_selected_process(service.process);
+                }
             }
         });
-    }
+        setTimeout(get_info, 1000)
+    };
 
 }( window.process_control = window.process_control || {}, jQuery ));

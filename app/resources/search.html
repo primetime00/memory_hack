@@ -1,93 +1,106 @@
 <ons-page id="search_page">
   <h2>Search</h2>
 
-  ##process_control##
+  <ons-row>
+    <ons-col align="center" width="150px" class="col ons-col-inner">Process:</ons-col>
+    <ons-col align="center" width="25%" class="col ons-col-inner">
+      <select id="search_process" class="select-input select-input--material" onchange="search.on_process_changed(this.value)">
+        <option value="_null"></option>
+      </select>
+    </ons-col>
+    <ons-col align="center" class="col ons-col-inner"></ons-col>
+  </ons-row>
 
-  <div id="search_information_block">
-    <ons-row>
-      <ons-col align="center" width="150px" class="col ons-col-inner">Search Size:</ons-col>
-      <ons-col align="center" width="25%" class="col ons-col-inner">
-        <select name="search_size" id="search_size" class="select-input select-input--material">
-          <option value="byte_1">BYTE</option>
-          <option value="byte_2">2 BYTES</option>
-          <option value="byte_4" selected>4 BYTES</option>
-          <option value="float" disabled>FLOAT</option>
-          <option value="array">ARRAY</option>
-        </select>
-      </ons-col>
-      <ons-col align="center" class="col ons-col-inner"></ons-col>
-    </ons-row>
+  <div id="search_block" hidden>
+    <div id="search_information_block">
+      <ons-row id="row_search_type">
+        <ons-col align="center" width="150px" class="col ons-col-inner">Search Type:</ons-col>
+        <ons-col align="center" width="25%" class="col ons-col-inner">
+          <select name="search_type" id="search_type" class="select-input select-input--material" onchange="search.search_type_changed(this.value);">
+            <option value="equal_to" selected>EQUAL TO</option>
+            <option value="greater_than">GREATER THAN</option>
+            <option value="less_than">LESS THAN</option>
+            <option value="unknown">UNKNOWN</option>
+            <option value="increase">INCREASE</option>
+            <option value="decrease">DECREASE</option>
+            <option value="unchanged">UNCHANGED</option>
+            <option value="changed">CHANGED</option>
+            <option value="changed_by">CHANGED BY</option>
+          </select>
+        </ons-col>
+        <ons-col align="center" class="col ons-col-inner"></ons-col>
+      </ons-row>
 
-    <ons-row>
-      <ons-col align="center" width="150px" class="col ons-col-inner">Search Type:</ons-col>
-      <ons-col align="center" width="25%" class="col ons-col-inner">
-        <select name="search_type" id="search_type" class="select-input select-input--material" onchange="search.search_type_changed(this.value);">
-          <option value="exact">EXACT</option>
-          <option value="unknown">UNKNOWN</option>
-        </select>
-      </ons-col>
-      <ons-col align="center" class="col ons-col-inner"></ons-col>
-    </ons-row>
+      <ons-row id="row_search_size">
+        <ons-col align="center" width="150px" class="col ons-col-inner">Search Size:</ons-col>
+        <ons-col align="center" width="25%" class="col ons-col-inner">
+          <select name="search_size" id="search_size" class="select-input select-input--material" onchange="search.search_size_changed(this.val)">
+            <option value="byte_1">BYTE</option>
+            <option value="byte_2">2 BYTES</option>
+            <option value="byte_4" selected>4 BYTES</option>
+            <option value="float" disabled>FLOAT</option>
+            <option value="array">ARRAY</option>
+          </select>
+        </ons-col>
+        <ons-col align="center" class="col ons-col-inner"></ons-col>
+      </ons-row>
 
-    <ons-row id="search_value_row">
-      <ons-col align="center" width="150px" class="col ons-col-inner">Search Value:</ons-col>
-      <ons-col align="center" width="25%" class="col ons-col-inner">
-        <input type="text" id="search_value" name="search_value" class="text-input text-input--material">
-      </ons-col>
-      <ons-col align="center" class="col ons-col-inner"></ons-col>
-    </ons-row>
 
-    <ons-row id="search_direction_row">
-      <ons-col align="center" width="150px" class="col ons-col-inner">Search Option:</ons-col>
-      <ons-col align="center" width="25%" class="col ons-col-inner">
-        <select name="search_direction" id="search_direction" class="select-input select-input--material">
-          <option value="increase">INCREASE</option>
-          <option value="decrease">DECREASE</option>
-          <option value="unchanged">UNCHANGED</option>
-          <option value="changed">CHANGED</option>
-        </select>
-      </ons-col>
-      <ons-col align="center" class="col ons-col-inner"></ons-col>
-    </ons-row>
+      <ons-row id="row_search_value">
+        <ons-col align="center" width="150px" class="col ons-col-inner">Value:</ons-col>
+        <ons-col align="center" width="25%" class="col ons-col-inner">
+          <input type="text" id="search_value" name="search_value" class="text-input text-input--material" oninput="search.search_value_changed(this.value)">
+        </ons-col>
+        <ons-col align="center" class="col ons-col-inner"></ons-col>
+      </ons-row>
 
-    <ons-row>
-      <ons-col align="center" width="150px" class="col ons-col-inner">
+      <ons-row>
+        <ons-col align="center" width="150px" class="col ons-col-inner">
 
-      </ons-col>
-      <ons-col align="center" width="25%" class="col ons-col-inner">
-      <section class="spacer">
-        <ons-button id="search_button" onclick="search.on_search_clicked()">Search</ons-button>
-        <ons-button id="search_reset_button" onclick="search.on_reset_clicked()">Reset</ons-button>
-      </section>
-      </ons-col>
-      <ons-col align="center" class="col ons-col-inner"></ons-col>
-    </ons-row>
-  </div>
+        </ons-col>
+        <ons-col align="center" width="25%" class="col ons-col-inner">
+        <section class="spacer">
+          <ons-button id="search_button" onclick="search.on_search_clicked()">Search</ons-button>
+          <ons-button id="search_reset_button" onclick="search.on_reset_clicked()">Reset</ons-button>
+        </section>
+        </ons-col>
+        <ons-col align="center" class="col ons-col-inner"></ons-col>
+      </ons-row>
+    </div>
 
-  <div id="search_results">
-    <ons-row id="search_progress_row">
-      <ons-col align="center" width="150px" class="col ons-col-inner"></ons-col>
-      <ons-col align="center" width="25%" class="col ons-col-inner">
-        Searching...  <span id="search_progress"></span>
-      </ons-col>
-      <ons-col align="center" class="col ons-col-inner"></ons-col>
-    </ons-row>
+    <div id="search_results">
+      <ons-row id="search_progress_row" hidden>
+        <ons-col align="center" width="150px" class="col ons-col-inner"></ons-col>
+        <ons-col align="center" width="25%" class="col ons-col-inner">
+          Searching...  <span id="search_progress"></span>%
+        </ons-col>
+        <ons-col align="center" class="col ons-col-inner"></ons-col>
+      </ons-row>
+      <ons-row id="search_initialize_unknown_row" hidden>
+        <ons-col align="center" width="150px" class="col ons-col-inner"></ons-col>
+        <ons-col align="center" width="25%" class="col ons-col-inner">
+          Search initialized...
+        </ons-col>
+        <ons-col align="center" class="col ons-col-inner"></ons-col>
+      </ons-row>
 
-    <ons-list id="search_result_list">
-      <ons-list-header>Results (<span id="result_count"></span>) <span id="result_count_disclaimer">Showing first 40.</span></ons-list-header>
-      <ons-list-item>
-          <ons-row>
-            <ons-col align="center" width="190px" class="col ons-col-inner">0xBEADFEEDC1345323</ons-col>
-            <ons-col align="center" width="190px" class="col ons-col-inner"><input type="text" id="result_value_00" name="search_value" class="text-input text-input--material" value="999999999999999999"></ons-col>
-            <ons-col align="center" class="col ons-col-inner">
-              <label class="checkbox checkbox--material" style="padding-left: 10px">
-                <input type="checkbox" id="freze_result_value_00" class="checkbox__input checkbox--material__input">
-                <div class="checkbox__checkmark checkbox--material__checkmark"></div>
-                Freeze
-              </label>
-            </ons-col>
-          </ons-row>
-      </ons-list-item>
-    </ons-list>
+
+      <ons-list id="search_result_list" hidden>
+        <ons-list-header>Results (<span id="result_count"></span>) <span id="result_count_disclaimer">Showing first 40.</span></ons-list-header>
+        <ons-list-item>
+            <ons-row>
+              <ons-col align="center" width="190px" class="col ons-col-inner">0xBEADFEEDC1345323</ons-col>
+              <ons-col align="center" width="190px" class="col ons-col-inner"><input type="text" id="result_value_00" name="search_value" class="text-input text-input--material" value="999999999999999999"></ons-col>
+              <ons-col align="center" class="col ons-col-inner">
+                <label class="checkbox checkbox--material" style="padding-left: 10px">
+                  <input type="checkbox" id="freze_result_value_00" class="checkbox__input checkbox--material__input">
+                  <div class="checkbox__checkmark checkbox--material__checkmark"></div>
+                  Freeze
+                </label>
+              </ons-col>
+            </ons-row>
+        </ons-list-item>
+      </ons-list>
+    </div>
   </div>
 </ons-page>

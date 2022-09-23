@@ -1,113 +1,126 @@
 <ons-page id="aob_page">
   <h2>AOB</h2>
-  ##process_control##
 
-  <div id="aob_information_block">
-    <ons-row>
-      <ons-col align="center" width="150px" class="col ons-col-inner">Name:</ons-col>
-      <ons-col align="center" width="150px" class="col ons-col-inner">
-        <input type="text" id="aob_name" class="text-input text-input--material" oninput="aob.aob_search_name_changed(this)">
-      </ons-col>
-      <ons-col align="center" width="25%" class="col ons-col-inner">
-        <select id="aob_selection" class="select-input select-input--material" onchange="aob.aob_search_name_selected(this)">
-          <option value="_null"></option>
-        </select>
-      </ons-col>
-      <ons-col align="center" class="col ons-col-inner"></ons-col>
-    </ons-row>
+  <ons-row>
+    <ons-col align="center" width="150px" class="col ons-col-inner">Process:</ons-col>
+    <ons-col align="center" width="25%" class="col ons-col-inner">
+      <select id="aob_process" class="select-input select-input--material">
+        <option value="_null"></option>
+      </select>
+    </ons-col>
+    <ons-col align="center" class="col ons-col-inner"></ons-col>
+  </ons-row>
 
-    <ons-row>
-      <ons-col align="center" width="150px" class="col ons-col-inner"></ons-col>
-      <ons-col align="center" width="150px" class="col ons-col-inner">
-      </ons-col>
-      <ons-col align="center" width="25%" class="col ons-col-inner">
-        <input type="file" id="aob_upload_button" onchange="aob.aob_upload_file_changed(this.files[0])" hidden/>
-        <label class="upload_button" for="aob_upload_button">Upload</label>
-      </ons-col>
-      <ons-col align="center" class="col ons-col-inner"></ons-col>
-    </ons-row>
+  <div id="aob_block" hidden>
 
 
+    <div id="aob_information_block">
+      <ons-row>
+        <ons-col align="center" width="150px" class="col ons-col-inner">Name:</ons-col>
+        <ons-col align="center" width="150px" class="col ons-col-inner">
+          <input type="text" id="aob_name" class="text-input text-input--material" oninput="aob.aob_search_name_changed(this)">
+        </ons-col>
+        <ons-col align="center" width="25%" class="col ons-col-inner">
+          <select id="aob_selection" class="select-input select-input--material" onchange="aob.aob_search_name_selected(this)">
+            <option value="_null"></option>
+          </select>
+        </ons-col>
+        <ons-col align="center" class="col ons-col-inner"></ons-col>
+      </ons-row>
 
-    <ons-row>
-      <ons-col align="center" width="150px" class="col ons-col-inner">Search Type:</ons-col>
-      <ons-col align="center" width="150px" class="col ons-col-inner">
-        <select id="aob_search_type" class="select-input select-input--material" onchange="aob.aob_search_type_changed(this);">
-          <option value="address">ADDRESS</option>
-          <option value="value">VALUE</option>
-        </select>
-      </ons-col>
-      <ons-col align="center" class="col ons-col-inner"></ons-col>
-    </ons-row>
-
-    <ons-row>
-      <ons-col id="aob_address_value_heading" align="center" width="150px" class="col ons-col-inner">Value:</ons-col>
-      <ons-col align="center" width="200px" class="col ons-col-inner">
-        <input type="text" id="aob_address_value" class="text-input text-input--material" oninput="aob.aob_address_value_changed(this)">
-      </ons-col>
-      <ons-col id="aob_value_size_col" align="center" width="25%" class="col ons-col-inner">
-        <select id="aob_value_size" class="select-input select-input--material">
-          <option value="byte">BYTE</option>
-          <option value="2byte">2 BYTES</option>
-          <option value="4byte" selected>4 BYTES</option>
-        </select>
-      </ons-col>
-      <ons-col align="center" class="col ons-col-inner"></ons-col>
-    </ons-row>
+      <ons-row>
+        <ons-col align="center" width="150px" class="col ons-col-inner"></ons-col>
+        <ons-col align="center" width="150px" class="col ons-col-inner">
+        </ons-col>
+        <ons-col align="center" width="25%" class="col ons-col-inner">
+          <input type="file" id="aob_upload_button" onchange="aob.aob_upload_file_changed(this.files[0])" hidden/>
+          <label class="upload_button" for="aob_upload_button">Upload</label>
+        </ons-col>
+        <ons-col align="center" class="col ons-col-inner"></ons-col>
+      </ons-row>
 
 
-    <ons-row id="aob_range_row">
-      <ons-col align="center" width="150px" class="col ons-col-inner">Range:</ons-col>
-      <ons-col align="center" width="25%" class="col ons-col-inner">
-        <input type="text" id="aob_range" class="text-input text-input--material" value="65536">
-      </ons-col>
-      <ons-col align="center" class="col ons-col-inner"></ons-col>
-    </ons-row>
 
-    <ons-row>
-      <ons-col align="center" width="150px" class="col ons-col-inner">
-      </ons-col>
-      <ons-col align="center" width="25%" class="col ons-col-inner">
-      <section class="spacer">
-        <ons-button id="aob_search_button" onclick="aob.aob_search_clicked(this)">Search</ons-button>
-      </section>
-      </ons-col>
-      <ons-col align="center" class="col ons-col-inner"></ons-col>
-    </ons-row>
-  </div>
+      <ons-row>
+        <ons-col align="center" width="150px" class="col ons-col-inner">Search Type:</ons-col>
+        <ons-col align="center" width="150px" class="col ons-col-inner">
+          <select id="aob_search_type" class="select-input select-input--material" onchange="aob.aob_search_type_changed(this);">
+            <option value="address">ADDRESS</option>
+            <option value="value">VALUE</option>
+          </select>
+        </ons-col>
+        <ons-col align="center" class="col ons-col-inner"></ons-col>
+      </ons-row>
 
-  <div id="aob_search_results" hidden>
-    <ons-row id="aob_search_progress_row">
-      <ons-col align="center" width="150px" class="col ons-col-inner"></ons-col>
-      <ons-col align="center" width="25%" class="col ons-col-inner">
-        Searching...  <span id="aob_search_progress"></span>
-      </ons-col>
-      <ons-col align="center" class="col ons-col-inner"></ons-col>
-    </ons-row>
-
-    <ons-row id="aob_initial_search_row">
-      <ons-col align="center" width="150px" class="col ons-col-inner"></ons-col>
-      <ons-col align="center" width="25%" class="col ons-col-inner">
-        Initial search complete.  Search again for AOBs.
-      </ons-col>
-      <ons-col align="center" class="col ons-col-inner"></ons-col>
-    </ons-row>
+      <ons-row>
+        <ons-col id="aob_address_value_heading" align="center" width="150px" class="col ons-col-inner">Value:</ons-col>
+        <ons-col align="center" width="200px" class="col ons-col-inner">
+          <input type="text" id="aob_address_value" class="text-input text-input--material" oninput="aob.aob_address_value_changed(this)">
+        </ons-col>
+        <ons-col id="aob_value_size_col" align="center" width="25%" class="col ons-col-inner">
+          <select id="aob_value_size" class="select-input select-input--material">
+            <option value="byte">BYTE</option>
+            <option value="2byte">2 BYTES</option>
+            <option value="4byte" selected>4 BYTES</option>
+          </select>
+        </ons-col>
+        <ons-col align="center" class="col ons-col-inner"></ons-col>
+      </ons-row>
 
 
-    <ons-row id="aob_search_result_count_row">
-      <ons-col align="center" width="150px" class="col ons-col-inner"><span id="aob_result_count">4000</span> AOBs</ons-col>
-      <ons-col align="center" width="150px" class="col ons-col-inner">
-        <ons-button id="aob_download_button" onclick="aob.on_download_clicked(this)">Download</ons-button>
-      </ons-col>
-      <ons-col align="center" class="col ons-col-inner"></ons-col>
-    </ons-row>
+      <ons-row id="aob_range_row">
+        <ons-col align="center" width="150px" class="col ons-col-inner">Range:</ons-col>
+        <ons-col align="center" width="25%" class="col ons-col-inner">
+          <input type="text" id="aob_range" class="text-input text-input--material" value="65536">
+        </ons-col>
+        <ons-col align="center" class="col ons-col-inner"></ons-col>
+      </ons-row>
 
-    <ons-row id="aob_search_results_header">
-      <ons-col align="center" width="75px" class="col ons-col-inner">Size</ons-col>
-      <ons-col align="center" width="100px" class="col ons-col-inner">Offset</ons-col>
-      <ons-col align="center" width="100px" class="col ons-col-inner">AOB</ons-col>
-    </ons-row>
+      <ons-row>
+        <ons-col align="center" width="150px" class="col ons-col-inner">
+        </ons-col>
+        <ons-col align="center" width="25%" class="col ons-col-inner">
+        <section class="spacer">
+          <ons-button id="aob_search_button" onclick="aob.aob_search_clicked(this)">Search</ons-button>
+        </section>
+        </ons-col>
+        <ons-col align="center" class="col ons-col-inner"></ons-col>
+      </ons-row>
+    </div>
 
+    <div id="aob_search_results" hidden>
+      <ons-row id="aob_search_progress_row">
+        <ons-col align="center" width="150px" class="col ons-col-inner"></ons-col>
+        <ons-col align="center" width="25%" class="col ons-col-inner">
+          Searching...  <span id="aob_search_progress"></span>
+        </ons-col>
+        <ons-col align="center" class="col ons-col-inner"></ons-col>
+      </ons-row>
+
+      <ons-row id="aob_initial_search_row">
+        <ons-col align="center" width="150px" class="col ons-col-inner"></ons-col>
+        <ons-col align="center" width="25%" class="col ons-col-inner">
+          Initial search complete.  Search again for AOBs.
+        </ons-col>
+        <ons-col align="center" class="col ons-col-inner"></ons-col>
+      </ons-row>
+
+
+      <ons-row id="aob_search_result_count_row">
+        <ons-col align="center" width="150px" class="col ons-col-inner"><span id="aob_result_count">4000</span> AOBs</ons-col>
+        <ons-col align="center" width="150px" class="col ons-col-inner">
+          <ons-button id="aob_download_button" onclick="aob.on_download_clicked(this)">Download</ons-button>
+        </ons-col>
+        <ons-col align="center" class="col ons-col-inner"></ons-col>
+      </ons-row>
+
+      <ons-row id="aob_search_results_header">
+        <ons-col align="center" width="75px" class="col ons-col-inner">Size</ons-col>
+        <ons-col align="center" width="100px" class="col ons-col-inner">Offset</ons-col>
+        <ons-col align="center" width="100px" class="col ons-col-inner">AOB</ons-col>
+      </ons-row>
+
+    </div>
   </div>
 
 </ons-page>

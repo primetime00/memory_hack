@@ -12,6 +12,8 @@ class AOBException(MemManipException):
 class ProgressException(MemManipException):
     pass
 
+class ProcessException(MemManipException):
+    pass
 class BreakException(MemManipException):
     def __init__(self):
         super().__init__("Operation Break", True)
