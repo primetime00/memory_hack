@@ -6,11 +6,13 @@ import psutil
 from app.helpers.memory_utils import is_process_valid
 from app.helpers.process_utils import is_pid_valid, can_attach
 from falcon import Request, Response, MEDIA_JSON
-import copy
+from pathlib import Path
+import fnmatch
 
 class Process:
     def __init__(self):
         self.user = os.environ.get('USER', os.environ.get('USERNAME'))
+        self.blacklist = self.load_blacklist()
         self.pid = 0
         self.pids = []
         self.pid_map = {}
@@ -180,7 +182,14 @@ class Process:
                     try:
                         proc = psutil.Process(d)
                         with proc.oneshot():
-                            self.pid_map[d] = {'pid': d, 'name': proc.name(), 'user': proc.username(), 'status': proc.status(), 'valid': is_pid_valid(proc.pid) and can_attach(proc.pid)}
+                            if os.name == "nt":
+                                try:
+                                    user = proc.username()
+                                except psutil.AccessDenied:
+                                    user = 'NT AUTHORITY\\SYSTEM'
+                            else:
+                                user = proc.username()
+                            self.pid_map[d] = {'pid': d, 'name': proc.name(), 'user': user, 'status': proc.status(), 'valid': is_pid_valid(proc.pid) and not self.is_blacklisted(proc.name()) and can_attach(proc.pid)}
                             self.pids.append(d)
                     except psutil.NoSuchProcess:
                         continue
@@ -191,3 +200,22 @@ class Process:
             if len(difference) > 0:
                 self.last_update_time = int(time.time() * 100) - 160000000000
             self._pid_monitor_event.wait(1)
+
+    def is_blacklisted(self, name):
+        if not self.blacklist:
+            return False
+        return any(fnmatch.fnmatch(name, x) for x in self.blacklist)
+
+    def load_blacklist(self):
+        p = Path("./resources")
+        if os.name == 'nt':
+            p = p.joinpath('win_blacklist.txt')
+        else:
+            p = p.joinpath('lin_blacklist.txt')
+        if not p.exists():
+            return []
+        bl = p.read_text().splitlines()
+        return [b.strip() for b in bl]
+
+
+
