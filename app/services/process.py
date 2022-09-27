@@ -103,10 +103,21 @@ class Process:
         return self.last_update_time
 
 
-    def close_process(self, pid: int):
+    def get_open_process_classes(self, pid: int):
+        cls = []
         for c in [x for x in self.process_classes if x.process_data]:
             if c.process_data['pid'] == pid:
-                c.p_release()
+                cls.append(c)
+        return cls
+
+    def error_process(self, pid: int, msg: str):
+        for c in self.get_open_process_classes(pid):
+            c.p_error(msg)
+        self.close_process(pid)
+
+    def close_process(self, pid: int):
+        for c in self.get_open_process_classes(pid):
+            c.p_release()
         if pid in self.open_pids:
             try:
                 proc: mem_edit.Process = self.open_pids[pid]['process']
@@ -156,7 +167,7 @@ class Process:
             pids = self.open_pids.copy().keys()
             for pid in pids:
                 if not is_process_valid(pid):
-                    self.close_process(pid)
+                    self.error_process(pid, 'Process is no longer valid')
                     self.remove_open_pid(pid)
             self._process_monitor_event.wait(0.6)
         self._process_monitor_thread = None

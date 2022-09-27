@@ -57,7 +57,7 @@ class Search(MemoryHandler):
     def release(self):
         self.reset()
 
-    def process_error(self):
+    def process_error(self, msg: str):
         self.reset()
 
     def set(self, data):

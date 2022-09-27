@@ -33,11 +33,11 @@ class MemoryHandler:
     def has_mem(self):
         return self.process_data and 'process' in self.process_data
 
-    def p_error(self):
+    def p_error(self, msg: str):
         self.process_data = None
-        self.process_error()
+        self.process_error(msg)
 
-    def process_error(self):
+    def process_error(self, msg: str):
         pass
 
     def release(self):

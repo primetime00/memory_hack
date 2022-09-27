@@ -4,8 +4,7 @@ import logging
 import shutil
 import traceback
 from pathlib import Path
-from threading import Thread
-from time import sleep
+from threading import Thread, Event
 
 import falcon.app_helpers
 import mem_edit
@@ -22,6 +21,7 @@ class Script(MemoryHandler):
 
     def __init__(self):
         super().__init__('scripts')
+        self.wait_event: Event = Event()
         self.current_script = ""
         self.current_script_obj: BaseScript = None
         self.error = ""
@@ -33,10 +33,17 @@ class Script(MemoryHandler):
                 shutil.copy(f, self.directory.joinpath(f.name))
 
     def release(self):
-        super().release()
+        print('script closed')
+        if self.script_thread and self.script_thread.is_alive():
+            self.script_thread.stop()
+        pass
+
+    def process_error(self, msg: str):
+        self.error = msg
+
 
     def set(self, data):
-        super().set(data)
+        pass
 
     def get_script_list(self):
         return [x.stem for x in Script.directory.glob('*.py') if not x.stem.startswith('__')]
@@ -69,13 +76,24 @@ class Script(MemoryHandler):
         except ScriptException as e:
             self.unload_script()
             resp.media = self.send_error(e)
+            self.error = ""
             if e.is_from_thread():
                 self.script_thread = None
 
     def handle_script_status(self, req: Request, resp: Response):
         resp.media = {'status': 'SCRIPT_STATUS', 'scripts': self.get_script_list(), 'current': self.current_script}
         if self.script_thread:
+            if self.error:
+                if self.script_thread.is_alive():
+                    self.script_thread.stop()
+                    self.script_thread.join()
+                    self.script_thread = None
+                raise ScriptException(self.error, from_thread=False)
             if self.script_thread.error:
+                if self.script_thread.is_alive():
+                    self.script_thread.stop()
+                    self.script_thread.join()
+                    self.script_thread = None
                 raise ScriptException(self.script_thread.error, from_thread=True)
             if self.script_thread.is_alive():
                 resp.media['controls'] = self.current_script_obj.get_ui_status()
@@ -125,7 +143,7 @@ class Script(MemoryHandler):
         name = req.media['name']
         load = req.media['unload'] == 'false'
         if self.script_thread and self.script_thread.is_alive():
-            self.script_thread.running = False
+            self.script_thread.stop()
             self.script_thread.join()
         if load:
             self.unload_script()
@@ -144,7 +162,8 @@ class Script(MemoryHandler):
             if not self.has_mem():
                 raise ScriptException('Could not find requested process for this script.')
             self.current_script_obj.set_memory(self.mem())
-            self.script_thread = Script.ScriptThread(self.current_script_obj, self.current_script, self.mem())
+            self.wait_event = Event()
+            self.script_thread = Script.ScriptThread(self.current_script_obj, self.current_script, self.mem(), self.wait_event)
             self.script_thread.start()
         resp.media['status'] = 'SCRIPT_LOADED' if load else 'SCRIPT_UNLOADED'
         resp.media['current'] = self.current_script
@@ -175,6 +194,9 @@ class Script(MemoryHandler):
     def unload_script(self):
         if self.current_script_obj:
             self.current_script_obj.on_unload()
+        if self.script_thread and self.script_thread.is_alive():
+            self.script_thread.stop()
+            self.script_thread.join()
         self.current_script_obj = None
         self.current_script = ""
         if self.mod_name:
@@ -202,13 +224,6 @@ class Script(MemoryHandler):
     def send_error(self, e: ScriptException) -> dict:
         return {'status': 'SCRIPT_ERROR', 'error': e.get_message()}
 
-    def run_script(self, script, script_name):
-        if self.script_thread and self.script_thread.is_alive():
-            self.script_thread.stop()
-            self.script_thread.join()
-        self.script_thread: Script.ScriptThread = Script.ScriptThread(script, script_name)
-        self.script_thread.start()
-
     @staticmethod
     def parse_error(name: str, error: str):
         lines = error.splitlines()
@@ -225,9 +240,10 @@ class Script(MemoryHandler):
 
 
     class ScriptThread(Thread):
-        def __init__(self, script: BaseScript, filename, memory: mem_edit.Process):
+        def __init__(self, script: BaseScript, filename, memory: mem_edit.Process, wait_event: Event):
             super().__init__(target=self.loop)
             self.running = False
+            self.wait_event = wait_event
             self.script: BaseScript = script
             self.filename = filename
             self.error = ""
@@ -237,18 +253,16 @@ class Script(MemoryHandler):
             return self.filename
 
         def stop(self):
+            print('stopping script')
             self.running = False
+            self.wait_event.set()
 
         def loop(self):
             try:
                 self.running = True
                 while self.running:
-                    #if not memory_utils.is_process_valid(memory.pid):
-                    #    logging.warning("Process is lost")
-                    #    self.script.process_lost()
-                    #    break
                     self.script.process()
-                    sleep(self.script.get_speed())
+                    self.wait_event.wait(self.script.get_speed())
             except IOError as io_error:
                 logging.error(str(io_error))
                 self.error = 'Could not open process {}. Is it opened in scanners?'.format(self.script.get_app())
