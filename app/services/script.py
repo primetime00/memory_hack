@@ -17,7 +17,7 @@ from app.script_common.base_script import BaseScript
 
 
 class Script(MemoryHandler):
-    directory = Path.home().joinpath('mem_manip/scripts') if '/root' not in str(Path.home()) else Path('/opt/mem_manip/scripts')
+    directory = Path.home().joinpath('mem_manip/user_scripts') if '/root' not in str(Path.home()) else Path('/opt/mem_manip/user_scripts')
 
     def __init__(self):
         super().__init__('scripts')
