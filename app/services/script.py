@@ -1,10 +1,8 @@
+import importlib.util
 import inspect
 import logging
 import shutil
-import sys
 import traceback
-from importlib import import_module
-import importlib.util
 from pathlib import Path
 from threading import Thread
 from time import sleep
@@ -13,9 +11,7 @@ import falcon.app_helpers
 import mem_edit
 from falcon import Request, Response
 
-from app.helpers import MemoryEditor
 from app.helpers import MemoryHandler
-from app.helpers import memory_utils, process_utils
 from app.helpers.data_store import DataStore
 from app.helpers.exceptions import ScriptException, ProcessException
 from app.script_common.base_script import BaseScript
