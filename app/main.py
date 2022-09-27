@@ -22,14 +22,7 @@ class MainResource:
         aob_instance = DataStore().get_service('aob')
         resp.content_type = falcon.MEDIA_HTML
         with open('resources/index.html', 'rt') as ac:
-            if script_instance.is_running():
-                resp.text = ac.read().replace('#search_active#', '').replace('#aob_active#', '').replace('#script_active#', 'active')
-            elif search_instance.is_running():
-                resp.text = ac.read().replace('#search_active#', 'active').replace('#aob_active#', '').replace('#script_active#', '')
-            elif aob_instance.is_running():
-                resp.text = ac.read().replace('#search_active#', '').replace('#aob_active#', 'active').replace('#script_active#', '')
-            else:
-                resp.text = ac.read().replace('#search_active#', '').replace('#aob_active#', '').replace('#script_active#', '')
+            resp.text = ac.read().replace('#search_active#', '').replace('#aob_active#', '').replace('#script_active#', '')
 
 class SearchResource:
     def on_get(self, req, resp):

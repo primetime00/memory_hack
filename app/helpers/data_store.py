@@ -49,10 +49,12 @@ class DataStore(metaclass=SingletonMeta):
     def add_memory_class(self, cls_inst):
         self.process_classes.append(cls_inst)
 
-    def get_process(self, cls):
-        if cls not in self.process_classes:
+    def get_process(self, service):
+        try:
+            return self.services['process'].service_pids[service]['name']
+        except:
             raise ProcessException('Cannot find class')
-        return 0
+
 
     def get_last_update_time(self):
         return self.last_update_time

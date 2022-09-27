@@ -1,16 +1,17 @@
 import copy
 import ctypes
 import logging
-import time
 import traceback
 from threading import Thread, Lock, Event
+
 from falcon import Request, Response
 from falcon.app_helpers import MEDIA_JSON
-from app.helpers.exceptions import SearchException, BreakException
 
-from app.helpers import MemoryEditor, DynamicHTML, MemoryHandler, DataStore, Progress, AOBWalk
+from app.helpers import DynamicHTML, MemoryHandler, DataStore, Progress
 from app.helpers import memory_utils
+from app.helpers.exceptions import SearchException, BreakException
 from app.helpers.search_utils import SearchUtilities
+
 
 class Search(MemoryHandler):
     FLOW_START = 4
@@ -43,10 +44,8 @@ class Search(MemoryHandler):
         self.flow = self.FLOW_START
 
         self.type = ""
-        self.last_search = ""
         self.size = ""
         self.value = ""
-        self.direction = ""
         self.search_thread: Thread = None
         self.update_thread: Search.UpdateThread = None
         self.search_results = []
@@ -69,28 +68,6 @@ class Search(MemoryHandler):
 
     def html_main(self):
         return DynamicHTML('resources/search.html', 1).get_html()
-
-    def is_running(self):
-        return (self.search_thread is not None and self.search_thread.is_alive()) or (self.update_thread is not None and self.update_thread.is_alive())
-
-    def is_searching(self):
-        return self.search_thread is not None and self.search_thread.is_alive()
-
-    def has_searched(self):
-        if not self.last_search:
-            return False
-        return not self.is_searching()
-
-    def is_updating(self):
-        return self.update_thread is not None and self.update_thread.is_alive()
-
-    def is_ready_for_start(self):
-        if self.update_thread and self.update_thread.is_alive():
-            return False
-        if self.search_thread and self.search_thread.is_alive():
-            return False
-        if self.last_search == "":
-            return True
 
     def get_search_progress(self) -> float:
         if self.search_thread:
@@ -310,7 +287,6 @@ class Search(MemoryHandler):
                 addrs = su.search_aob_all_memory(value)
             else:
                 addrs = su.search_all_memory(value)
-                self.last_search = "EXACT_INITIAL"
         else:
             if self.size == 'array':
                 def cmp(*args):
@@ -328,17 +304,14 @@ class Search(MemoryHandler):
                 def cmp(*args):
                     return bytes(args[0]) == bytes(args[2])
                 addrs = su.search_addresses(value, self.search_results, cmp)
-            self.last_search = "EXACT_CONTINUE"
         self.search_results = [{'address': x, 'value': r} for x, r in addrs]
 
     def _value_cmp_search(self, value, cmp):
         su = SearchUtilities(self.mem(), DataStore().get_operation_control(), self.progress)
         if not self.search_results:
             addrs = su.search_cmp_memory(value, cmp)
-            self.last_search = "EXACT_INITIAL"
         else:
             addrs = su.search_addresses(value, self.search_results, cmp)
-            self.last_search = "EXACT_CONTINUE"
         self.search_results = [{'address': x, 'value': r} for x, r in addrs]
 
 
@@ -425,10 +398,8 @@ class Search(MemoryHandler):
             return args[0].value - args[1].value == args[2].value
         if not self.search_results:
             addrs = su.search_cmp_capture(value.__class__, cmp, value)
-            self.last_search = "EXACT_INITIAL"
         else:
             addrs = su.search_addresses(value, self.search_results, cmp)
-            self.last_search = "EXACT_CONTINUE"
         self.search_results = [{'address': x, 'value': r} for x, r in addrs]
 
 
@@ -488,7 +459,6 @@ class Search(MemoryHandler):
                             self.addresses[i]['value'] = sr.value
                     self.lock.release()
                     self.stop.wait(1)
-                    print('update')
             except Exception as e:
                 self.error = str(e)
             finally:

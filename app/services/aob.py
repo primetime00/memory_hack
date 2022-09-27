@@ -2,19 +2,27 @@ import ctypes
 import logging
 import os
 from io import StringIO
+import time
 from pathlib import Path
 from threading import Thread
 
 from falcon import Request, Response, MEDIA_JSON
+from mem_edit import Process
 
 from app.helpers import DynamicHTML, MemoryHandler, DataStore
 from app.helpers import memory_utils, AOBWalk, AOBFile, Progress
+from app.helpers.aob_utils import AOBUtilities
 from app.helpers.exceptions import AOBException, BreakException
 
 
 class AOB(MemoryHandler):
     directory = Path('.aob')
-
+    FLOW_START = 0
+    FLOW_SEARCHING = 1
+    FLOW_RESULTS = 2
+    FLOW_NO_RESULTS = 3
+    FLOW_WORKING = 5
+    FLOW_INITIAL_COMPLETE = 6
     def __init__(self):
         super().__init__('aob')
         self.handle_map = {
@@ -26,13 +34,16 @@ class AOB(MemoryHandler):
             "AOB_UPLOAD": self.handle_upload,
             "AOB_STATUS": self.handle_initialization
         }
+        self.flow = self.FLOW_START
+        self.previous_state = {'flow': self.FLOW_START, 'name': ""}
+
+
         self.aob_work_thread: AOB.AOBWorkThread = None
         self.current_name = ''
         self.set_current_name('')
         self.current_search_type = 'address'
         self.current_address = 0
-        self.current_range = 0
-        self.round = 0
+        self.current_range = 65536
         self.current_value = None
         self.current_value_size = None
 
@@ -50,13 +61,13 @@ class AOB(MemoryHandler):
 
     def reset(self):
         if self.aob_work_thread and self.aob_work_thread.is_alive():
-            self.memory.break_search()
+            DataStore().get_operation_control().control_break()
             self.aob_work_thread.join()
+        self.flow = self.FLOW_START
         self.set_current_name('')
         self.current_search_type = 'address'
         self.current_address = 0
         self.current_range = 0
-        self.round = 0
         self.current_value = None
         self.current_value_size = None
         self.aob_work_thread: AOB.AOBWorkThread = None
@@ -71,30 +82,20 @@ class AOB(MemoryHandler):
         for x in AOB.directory.glob('*.mem'):
             os.unlink(x)
 
-    def is_running(self):
-        return self.aob_work_thread is not None and self.aob_work_thread.is_alive()
-
-    def is_ready_for_start(self):
-        if self.aob_work_thread and self.aob_work_thread.is_alive():
-            return False
-        if self.current_name == "":
-            return True
-        return False
-    def is_searching(self):
-        return self.aob_work_thread and self.aob_work_thread.is_alive()
-
     def get_search_progress(self):
-        if not self.is_searching():
+        if not (self.aob_work_thread and self.aob_work_thread.is_alive()):
             return 0
         return self.aob_work_thread.get_progress()
 
-    def has_searched(self):
-        return not self.is_ready_for_start() and not self.is_searching()
-
     def handle_reset(self, req: Request, resp: Response):
-        process = req.media['process']
-        self.reset()
-        resp.media['state'] = "AOB_STATE_START"
+        if self.aob_work_thread and self.aob_work_thread.is_alive():
+            DataStore().get_operation_control().control_break()
+            self.aob_work_thread.join()
+        self.flow = self.previous_state['flow']
+        self.set_current_name(self.previous_state['name'])
+        resp.media['repeat'] = 100
+        self.aob_work_thread: AOB.AOBWorkThread = None
+
 
     def handle_download(self, req: Request, resp: Response):
         name = req.params['name']
@@ -117,11 +118,15 @@ class AOB(MemoryHandler):
         aob_file = AOBFile(filename=proposed_filename+'.aob')
         try:
             aob_file.read_stream(StringIO(data))
+            self.current_name = proposed_filename
+            self.process_selected_file(resp, aob_file)
+            resp.media['name'] = proposed_filename
+            resp.media['range'] = aob_file.get_range()
+            aob_file.write()
+            resp.media['message'] = 'Upload complete'
         except AOBException as e:
+            resp.media['name'] = self.current_name
             resp.media['error'] = 'Upload failed: {}'.format(e.get_message())
-            return
-        aob_file.write()
-        resp.media['message'] = 'Upload complete'
         resp.media['names'] = self.get_aob_list()
 
 
@@ -133,66 +138,99 @@ class AOB(MemoryHandler):
         value_size = req.media["value_size"]
         self.set_current_name(name)
         try:
-            self.aob_work_thread = AOB.AOBWorkThread(self.memory, name, search_type, address_value, search_range, value_size)
+            self.aob_work_thread = AOB.AOBWorkThread(self.mem(), name, search_type, address_value, search_range, value_size)
         except ValueError as e:
             resp.media['error'] = 'Could not start: {}'.format(e)
             return
+        self.previous_state['flow'] = self.flow
+        self.previous_state['name'] = name
+        self.flow = self.FLOW_WORKING
+        self.current_search_type = search_type
+        if search_type == 'value':
+            self.current_value = req.media['address_value']
+        else:
+            self.current_address = req.media['address_value']
+        self.current_value_size = value_size
         self.aob_work_thread.start()
-        resp.media['state'] = 'AOB_STATE_SEARCHING'
         resp.media['repeat'] = 1000
         resp.media['progress'] = self.get_search_progress()
 
     def handle_initialization(self, req: Request, resp: Response):
-        #We just loaded the page. Check if search is idle, running, or finished
-        if self.is_ready_for_start():
-            resp.media['state'] = 'AOB_STATE_START'
-            resp.media['repeat'] = 0
-            resp.media['search_type'] = "address"
-            resp.media['valid_searches'] = ['address']
-            if self.current_name in self.get_aob_list():
-                resp.media['valid_searches'].append('value')
+        if self.flow == self.FLOW_START:
+            resp.media['name'] = self.current_name
             resp.media['names'] = self.get_aob_list()
-        elif self.is_searching():
-            resp.media['state'] = 'AOB_STATE_SEARCHING'
-            resp.media['repeat'] = 1000
-            resp.media['progress'] = self.get_search_progress()
-        elif self.has_searched():
-            if not self.aob_work_thread: #we refreshed the page?
-                req.media['name'] = self.current_name
-                self.handle_select(req, resp)
-                resp.media['names'] = self.get_aob_list()
+            resp.media['type'] = self.current_search_type
+            resp.media['value'] = self.current_value
+            resp.media['range'] = 65536 if self.current_range <= 0  else self.current_range
+            resp.media['valid_types'] = ['address']
+            if self.current_name in self.get_aob_list():
+                resp.media['valid_types'].append('value')
+        elif self.flow == self.FLOW_WORKING:
+            if self.aob_work_thread and not self.aob_work_thread.is_alive():
+                ab_file = self.aob_work_thread.get_file()
+                self.process_selected_file(resp, ab_file)
                 resp.media['name'] = self.current_name
-                resp.media['select'] = self.current_name if self.current_name in self.get_aob_list()  else '_null'
-            elif self.aob_work_thread.is_errored():
-                resp.media['state'] = 'AOB_STATE_START' if len(self.aob_work_thread.get_results()) == 0 else 'AOB_STATE_CONTINUE'
-                resp.media['error'] = self.aob_work_thread.get_error()
-                resp.media['number_of_results'] = len(self.aob_work_thread.get_results())
-                resp.media['search_results'] = self.aob_work_thread.get_results()
-            else:
-                resp.media['state'] = 'AOB_STATE_CONTINUE'
-                resp.media['search_type'] = self.current_search_type
-                resp.media['number_of_results'] = len(self.aob_work_thread.get_results())
-                resp.media['search_results'] = self.aob_work_thread.get_results()
-                resp.media['initial_search'] = self.aob_work_thread.is_initial_search()
-                resp.media['is_final'] = self.aob_work_thread.is_final_search()
                 resp.media['names'] = self.get_aob_list()
-            resp.media['last_search'] = ''
-            resp.media['search_round'] = self.round
-            resp.media['repeat'] = 0
+                resp.media['type'] = self.current_search_type
+            else:
+                resp.media['repeat'] = 1000
+                resp.media['progress'] = self.get_search_progress()
+        elif self.flow == self.FLOW_RESULTS:
+            ab_file = AOBFile(directory=AOB.directory, filename=self.current_name+'.aob')
+            self.process_selected_file(resp, ab_file)
+            resp.media['name'] = self.current_name
+            resp.media['names'] = self.get_aob_list()
+            resp.media['type'] = self.current_search_type
+        elif self.flow == self.FLOW_INITIAL_COMPLETE:
+            ab_file = AOBFile(directory=AOB.directory, filename=self.current_name+'.aob')
+            self.process_selected_file(resp, ab_file)
+            resp.media['name'] = self.current_name
+            resp.media['names'] = self.get_aob_list()
+            resp.media['type'] = self.current_search_type
+
 
     def handle_select(self, req: Request, resp: Response):
         name = req.media['name']
+        if name == '_null':
+            name = ""
         self.set_current_name(name)
-        resp.media['valid_searches'] = ['address']
         if self.current_name in self.get_aob_list():
             ab_file = AOBFile(directory=AOB.directory, filename=self.current_name+'.aob')
-            resp.media['state'] = 'AOB_STATE_CONTINUE'
-            resp.media['search_results'] = ab_file.get_results()
+            self.process_selected_file(resp, ab_file)
+            resp.media['name'] = self.current_name
+            resp.media['names'] = self.get_aob_list()
+            resp.media['type'] = self.current_search_type
+        else:
+            self.flow = self.FLOW_START
+            resp.media['name'] = self.current_name
+            resp.media['names'] = self.get_aob_list()
+            resp.media['type'] = self.current_search_type
+            resp.media['valid_types'] = ['address']
+
+    def process_selected_file(self, resp: Response, ab_file: AOBFile):
+        if not ab_file.is_final() and not ab_file.is_initial():
+            self.flow = self.FLOW_RESULTS
             resp.media['is_initial_search'] = ab_file.count_aob_results() == 0
             resp.media['number_of_results'] = ab_file.count_aob_results()
             resp.media['is_final'] = ab_file.is_final()
+            if self.current_search_type == 'address' and (not self.current_address or int(self.current_address, 16) <= 0xFFFF):
+                self.current_address = ""
+            resp.media['value'] = self.current_value if self.current_search_type == 'value' else self.current_address
+            resp.media['type'] = self.current_search_type
+            resp.media['size'] = self.current_value_size
+            resp.media['valid_types'] = ['address']
             if ab_file.count_aob_results() > 0:
-                resp.media['valid_searches'].append('value')
+                resp.media['valid_types'].append('value')
+            resp.media['results'] = ab_file.get_results()
+        if ab_file.is_initial():
+            if ab_file.has_memory_file():
+                self.flow = self.FLOW_INITIAL_COMPLETE
+            else:
+                self.flow = self.FLOW_START
+                resp.media['range'] = ab_file.get_range()
+        elif ab_file.count_aob_results() == 0:
+            self.flow = self.FLOW_NO_RESULTS
+            resp.media['range'] = ab_file.get_range()
 
     def process(self, req: Request, resp: Response):
         resp.media = {}
@@ -203,6 +241,8 @@ class AOB(MemoryHandler):
             self.handle_map[command](req, resp)
         except AOBException as e:
             resp.media['error'] = e.get_message()
+        finally:
+            resp.media['flow'] = self.flow
 
     def get_aob_list(self):
         return [x.stem for x in AOB.directory.glob('*.aob')]
@@ -210,13 +250,10 @@ class AOB(MemoryHandler):
     class AOBWorkThread(Thread):
         smallest_run = 5
         consecutive_zeros = 5
-        INITIAL_SEARCH_COMPLETE = "AOB_INITIAL_SEARCH_COMPLETE"
-        SEARCH_COMPLETE = "AOB_SEARCH_COMPLETE"
-        ERROR = "AOB_ERROR"
 
         def __init__(self, _memory, _name, _type=None, _address_value=None, _range=None, _size=None):
             super().__init__(target=self.process)
-            self.memory = _memory
+            self.memory: Process = _memory
             self.current_name = _name
             self.current_address = int(_address_value, 16) if _type == 'address' else 0
             self.current_range = int(_range) if _range else 0
@@ -232,49 +269,16 @@ class AOB(MemoryHandler):
                 os.mkdir(AOB.directory)
 
             self.aob_file: AOBFile = AOBFile(directory=AOB.directory, filename=self.current_name+'.aob')
-            self.current_aobs = []
             self.progress = Progress()
-            self.status = {}
+            self.error = ""
             self.operation_control = DataStore().get_operation_control()
+
+
+        def get_file(self):
+            return self.aob_file
 
         def get_progress(self):
             return self.progress.get_progress()
-
-        def is_errored(self):
-            return self.status['status'] == self.ERROR
-
-        def is_initial_search(self):
-            return self.status['status'] == self.INITIAL_SEARCH_COMPLETE
-
-        def is_final_search(self):
-            if "final" in self.status:
-                return self.status["final"]
-            return False
-
-        def is_continued_search(self):
-            return self.status['status'] == self.SEARCH_COMPLETE
-
-        def get_error(self):
-            return self.status['error']
-
-        def get_results(self):
-            if 'results' in self.status:
-                return self.status['results']
-            return []
-
-        def calculate_range(self, proc):
-            start, end = self.memory.find_heap_data(proc, self.current_address)
-            if start == -1:
-                return start, end
-            want_start = self.current_address - int((self.current_range / 2))
-            if want_start > start:
-                start = want_start
-            want_end = self.current_address + int((self.current_range / 2))
-            if want_end < end:
-                end = want_end
-            actual_range = end - start
-            self.current_range = actual_range
-            return start, end
 
         def is_initial_needed(self):
             if not self.aob_file.exists():
@@ -287,33 +291,32 @@ class AOB(MemoryHandler):
         def process_address_run(self):
             if self.is_initial_needed():
                 # start needs to be an address
-                start, end = self.calculate_range(self.memory.handle)
+                self.progress.add_constraint(0, 100, 1.0)
+                au = AOBUtilities(self.memory, DataStore().get_operation_control(), self.progress)
+                start, end, self.current_range = au.calculate_range(self.current_address, self.current_range)
                 if start == -1:  # error with range
-                    self.status = {'status': self.ERROR, 'error': "Invalid address for this process."}
+                    self.error = "Invalid address for this process."
                     return
-                self.progress.add_constraint(0, 1, 1)
-                self.progress.increment(0.3)
-                data = self.memory.read(start, (ctypes.c_byte * (end - start))())
-                self.progress.increment(0.8)
-                self.aob_file.set_process(DataStore().get_process())
+                self.progress.increment(30)
+                data = self.memory.read_memory(start, (ctypes.c_byte * (end - start))())
+                self.progress.increment(40)
+                self.aob_file.set_process(DataStore().get_process('aob'))
                 self.aob_file.set_name(self.current_name)
                 self.aob_file.set_range(self.current_range)
                 self.aob_file.set_offset(self.current_address-start)
                 self.aob_file.set_length(end-start)
+                self.aob_file.set_initial(True)
                 self.aob_file.write()
                 with open(AOB.directory.joinpath('{}.mem'.format(self.current_name)), 'wb') as d_file:
                     d_file.write(data)
                 self.progress.mark()
-                self.status = {'status': self.INITIAL_SEARCH_COMPLETE, 'results': []}
             else: #we have an aob file
+                self.aob_file.set_initial(False)
                 number_of_results = self.aob_address_search()
-                results = []
                 if number_of_results >= 0:
-                    results = self.aob_file.get_results()
                     if number_of_results == 0:
                         self.aob_file.set_final()
                     self.aob_file.write()
-                self.status = {'status': self.SEARCH_COMPLETE, 'results': results, 'final': self.aob_file.is_final()}
 
         def process_value_run(self):
             if not self.aob_file.exists():
@@ -322,42 +325,34 @@ class AOB(MemoryHandler):
             try:
                 number_of_results = self.aob_value_search()
             except AOBException as e:
-                self.status = {'status': self.ERROR, 'error': 'Search Failed: {}'.format(e.get_message())}
-                self.status['results'] = self.aob_file.get_results()
+                self.error = 'Search Failed: {}'.format(e.get_message())
                 return
-            results = []
             if number_of_results >= 0:
-                results = self.aob_file.get_results()
                 if number_of_results == 0:
                     self.aob_file.set_final()
                 self.aob_file.write()
-            self.status = {'status': self.SEARCH_COMPLETE, 'results': results, 'final': self.aob_file.is_final()}
 
 
         def process(self):
-            self.progress = Progress()
             self.aob_file.remove_dupes()
             try:
                 if not self.is_value:
                     self.process_address_run()
                 else:
                     self.process_value_run()
-            except BreakException as br:
-                self.status = {'status': self.SEARCH_COMPLETE, 'results': self.aob_file.get_results(), 'final': self.aob_file.is_final()}
+            except BreakException:
+                pass
 
 
         def aob_value_search(self):
-            def progress_func(current, total):
-                if current == 0:
-                    self.progress.add_constraint(0, total, 1)
-                self.progress.increment(current)
-
-            walker = AOBWalk(aob_file=self.aob_file, max_size=50, filter_result_size=1)
+            au = AOBUtilities(self.memory, self.operation_control, self.progress)
+            walker = AOBWalk(aob_file=self.aob_file, max_size=50, filter_result_size=-1)
             if self.current_value:
-                sz_map = {'byte': AOBWalk.BYTE, '2byte': AOBWalk.BYTE_2, '4byte': AOBWalk.BYTE_4}
+                sz_map = {'byte_1': AOBWalk.BYTE, 'byte_2': AOBWalk.BYTE_2, 'byte_4': AOBWalk.BYTE_4}
                 walker.set_result_value_filter(self.current_value, sz_map[self.current_size], self.memory)
-
-            walker.search(self.memory, progress=progress_func)
+            self.progress.add_constraint(0, au.get_total_memory_size()[0], 1.0)
+            walker.search(self.memory, progress=self.progress)
+            self.progress.mark()
             return self.aob_file.count_aob_results()
 
         def aob_address_search_memory(self, new_data) -> int:
@@ -377,7 +372,7 @@ class AOB(MemoryHandler):
             self.progress.add_constraint(0, 1, 0.1)
             start = self.current_address - self.aob_file.get_offset()
             end = start+self.aob_file.get_length()
-            new_data = self.memory.read(start, (ctypes.c_byte * (end - start))())
+            new_data = self.memory.read_memory(start, (ctypes.c_byte * (end - start))())
             self.progress.mark()
             if self.aob_file.count_aob_results() == 0:
                 number_of_results = self.aob_address_search_memory(new_data)
@@ -387,14 +382,13 @@ class AOB(MemoryHandler):
 
         def compare_aob(self, new_data):
             aob_list = self.aob_file.get_aob_list()
-            self.progress.add_constraint(0, len(aob_list), 0.35)
-            j = 0
+            self.progress.add_constraint(0, len(aob_list), 0.90)
             for i in range(len(aob_list)-1, -1, -1):
-                if self.operation_control.is_control_break():
-                    raise BreakException()
+                if i % 1 == 0:
+                    time.sleep(0.05)
+                self.operation_control.test()
                 aob = aob_list[i]
-                self.progress.increment(j)
-                j += 1
+                self.progress.increment(1)
                 new_aob = []
                 index = aob['offset'] + self.aob_file.get_offset()
                 for bt in aob['aob_array']:
@@ -417,13 +411,11 @@ class AOB(MemoryHandler):
         def compare_data(self, new_data, old_data) -> int:
             data_length = len(new_data)
             self.progress.add_constraint(0, data_length, 0.9)
-            aob_table = []
             current_string = []
             start_run = -1
             for i in range(0, data_length):
-                self.progress.increment(i)
-                if self.operation_control.is_control_break():
-                    raise BreakException()
+                self.progress.increment(1)
+                self.operation_control.test()
                 if start_run == -1:
                     if new_data[i] == old_data[i] and not self.are_zeros(new_data, old_data, i, data_length): #if we have a match and they aren't x bytes of zeros
                         start_run = i

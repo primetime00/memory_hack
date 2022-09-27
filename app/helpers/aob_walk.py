@@ -199,7 +199,7 @@ class AOBWalk:
             addr = data['addresses'][0]
             read_address = addr-offset
             try:
-                read = mem.read(read_address, (ctypes.c_byte * len(val))())
+                read = mem.read_memory(read_address, (ctypes.c_byte * len(val))())
             except Exception as e:
                 if self.aob_file:
                     self.aob_file.remove_aob_string(aob)

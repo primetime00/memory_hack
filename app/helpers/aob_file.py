@@ -21,12 +21,14 @@ class AOBFile():
         self.length = 0
         self.valid = 0
         self.final = False
+        self.initial = False
         self.aob_list = []
         self.filename = filename
         if self.filename and self.directory.joinpath(self.filename).exists():
             self.read()
 
     def read_stream(self, handle):
+        count = 0
         try:
             for line in handle.readlines():
                 line = line.replace('\n', '').strip()
@@ -44,12 +46,17 @@ class AOBFile():
                     self.valid = int(line[7:])
                 elif line.startswith('Final: '):
                     self.final = line[7:].casefold() == 'true'
+                elif line.startswith('Initial: '):
+                    self.initial = line[9:].casefold() == 'true'
                 elif line.startswith('Size: '):
                     matches = re.match(AOBFile._pattern, line)
                     size = int(matches.group(1))
                     offset = int(matches.group(2).replace(' ', ''), 16)
                     aob = matches.group(3)
                     self.aob_list.append(self.create_aob(size, offset, aob))
+                count += 1
+                if count > 4 and not self.process:
+                    raise AOBException('Could not parse AOB file.')
         except ValueError as e:
             raise AOBException('Could not parse AOB data [{}]'.format(e))
         except:
@@ -144,7 +151,8 @@ class AOBFile():
                 f.write('Offset: {}\n'.format(self.offset))
                 f.write('Length: {}\n'.format(self.length))
                 f.write('Valid: {}\n'.format(self.valid))
-                f.write('Final: {}\n\n'.format(str(self.final).casefold()))
+                f.write('Final: {}\n'.format(str(self.final).casefold()))
+                f.write('Initial: {}\n\n'.format(str(self.initial).casefold()))
                 for aob in sorted(self.aob_list, key=lambda x:x['offset']):
                     f.write("Size: {:<5} Offset: {:<15X} {}\n".format(aob['size'], aob['offset'], aob['aob_string']))
             except Exception as e:
@@ -183,6 +191,12 @@ class AOBFile():
     def set_final(self):
         self.final = True
 
+    def is_initial(self):
+        return self.initial
+
+    def set_initial(self, ini):
+        self.initial = ini
+
     def get_aob_list(self):
         return self.aob_list
 
@@ -214,6 +228,9 @@ class AOBFile():
 
     def get_length(self) -> int:
         return self.length
+
+    def get_range(self) -> int:
+        return self.range
 
     def remove_index(self, index=0):
         self.aob_list.pop(index)
@@ -292,6 +309,9 @@ class AOBFile():
             if aob['aob_string'] in dupe and dupe[aob['aob_string']] > 1:
                 self.aob_list.pop(i)
         self.valid = len(self.aob_list)
+
+    def has_memory_file(self):
+        return self.get_memory_file().exists()
 
 
 

@@ -4,7 +4,7 @@
   <ons-row>
     <ons-col align="center" width="150px" class="col ons-col-inner">Process:</ons-col>
     <ons-col align="center" width="25%" class="col ons-col-inner">
-      <select id="aob_process" class="select-input select-input--material">
+      <select id="aob_process" class="select-input select-input--material" onchange="aob.on_process_changed(this.value)">
         <option value="_null"></option>
       </select>
     </ons-col>
@@ -18,10 +18,10 @@
       <ons-row>
         <ons-col align="center" width="150px" class="col ons-col-inner">Name:</ons-col>
         <ons-col align="center" width="150px" class="col ons-col-inner">
-          <input type="text" id="aob_name" class="text-input text-input--material" oninput="aob.aob_search_name_changed(this)">
+          <input type="text" id="aob_name" class="text-input text-input--material" oninput="aob.aob_search_name_changed(this.value)">
         </ons-col>
         <ons-col align="center" width="25%" class="col ons-col-inner">
-          <select id="aob_selection" class="select-input select-input--material" onchange="aob.aob_search_name_selected(this)">
+          <select id="aob_selection" class="select-input select-input--material" onchange="aob.aob_search_name_selected(this.value)">
             <option value="_null"></option>
           </select>
         </ons-col>
@@ -53,15 +53,15 @@
       </ons-row>
 
       <ons-row>
-        <ons-col id="aob_address_value_heading" align="center" width="150px" class="col ons-col-inner">Value:</ons-col>
+        <ons-col id="aob_address_value_heading" align="center" width="150px" class="col ons-col-inner"><span id="val_address_text">Value</span>:</ons-col>
         <ons-col align="center" width="200px" class="col ons-col-inner">
-          <input type="text" id="aob_address_value" class="text-input text-input--material" oninput="aob.aob_address_value_changed(this)">
+          <input type="text" id="aob_address_value" class="text-input text-input--material" oninput="aob.aob_address_value_changed(this.value)">
         </ons-col>
         <ons-col id="aob_value_size_col" align="center" width="25%" class="col ons-col-inner">
-          <select id="aob_value_size" class="select-input select-input--material">
-            <option value="byte">BYTE</option>
-            <option value="2byte">2 BYTES</option>
-            <option value="4byte" selected>4 BYTES</option>
+          <select id="aob_value_size" class="select-input select-input--material" onchange="aob.aob_size_changed(this.value)">
+            <option value="byte_1">BYTE</option>
+            <option value="byte_2">2 BYTES</option>
+            <option value="byte_4" selected>4 BYTES</option>
           </select>
         </ons-col>
         <ons-col align="center" class="col ons-col-inner"></ons-col>
@@ -71,7 +71,7 @@
       <ons-row id="aob_range_row">
         <ons-col align="center" width="150px" class="col ons-col-inner">Range:</ons-col>
         <ons-col align="center" width="25%" class="col ons-col-inner">
-          <input type="text" id="aob_range" class="text-input text-input--material" value="65536">
+          <input type="text" id="aob_range" class="text-input text-input--material" value="65536" oninput="aob.aob_range_changed(this.value)">
         </ons-col>
         <ons-col align="center" class="col ons-col-inner"></ons-col>
       </ons-row>
@@ -92,7 +92,7 @@
       <ons-row id="aob_search_progress_row">
         <ons-col align="center" width="150px" class="col ons-col-inner"></ons-col>
         <ons-col align="center" width="25%" class="col ons-col-inner">
-          Searching...  <span id="aob_search_progress"></span>
+          Processing...  <span id="aob_search_progress"></span>%
         </ons-col>
         <ons-col align="center" class="col ons-col-inner"></ons-col>
       </ons-row>

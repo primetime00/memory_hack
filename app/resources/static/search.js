@@ -25,6 +25,18 @@
 
     var li_template = (['<ons-list-item class="result-row">',
           '<ons-row>',
+            '<ons-col align="center" width="300px" class="col ons-col-inner">',
+              '<ons-row>',
+                '<ons-col align="center" width="280px" class="col ons-col-inner address">##address##</ons-col>',
+                '<ons-col align="center" width="280px" class="col ons-col-inner"><input type="text" id="result_value_##index##" data-address="##address##" name="search_value" class="text-input text-input--material value" value="##value##" onkeydown="search.result_change(this)"></ons-col>',
+              '</ons-row>',
+            '</ons-col>',
+          '</ons-row>',
+      '</ons-list-item>',
+    ]).join("\n");
+
+    var li_template2 = (['<ons-list-item class="result-row">',
+          '<ons-row>',
             '<ons-col align="center" width="190px" class="col ons-col-inner address">##address##</ons-col>',
             '<ons-col align="center" width="190px" class="col ons-col-inner"><input type="text" id="result_value_##index##" data-address="##address##" name="search_value" class="text-input text-input--material value" value="##value##" onkeydown="search.result_change(this)"></ons-col>',
             '<ons-col align="center" class="col ons-col-inner">',
@@ -37,6 +49,7 @@
           '</ons-row>',
       '</ons-list-item>',
     ]).join("\n");
+
 
     var current_state = "SEARCH_STATE_START";
     var current_search_type = "exact";
@@ -95,10 +108,10 @@
     search.on_process_changed = function(process) {
         process_control.request_process(process, 'search', function(result){
             if (!result.success) {
-                set_search_process('_null')
+                set_process('_null')
                 ons.notification.toast(result.error, { timeout: 4000, animation: 'fall' })
             } else {
-                set_search_process(process)
+                set_process(process)
             }
         })
     };
@@ -117,7 +130,6 @@
         }
         var f = sel_search_process.find('option:first')
         for (const item of process_list_add) {
-            //sel_search_process.append($('<option>', {value: item, text: item}))
             f.after($('<option>', {value: item, text: item}))
         }
     }
@@ -125,7 +137,7 @@
     search.on_update_selected_process = function(process_name) {
         var value = sel_search_process.val()
         if (value != process_name){
-            set_search_process(process_name)
+            set_process(process_name)
         }
     }
 
@@ -151,7 +163,7 @@
         $.send('/search', { "command": "SEARCH_INITIALIZE" }, on_search_status);
     }
 
-    function set_search_process(process_name) {
+    function set_process(process_name) {
         sel_search_process.val(process_name)
         if (process_name === '_null') {
             process_name = ''
@@ -943,6 +955,6 @@
             target = target[branch];
         }
         return true;
-}
+    }
 
 }( window.search = window.search || {}, jQuery ));
