@@ -1,13 +1,17 @@
 import logging
-from typing import List
-from app.helpers.memory import Memory
-from app.script_ui.list import ListUI
-from app.script_ui._base import BaseUI
+
+import mem_edit
+
 from app.script_common.aob import AOB
+from app.script_ui._base import BaseUI
+from app.script_ui.list import ListUI
+from app.helpers.search_utils import SearchUtilities
+
 
 class BaseScript:
     def __init__(self):
-        self.title = ""
+        self.searcher: SearchUtilities = None
+        self.process_name:str = ""
         self.list_ui: ListUI = ListUI()
         self.build_ui()
 
@@ -20,12 +24,25 @@ class BaseScript:
     def on_unload(self):
         self.aobs.clear()
 
+    def set_memory(self, mem: mem_edit.Process):
+        self.searcher = SearchUtilities(mem)
+
+    def get_memory(self) -> mem_edit.Process:
+        return self.searcher.get_process_memory()
+
+    def set_process(self, proc: str):
+        self.process_name = proc
+
+    def get_process(self) -> str:
+        return self.process_name
+
     def add_ui_element(self, element: BaseUI):
         self.list_ui.add(element)
         element.update_status()
 
     def get_ui(self):
         ui = "<h2>{}</h2>".format(self.get_name())
+        ui += "<h3>{}</h3>".format(self.get_process())
         return ui+self.list_ui.present()
 
     def get_ui_status(self):
@@ -67,43 +84,43 @@ class BaseScript:
     def on_aob_lost(self, aob: AOB):
         pass
 
-    def _on_aob_found(self, aob: AOB, memory: Memory):
-        self.on_aob_found(aob, memory)
+    def _on_aob_found(self, aob: AOB):
+        self.on_aob_found(aob)
         for item in self.list_ui.ui_list:
             item.update_status()
 
-    def on_aob_found(self, aob: AOB, memory: Memory):
+    def on_aob_found(self, aob: AOB):
         pass
 
 
-    def process(self, memory: Memory):
+    def process(self):
         for aob in self.aobs:
             if not aob.is_found():
-                self.find_address(memory, aob)
+                self.find_address(aob)
             else:
-                self.compare_aob(memory, aob)
+                self.compare_aob(aob)
         for item in self.list_ui.ui_list:
             if item.is_enabled():
-                item.process(memory)
+                item.process()
 
 
-    def find_address(self, memory, aob: AOB):
-        addrs = memory.search_aob(aob.get_aob_string())
+    def find_address(self, aob: AOB):
+        addrs = self.searcher.search_aob_all_memory(aob.get_aob_string())
         if len(addrs) == 0:
             if aob.will_warn():
                 logging.warning('Cannot find aob {} [{}]'.format(aob.get_name(), aob.get_aob_string()))
             aob.clear_bases()
         elif len(addrs) > 1:
             logging.warning('aob has multiple matches [{}] {} [{}]'.format(len(addrs), aob.get_name(), aob.get_aob_string()))
-        aob.set_bases(addrs)
-        self._on_aob_found(aob, memory)
+        aob.set_bases([x[0] for x in addrs])
+        self._on_aob_found(aob)
 
-    def compare_aob(self, memory, aob:AOB):
+    def compare_aob(self, aob:AOB):
         bases = aob.get_bases()
         bases_length = len(bases)
         for i in range(bases_length - 1, -1, -1):
             base = bases[i]
-            res, old, new = memory.compare(base, aob.get_aob_string())
+            res, old, new = self.searcher.compare_aob(base, aob.get_aob_string())
             if not res:
                 bases.pop(i)
                 logging.warning('aob {} does not match!\n{}\n{}'.format(aob.get_name(), old, new))

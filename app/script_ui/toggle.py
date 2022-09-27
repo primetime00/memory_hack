@@ -1,3 +1,4 @@
+from mem_edit import Process
 from app.script_ui._base import BaseUI
 
 class Toggle(BaseUI):
@@ -11,7 +12,7 @@ class Toggle(BaseUI):
     def ui_data(self):
         return '<ons-switch id="{}" class="script_control" onchange="script.script_interact_toggle(event)" {}></ons-switch>{}'.format(self.id, ("checked" if self.toggled else ""), self.title)
 
-    def process(self, memory):
+    def process(self):
         if self.toggled:
-            self.int_callback(memory)
+            self.int_callback()
 

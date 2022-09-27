@@ -1,3 +1,4 @@
+from mem_edit import Process
 from app.script_ui._base import BaseUI
 
 class Button(BaseUI):
@@ -9,10 +10,10 @@ class Button(BaseUI):
     def handle_interaction(self, data):
         self.pressed = True
 
-    def process(self, memory):
+    def process(self):
         if self.pressed:
             self.pressed = False
-            self.int_callback(memory)
+            self.int_callback()
 
 
 

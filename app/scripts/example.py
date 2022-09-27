@@ -1,10 +1,8 @@
 import ctypes
-from app.helpers.memory import Memory
 
 from app.script_common import BaseScript
-from app.script_ui import Toggle, InputButton, BaseUI
-
 from app.script_common.aob import AOB
+from app.script_ui import Toggle, InputButton, BaseUI
 
 
 class Test(BaseScript):
@@ -54,30 +52,28 @@ class Test(BaseScript):
         except ValueError:
             return None
 
-    def add_army(self, memory: Memory, control: BaseUI):
+    def add_army(self, control: BaseUI):
         val = control.input_handler.get_validated_value()
-        pointer_value = memory.read(self.pointer_aob.get_bases()[0] + self.pointer_offset, ctypes.c_uint32())
+        pointer_value = self.get_memory().read_memory(self.pointer_aob.get_bases()[0] + self.pointer_offset, ctypes.c_uint32())
         starting_address = (self.pointer_aob.get_bases()[0] + self.pointer_offset) + pointer_value.value - self.army_magic
-        print("got address {}".format(starting_address))
-        number = memory.read(starting_address, ctypes.c_uint16())
-        print("got value {}".format(number.value))
+        number = self.get_memory().read_memory(starting_address, ctypes.c_uint16())
         for i in range(0, 5):
             addr = starting_address + (i*2)
-            number = memory.read(starting_address, ctypes.c_uint16())
+            number = self.get_memory().read_memory(starting_address, ctypes.c_uint16())
             if number.value == 0:
                 continue
-            memory.write(addr, ctypes.c_uint16(val))
+            self.get_memory().write_memory(addr, ctypes.c_uint16(val))
 
-    def unlimited_movement(self, memory: Memory, control: BaseUI):
-        pointer_value = memory.read(self.pointer_aob.get_bases()[0] + self.pointer_offset, ctypes.c_uint32())
+    def unlimited_movement(self, control: BaseUI):
+        pointer_value = self.get_memory().read_memory(self.pointer_aob.get_bases()[0] + self.pointer_offset, ctypes.c_uint32())
         if pointer_value.value > 0:
             addr = (self.pointer_aob.get_bases()[0] + self.pointer_offset) + pointer_value.value - self.movement_magic
-            memory.write(addr, ctypes.c_uint16(1000))
+            self.get_memory().write_memory(addr, ctypes.c_uint16(1000))
 
 
-    def unlimited_resources(self, memory: Memory, control: BaseUI):
+    def unlimited_resources(self, control: BaseUI):
         for offset in [x['offset'] for x in self.resource_offsets]:
-            memory.write(self.resources_aob.get_bases()[0] + offset, ctypes.c_int32(50000))
+            self.get_memory().write_memory(self.resources_aob.get_bases()[0] + offset, ctypes.c_int32(50000))
 
 
 

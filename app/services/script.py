@@ -1,34 +1,49 @@
 import inspect
 import logging
+import shutil
 import sys
 import traceback
 from importlib import import_module
+import importlib.util
 from pathlib import Path
 from threading import Thread
 from time import sleep
 
 import falcon.app_helpers
+import mem_edit
 from falcon import Request, Response
 
 from app.helpers import MemoryEditor
+from app.helpers import MemoryHandler
 from app.helpers import memory_utils, process_utils
-from app.helpers.exceptions import ScriptException
+from app.helpers.data_store import DataStore
+from app.helpers.exceptions import ScriptException, ProcessException
 from app.script_common.base_script import BaseScript
 
 
-class Script:
-    directory = Path('scripts')
+class Script(MemoryHandler):
+    directory = Path.home().joinpath('mem_manip/scripts') if '/root' not in str(Path.home()) else Path('/opt/mem_manip/scripts')
 
     def __init__(self):
+        super().__init__('scripts')
         self.current_script = ""
         self.current_script_obj: BaseScript = None
         self.error = ""
         self.script_thread: Script.ScriptThread = None
         self.mod_name = ""
+        if not self.directory.exists():
+            self.directory.mkdir(parents=True, exist_ok=True)
+            for f in Path('./scripts').glob('*.py'):
+                shutil.copy(f, self.directory.joinpath(f.name))
+
+    def release(self):
+        super().release()
+
+    def set(self, data):
+        super().set(data)
 
     def get_script_list(self):
         return [x.stem for x in Script.directory.glob('*.py') if not x.stem.startswith('__')]
-
 
     def html_main(self):
         with open('resources/script.html', 'rt') as ac:
@@ -122,7 +137,18 @@ class Script:
         else:
             self.unload_script()
         if self.current_script_obj:
-            self.script_thread = Script.ScriptThread(self.current_script_obj, self.current_script)
+            proc_service = DataStore().get_service('process')
+            for req_proc in self.current_script_obj.get_app():
+                try:
+                    proc_service.request_process('scripts', req_proc)
+                    self.current_script_obj.set_process(req_proc)
+                    break
+                except ProcessException:
+                    continue
+            if not self.has_mem():
+                raise ScriptException('Could not find requested process for this script.')
+            self.current_script_obj.set_memory(self.mem())
+            self.script_thread = Script.ScriptThread(self.current_script_obj, self.current_script, self.mem())
             self.script_thread.start()
         resp.media['status'] = 'SCRIPT_LOADED' if load else 'SCRIPT_UNLOADED'
         resp.media['current'] = self.current_script
@@ -156,13 +182,15 @@ class Script:
         self.current_script_obj = None
         self.current_script = ""
         if self.mod_name:
-            del sys.modules[self.mod_name]
+            #del sys.modules[self.mod_name]
             self.mod_name = ""
 
     def load_script(self, name):
-        self.mod_name = 'app.scripts.{}'.format(name)
+        self.mod_name = 'app.user_scripts.{}'.format(name)
         try:
-            mod = import_module(self.mod_name)
+            spec = importlib.util.spec_from_file_location(self.mod_name, self.directory.joinpath(name + '.py'))
+            mod = importlib.util.module_from_spec(spec)  #import_module(self.mod_name)
+            spec.loader.exec_module(mod)
             for cls, obj in inspect.getmembers(mod):
                 if inspect.isclass(obj) and obj.__module__ == self.mod_name:
                     logging.info('Starting {}'.format(name))
@@ -201,12 +229,13 @@ class Script:
 
 
     class ScriptThread(Thread):
-        def __init__(self, script: BaseScript, filename):
+        def __init__(self, script: BaseScript, filename, memory: mem_edit.Process):
             super().__init__(target=self.loop)
             self.running = False
             self.script: BaseScript = script
             self.filename = filename
             self.error = ""
+            self.memory = memory
 
         def get_name(self):
             return self.filename
@@ -215,22 +244,15 @@ class Script:
             self.running = False
 
         def loop(self):
-            memory = MemoryEditor()
-            valid, pid = process_utils.valid_processes(self.script.get_app())
-            if not valid:
-                self.error = 'Could not open process. Is it opened in scanners?'
-                return
             try:
-                with memory.open_pid(pid) as f:
-                    memory.handle = f
-                    self.running = True
-                    while self.running:
-                        if not memory_utils.is_process_valid(memory.pid):
-                            logging.warning("Process is lost")
-                            self.script.process_lost()
-                            break
-                        self.script.process(memory)
-                        sleep(self.script.get_speed())
+                self.running = True
+                while self.running:
+                    #if not memory_utils.is_process_valid(memory.pid):
+                    #    logging.warning("Process is lost")
+                    #    self.script.process_lost()
+                    #    break
+                    self.script.process()
+                    sleep(self.script.get_speed())
             except IOError as io_error:
                 logging.error(str(io_error))
                 self.error = 'Could not open process {}. Is it opened in scanners?'.format(self.script.get_app())

@@ -1,4 +1,4 @@
-from app.helpers.memory import Memory
+from mem_edit import Process
 from app.script_ui.input import Input
 
 
@@ -43,11 +43,11 @@ class BaseUI:
     def get_interact_callback(self):
         return self.interact_callback
 
-    def process(self, memory: Memory):
+    def process(self):
         pass
 
-    def int_callback(self, memory):
-        self.get_interact_callback()(memory, self)
+    def int_callback(self):
+        self.get_interact_callback()(self)
 
     def get_id(self):
         return self.id

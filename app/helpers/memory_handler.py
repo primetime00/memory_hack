@@ -30,6 +30,9 @@ class MemoryHandler:
             return self.process_data['process']
         raise IOError()
 
+    def has_mem(self):
+        return self.process_data and 'process' in self.process_data
+
     def p_error(self):
         self.process_data = None
         self.process_error()

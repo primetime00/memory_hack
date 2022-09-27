@@ -10,10 +10,16 @@ import shutil, os
 
 ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, ctypes.Union]
 class SearchUtilities:
-    def __init__(self, mem: Process, op_control: OperationControl, progress:Progress):
+    def __init__(self, mem: Process, op_control: OperationControl = None, progress:Progress = None):
         self.mem = mem
-        self.op_control = op_control
-        self.progress = progress
+        if op_control:
+            self.op_control = op_control
+        else:
+            self.op_control = OperationControl()
+        if progress:
+            self.progress = progress
+        else:
+            self.progress = Progress()
         self.total_size, self.mem_start, self.mem_end = self.get_total_memory_size()
 
     class memory_walker():
@@ -264,5 +270,23 @@ class SearchUtilities:
                 found.append((item['address'], read))
         return found
 
+    def compare_aob(self, addr:int, aob:str):
+        res = True
+        values = aob.upper().split()
+        new_values = []
+        mem = self.mem.read_memory(addr, (ctypes.c_byte * len(values))())
+        for i in range(0, len(mem)):
+            new_values.append('{0:0{1}X}'.format((mem[i] + (1 << 8)) % (1 << 8), 2))
+            if values[i] == '??':
+                continue
+            orig = bytes.fromhex(values[i])
+            if res and orig[0] != ((mem[i] + (1 << 8)) % (1 << 8)):
+                res = False
+        return res, new_values, values
 
+    def get_process_memory(self):
+        return self.mem
+
+    def call_break(self):
+        self.op_control.control_break()
 
