@@ -18,8 +18,6 @@ class SingletonMeta(type):
         return cls._instances[cls]
 
 
-from threading import Thread
-
 from app.helpers.exceptions import ProcessException
 from app.helpers.operation_control import OperationControl
 
@@ -61,3 +59,7 @@ class DataStore(metaclass=SingletonMeta):
 
     def get_operation_control(self):
         return self.operation_control
+
+    def kill(self):
+        for s_key in self.services.keys():
+            self.services[s_key].kill()

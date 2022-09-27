@@ -1,15 +1,18 @@
 import mem_edit
+from app.services.service import Service
 
-from app.helpers.data_store import DataStore
-
-class MemoryHandler:
+class MemoryHandler(Service):
     def __init__(self, service_name):
+        from app.helpers.data_store import DataStore
         self.process_data = None
         self.service_name = service_name
         self.memory = None
         #add this to the process service
 
         DataStore().get_service('process').add_process_service(self)
+
+    def kill(self):
+        pass
 
     def get_process_name(self):
         try:

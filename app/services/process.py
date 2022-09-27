@@ -1,6 +1,7 @@
 import time, os
 from threading import Thread, Event
 from app.helpers.exceptions import ProcessException
+from app.services.service import Service
 import mem_edit
 import psutil
 from app.helpers.memory_utils import is_process_valid
@@ -9,7 +10,7 @@ from falcon import Request, Response, MEDIA_JSON
 from pathlib import Path
 import fnmatch
 
-class Process:
+class Process(Service):
     def __init__(self):
         self.user = os.environ.get('USER', os.environ.get('USERNAME'))
         self.blacklist = self.load_blacklist()
@@ -29,12 +30,21 @@ class Process:
         }
 
         self.process_classes = []
+        self.thread_break = False
         self._process_monitor_event: Event = Event()
         self._process_monitor_thread: Thread = None
         self._pid_monitor_thread: Thread = Thread(target=self._pid_monitor)
         self._pid_monitor_event: Event = Event()
         self._pid_monitor_thread.start()
 
+    def kill(self):
+        self.thread_break = True
+        self._process_monitor_event.set()
+        self._pid_monitor_event.set()
+        if self._pid_monitor_thread and self._pid_monitor_thread.is_alive():
+            self._pid_monitor_thread.join()
+        if self._process_monitor_thread and self._process_monitor_thread.is_alive():
+            self._process_monitor_thread.join()
 
     def process(self, req: Request, resp: Response):
         resp.media = {}
@@ -163,7 +173,7 @@ class Process:
 
 
     def _process_monitor(self):
-        while self.open_pids:
+        while self.open_pids and not self.thread_break:
             pids = self.open_pids.copy().keys()
             for pid in pids:
                 if not is_process_valid(pid):
@@ -183,7 +193,7 @@ class Process:
             del self.service_pids[x]
 
     def _pid_monitor(self):
-        while True:
+        while not self.thread_break:
             current_pid_set = set(mem_edit.Process.list_available_pids())
             previous_pid_set = set(self.pids)
             difference = current_pid_set ^ previous_pid_set
@@ -227,6 +237,8 @@ class Process:
             return []
         bl = p.read_text().splitlines()
         return [b.strip() for b in bl]
+
+
 
 
 

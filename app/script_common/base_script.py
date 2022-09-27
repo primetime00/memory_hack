@@ -93,12 +93,14 @@ class BaseScript:
         pass
 
 
-    def process(self):
+    def search(self):
         for aob in self.aobs:
             if not aob.is_found():
                 self.find_address(aob)
             else:
                 self.compare_aob(aob)
+
+    def process(self):
         for item in self.list_ui.ui_list:
             if item.is_enabled():
                 item.process()

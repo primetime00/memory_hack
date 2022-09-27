@@ -54,6 +54,13 @@ class Search(MemoryHandler):
         self.error = ""
         self.progress = Progress()
 
+    def kill(self):
+        if self.search_thread and self.search_thread.is_alive():
+            DataStore().get_operation_control().control_break()
+            self.search_thread.join()
+        self.stop_updater()
+
+
     def release(self):
         self.reset()
 

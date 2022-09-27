@@ -2,17 +2,21 @@ import ctypes
 import logging
 import os
 from io import StringIO
-import time
 from pathlib import Path
 from threading import Thread
 
 from falcon import Request, Response, MEDIA_JSON
 from mem_edit import Process
 
-from app.helpers import DynamicHTML, MemoryHandler, DataStore
-from app.helpers import memory_utils, AOBWalk, AOBFile, Progress
+from app.helpers.memory_utils import value_to_hex, bytes_to_aobstr
+from app.helpers.aob_file import AOBFile
 from app.helpers.aob_utils import AOBUtilities
+from app.helpers.aob_walk import AOBWalk
+from app.helpers.data_store import DataStore
+from app.helpers.dyn_html import DynamicHTML
 from app.helpers.exceptions import AOBException, BreakException
+from app.helpers.memory_handler import MemoryHandler
+from app.helpers.progress import Progress
 
 
 class AOB(MemoryHandler):
@@ -52,6 +56,11 @@ class AOB(MemoryHandler):
 
         self.reset()
         self.delete_memory()
+
+    def kill(self):
+        if self.aob_work_thread and self.aob_work_thread.is_alive():
+            DataStore().get_operation_control().control_break()
+            self.aob_work_thread.join()
 
     def release(self):
         self.reset()
@@ -384,8 +393,6 @@ class AOB(MemoryHandler):
             aob_list = self.aob_file.get_aob_list()
             self.progress.add_constraint(0, len(aob_list), 0.90)
             for i in range(len(aob_list)-1, -1, -1):
-                if i % 1 == 0:
-                    time.sleep(0.05)
                 self.operation_control.test()
                 aob = aob_list[i]
                 self.progress.increment(1)
@@ -395,7 +402,7 @@ class AOB(MemoryHandler):
                     if bt == '??':
                         new_aob.append('??')
                     else:
-                        new_byte = memory_utils.value_to_hex(new_data[index], aob=True)
+                        new_byte = value_to_hex(new_data[index], aob=True)
                         new_aob.append('??' if new_byte != bt else bt)
                     index += 1
                 if all(x == '??' or x == '00' for x in new_aob):
@@ -419,10 +426,10 @@ class AOB(MemoryHandler):
                 if start_run == -1:
                     if new_data[i] == old_data[i] and not self.are_zeros(new_data, old_data, i, data_length): #if we have a match and they aren't x bytes of zeros
                         start_run = i
-                        current_string = [memory_utils.value_to_hex(new_data[i], aob=True)]
+                        current_string = [value_to_hex(new_data[i], aob=True)]
                 else:
                     if new_data[i] == old_data[i] and not self.are_zeros(new_data, old_data, i, data_length):  # if we have a match and they aren't x bytes of zeros
-                        current_string.append(memory_utils.value_to_hex(new_data[i], aob=True))
+                        current_string.append(value_to_hex(new_data[i], aob=True))
                     elif new_data[i] != old_data[i] and not self.are_diffs(new_data, old_data, i, data_length): #if we don't have a match, but we also don't have x bytes of mismatches
                         current_string.append('??')
                     else: #we have 5 or more mismatches coming up.  end the run
@@ -437,7 +444,7 @@ class AOB(MemoryHandler):
             if current_run >= self.smallest_run:
                 b_data = (ctypes.c_byte * current_run)(*new_data[start_run:start_run + current_run])
                 aob_table.append(
-                    {'offset': start_run + offset, 'size': current_run, 'aob': memory_utils.bytes_to_aobstr(b_data)})
+                    {'offset': start_run + offset, 'size': current_run, 'aob': bytes_to_aobstr(b_data)})
             current_run = 0
             return current_run
 
@@ -448,7 +455,7 @@ class AOB(MemoryHandler):
             if current_run == self.largest_run:
                 b_data = (ctypes.c_byte * current_run)(*new_data[start_run:start_run + current_run])
                 aob_table.append(
-                    {'offset': start_run + offset, 'size': current_run, 'aob': memory_utils.bytes_to_aobstr(b_data)})
+                    {'offset': start_run + offset, 'size': current_run, 'aob': bytes_to_aobstr(b_data)})
                 current_run = 0
             return current_run, start_run
 
