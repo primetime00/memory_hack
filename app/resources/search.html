@@ -2,8 +2,8 @@
   <h2>Search</h2>
 
   <ons-row>
-    <ons-col align="center" width="150px" class="col ons-col-inner">Process:</ons-col>
-    <ons-col align="center" width="25%" class="col ons-col-inner">
+    <ons-col align="center" width="25%" class="col ons-col-inner">Process:</ons-col>
+    <ons-col align="center" width="65%" class="col ons-col-inner">
       <select id="search_process" class="select-input select-input--material" onchange="search.on_process_changed(this.value)">
         <option value="_null"></option>
       </select>
@@ -14,8 +14,8 @@
   <div id="search_block" hidden>
     <div id="search_information_block">
       <ons-row id="row_search_type">
-        <ons-col align="center" width="150px" class="col ons-col-inner">Search Type:</ons-col>
-        <ons-col align="center" width="25%" class="col ons-col-inner">
+        <ons-col align="center" width="25%" class="col ons-col-inner">Search Type:</ons-col>
+        <ons-col align="center" width="65%" class="col ons-col-inner">
           <select name="search_type" id="search_type" class="select-input select-input--material" onchange="search.search_type_changed(this.value);">
             <option value="equal_to" selected>EQUAL TO</option>
             <option value="greater_than">GREATER THAN</option>
@@ -32,8 +32,8 @@
       </ons-row>
 
       <ons-row id="row_search_size">
-        <ons-col align="center" width="150px" class="col ons-col-inner">Search Size:</ons-col>
-        <ons-col align="center" width="25%" class="col ons-col-inner">
+        <ons-col align="center" width="25%" class="col ons-col-inner">Search Size:</ons-col>
+        <ons-col align="center" width="65%" class="col ons-col-inner">
           <select name="search_size" id="search_size" class="select-input select-input--material" onchange="search.search_size_changed(this.val)">
             <option value="byte_1">BYTE</option>
             <option value="byte_2">2 BYTES</option>
@@ -47,18 +47,18 @@
 
 
       <ons-row id="row_search_value">
-        <ons-col align="center" width="150px" class="col ons-col-inner">Value:</ons-col>
-        <ons-col align="center" width="25%" class="col ons-col-inner">
+        <ons-col align="center" width="25%" class="col ons-col-inner">Value:</ons-col>
+        <ons-col align="center" width="65%" class="col ons-col-inner">
           <input type="text" id="search_value" name="search_value" class="text-input text-input--material" oninput="search.search_value_changed(this.value)">
         </ons-col>
         <ons-col align="center" class="col ons-col-inner"></ons-col>
       </ons-row>
 
       <ons-row>
-        <ons-col align="center" width="150px" class="col ons-col-inner">
+        <ons-col align="center" width="25%" class="col ons-col-inner">
 
         </ons-col>
-        <ons-col align="center" width="25%" class="col ons-col-inner">
+        <ons-col align="center" width="65%" class="col ons-col-inner">
         <section class="spacer">
           <ons-button id="search_button" onclick="search.on_search_clicked()">Search</ons-button>
           <ons-button id="search_reset_button" onclick="search.on_reset_clicked()">Reset</ons-button>
@@ -70,15 +70,15 @@
 
     <div id="search_results">
       <ons-row id="search_progress_row" hidden>
-        <ons-col align="center" width="150px" class="col ons-col-inner"></ons-col>
-        <ons-col align="center" width="25%" class="col ons-col-inner">
+        <ons-col align="center" width="25%" class="col ons-col-inner"></ons-col>
+        <ons-col align="center" width="65%" class="col ons-col-inner">
           Searching...  <span id="search_progress"></span>%
         </ons-col>
         <ons-col align="center" class="col ons-col-inner"></ons-col>
       </ons-row>
       <ons-row id="search_initialize_unknown_row" hidden>
-        <ons-col align="center" width="150px" class="col ons-col-inner"></ons-col>
-        <ons-col align="center" width="25%" class="col ons-col-inner">
+        <ons-col align="center" width="25%" class="col ons-col-inner"></ons-col>
+        <ons-col align="center" width="65%" class="col ons-col-inner">
           Search initialized...
         </ons-col>
         <ons-col align="center" class="col ons-col-inner"></ons-col>
