@@ -1,6 +1,5 @@
 from app.helpers.data_store import DataStore
 from app.helpers.dyn_html import DynamicHTML
-from app.helpers.memory import Memory as MemoryEditor
 from app.helpers.aob_walk import AOBWalk
 from app.helpers.aob_value import AOBValue
 from app.helpers.memory_handler import MemoryHandler
