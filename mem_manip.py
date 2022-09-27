@@ -5,6 +5,7 @@ import falcon
 from falcon_multipart.middleware import MultipartMiddleware
 from app import ScriptResource, SearchResource, MainResource, AOBResource, InfoResource
 from app.main import initialize
+from app.helpers.data_store import DataStore
 from wsgiref.simple_server import make_server, WSGIRequestHandler
 
 
@@ -24,6 +25,9 @@ if __name__ == '__main__':
     app.add_route('/info', InfoResource())
     app.add_static_route('/resources/static', pt.joinpath("resources/static/").absolute())
 
-    with make_server('', 5000, app, handler_class=NoLoggingWSGIRequestHandler) as httpd:
-        print('Serving on port 5000...')
-        httpd.serve_forever()
+    try:
+        with make_server('', 5000, app, handler_class=NoLoggingWSGIRequestHandler) as httpd:
+            print('Serving on port 5000...')
+            httpd.serve_forever()
+    except KeyboardInterrupt:
+        DataStore().kill()
