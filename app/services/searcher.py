@@ -165,6 +165,9 @@ class Search(MemoryHandler):
             self.stop_updater()
             self.flow = self.FLOW_START
             resp.media['results'] = []
+            self.round = 0
+            self.value = ""
+            self.size = 'byte_4'
             resp.media['round'] = self.round
             resp.media['type'] = self.type
             resp.media['size'] = self.size

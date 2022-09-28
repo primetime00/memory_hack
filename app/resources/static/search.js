@@ -365,6 +365,7 @@
                     value_valid = true
                     row_search_value.hide()
                 }else {
+                    row_search_value.show()
                     if (has(result, "value") && has(result, "size")) {
                         inp_search_value.val(result.value)
                         validate_value(String(result.value), result.size)
