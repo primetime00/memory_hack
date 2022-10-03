@@ -47,10 +47,7 @@ gvfs-goa-volume-monitor
 gvfs-gphoto2-volume-monitor
 gvfs-mtp-volume-monitor
 gvfs-udisks2-volume-monitor
-gvfsd
-gvfsd-fuse
-gvfsd-metadata
-gvfsd-trash
+gvfsd*
 idle_inject*
 inet_frag_wq
 ipmi-msghandler
@@ -157,4 +154,5 @@ iwd
 steam
 sdhci
 sddm*
-
+dconf*
+sftp-*

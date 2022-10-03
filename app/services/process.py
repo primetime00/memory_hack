@@ -90,10 +90,12 @@ class Process(Service):
         for d in difference:
             if d in current_set:
                 # this is an addition
-                adds.append(self.pid_map[d]['name'])
+                if self.pid_map[d]['valid']:
+                    adds.append(self.pid_map[d]['name'])
             else:
                 # this is a removal
-                removes.append(self.pid_map_copy[d]['name'])
+                if self.pid_map_copy[d]['valid']:
+                    removes.append(self.pid_map_copy[d]['name'])
         return adds, removes
 
     def get_process(self, cls):
