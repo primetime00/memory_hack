@@ -47,8 +47,8 @@ diff -uN ./linux.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/si
                  if 'r' not in privileges:
 diff -uN ./linux_vm.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux_vm.py
 --- ./linux_vm.py	1969-12-31 19:00:00.000000000 -0500
-+++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux_vm.py	2022-10-03 14:35:00.782367790 -0400
-@@ -0,0 +1,125 @@
++++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux_vm.py	2022-10-03 17:04:25.842863060 -0400
+@@ -0,0 +1,126 @@
 +"""
 +Implementation of Process class for Linux with kernel >= 3.2
 +"""
@@ -63,7 +63,7 @@ diff -uN ./linux_vm.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10
 +import logging
 +
 +from .abstract import Process as AbstractProcess
-+from .utils import ctypes_buffer_t, MemEditError
++from .utils import ctypes_buffer_t
 +
 +
 +logger = logging.getLogger(__name__)
@@ -72,7 +72,7 @@ diff -uN ./linux_vm.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10
 +def _error_checker(result, function, arguments):
 +    if result == -1:
 +        errno = ctypes.get_errno()
-+        raise MemEditError(errno, os.strerror(errno))
++        raise OSError(errno, os.strerror(errno))
 +
 +class IOBuffer(ctypes.Structure): # iovec struct
 +    _fields_ = [("base", ctypes.c_void_p),
@@ -120,6 +120,7 @@ diff -uN ./linux_vm.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10
 +        write_process_memory(self.pid, base_address, write_buffer)
 +
 +    def read_memory(self, base_address: int, read_buffer: ctypes_buffer_t) -> ctypes_buffer_t:
++        print('reading memory at ', hex(base_address))
 +        return read_process_memory(self.pid, base_address, read_buffer)
 +
 +    def get_path(self) -> str:
