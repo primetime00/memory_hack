@@ -47,8 +47,8 @@ diff -uN ./linux.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/si
                  if 'r' not in privileges:
 diff -uN ./linux_vm.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux_vm.py
 --- ./linux_vm.py	1969-12-31 19:00:00.000000000 -0500
-+++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux_vm.py	2022-10-03 17:04:25.842863060 -0400
-@@ -0,0 +1,126 @@
++++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux_vm.py	2022-10-03 17:09:09.322194993 -0400
+@@ -0,0 +1,125 @@
 +"""
 +Implementation of Process class for Linux with kernel >= 3.2
 +"""
@@ -120,7 +120,6 @@ diff -uN ./linux_vm.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10
 +        write_process_memory(self.pid, base_address, write_buffer)
 +
 +    def read_memory(self, base_address: int, read_buffer: ctypes_buffer_t) -> ctypes_buffer_t:
-+        print('reading memory at ', hex(base_address))
 +        return read_process_memory(self.pid, base_address, read_buffer)
 +
 +    def get_path(self) -> str:
