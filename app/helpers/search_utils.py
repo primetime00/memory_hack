@@ -24,7 +24,6 @@ class SearchUtilities:
         self.mem = mem
         self.value = value
         self.results = results
-
         if op_control:
             self.op_control = op_control
         else:
@@ -102,12 +101,7 @@ class SearchUtilities:
         _start = ls[0][0]
         _end = ls[-1][1]
         for start, stop in self.mem.list_mapped_regions():
-            try:
-                region_buffer = (ctypes.c_byte * (stop - start))()
-                self.mem.read_memory(start, region_buffer)
-                total += (stop-start)
-            except OSError:
-                continue
+            total += (stop-start)
         return total, _start, _end
 
     def search_all_memory(self, filter_func = None):
