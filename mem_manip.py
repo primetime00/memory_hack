@@ -8,7 +8,6 @@ from app.main import initialize
 from app.helpers.data_store import DataStore
 from wsgiref.simple_server import make_server, WSGIRequestHandler
 
-
 class NoLoggingWSGIRequestHandler(WSGIRequestHandler):
     def log_message(self, format, *args):
         pass
