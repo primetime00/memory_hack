@@ -1,5 +1,7 @@
 import mem_edit
+
 from app.services.service import Service
+
 
 class MemoryHandler(Service):
     def __init__(self, service_name):

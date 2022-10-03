@@ -1,14 +1,18 @@
-import time, os
+import fnmatch
+import os
+import time
+from pathlib import Path
 from threading import Thread, Event
-from app.helpers.exceptions import ProcessException
-from app.services.service import Service
+
 import mem_edit
 import psutil
+from falcon import Request, Response, MEDIA_JSON
+
+from app.helpers.exceptions import ProcessException
 from app.helpers.memory_utils import is_process_valid
 from app.helpers.process_utils import is_pid_valid, can_attach
-from falcon import Request, Response, MEDIA_JSON
-from pathlib import Path
-import fnmatch
+from app.services.service import Service
+
 
 class Process(Service):
     def __init__(self):

@@ -1,9 +1,12 @@
-from app.helpers.exceptions import AOBException, BreakException
-from mem_edit import Process
-from app.helpers.data_store import DataStore
-from app.helpers.aob_file import AOBFile
-from app.helpers.memory_utils import value_to_bytes
 import ctypes
+
+from mem_edit import Process
+
+from app.helpers.aob_file import AOBFile
+from app.helpers.data_store import DataStore
+from app.helpers.exceptions import AOBException, BreakException
+from app.helpers.memory_utils import value_to_bytes
+
 
 class AOBWalk:
     BYTE = 1

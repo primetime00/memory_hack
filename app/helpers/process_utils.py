@@ -1,5 +1,8 @@
-import mem_edit, platform
-import psutil, os, zlib
+import mem_edit
+import os
+import platform
+import psutil
+import zlib
 
 inv = ['root', 'kernoops', 'systemd-resolve', 'systemd-timesync', 'avahi', 'rtkit', 'colord', 'messagebus', 'syslog']
 app = ['Isolated Web', 'WebExtensions', 'xdg-', 'Web Content', 'Socket Process', 'bwrap', 'Privileged Cont']

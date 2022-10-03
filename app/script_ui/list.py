@@ -1,6 +1,8 @@
 from typing import List
+
 from app.helpers.exceptions import ScriptException
 from app.script_ui._base import BaseUI
+
 
 class ListUI:
     def __init__(self):

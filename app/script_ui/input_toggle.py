@@ -1,5 +1,6 @@
-from app.script_ui.toggle import Toggle
 from app.script_ui.input import Input
+from app.script_ui.toggle import Toggle
+
 
 class InputToggle(Toggle):
 

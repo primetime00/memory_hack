@@ -1,13 +1,13 @@
-import os, sys, ctypes
+import ctypes
+import os
 import shutil
 import subprocess
+import sys
 import time
+import venv
 import zipfile
 from pathlib import Path
 from urllib import request
-
-import venv
-
 
 #run with: powershell -Command "(new-object System.Net.WebClient).DownloadFile('https://github.com/primetime00/memory_hack/raw/master/app/patches/win_install.py','install.py')"
 

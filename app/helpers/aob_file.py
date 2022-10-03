@@ -1,10 +1,10 @@
-from pathlib import Path
-import re
-from app.helpers.exceptions import AOBException
-from io import BytesIO
 import logging
+import re
+from io import BytesIO
+from pathlib import Path
 
-from typing import List
+from app.helpers.exceptions import AOBException
+
 
 class AOBFile():
     _pattern = re.compile('^Size: (\d+)\s*Offset: (-?[0-9A-F]+)\s*([0-9A-F ?]+)$')

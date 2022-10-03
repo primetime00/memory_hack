@@ -8,7 +8,6 @@ from threading import Thread
 from falcon import Request, Response, MEDIA_JSON
 from mem_edit import Process
 
-from app.helpers.memory_utils import value_to_hex, bytes_to_aobstr
 from app.helpers.aob_file import AOBFile
 from app.helpers.aob_utils import AOBUtilities
 from app.helpers.aob_walk import AOBWalk
@@ -16,6 +15,7 @@ from app.helpers.data_store import DataStore
 from app.helpers.dyn_html import DynamicHTML
 from app.helpers.exceptions import AOBException, BreakException
 from app.helpers.memory_handler import MemoryHandler
+from app.helpers.memory_utils import value_to_hex, bytes_to_aobstr
 from app.helpers.progress import Progress
 
 

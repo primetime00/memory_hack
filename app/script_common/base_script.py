@@ -3,14 +3,15 @@ import logging
 import mem_edit
 
 from app.script_common.aob import AOB
+from app.script_common.utilities import ScriptUtilities
 from app.script_ui._base import BaseUI
 from app.script_ui.list import ListUI
-from app.helpers.search_utils import SearchUtilities
 
 
 class BaseScript:
     def __init__(self):
-        self.searcher: SearchUtilities = None
+        self.memory: mem_edit.Process = None
+        self.utilities = ScriptUtilities()
         self.process_name:str = ""
         self.list_ui: ListUI = ListUI()
         self.build_ui()
@@ -25,10 +26,10 @@ class BaseScript:
         self.aobs.clear()
 
     def set_memory(self, mem: mem_edit.Process):
-        self.searcher = SearchUtilities(mem)
+        self.memory = mem
 
     def get_memory(self) -> mem_edit.Process:
-        return self.searcher.get_process_memory()
+        return self.memory
 
     def set_process(self, proc: str):
         self.process_name = proc
@@ -107,14 +108,14 @@ class BaseScript:
 
 
     def find_address(self, aob: AOB):
-        addrs = self.searcher.search_aob_all_memory(aob.get_aob_string())
+        addrs = self.utilities.search_aob_all_memory(self.memory, aob)
         if len(addrs) == 0:
             if aob.will_warn():
                 logging.warning('Cannot find aob {} [{}]'.format(aob.get_name(), aob.get_aob_string()))
             aob.clear_bases()
         elif len(addrs) > 1:
             logging.warning('aob has multiple matches [{}] {} [{}]'.format(len(addrs), aob.get_name(), aob.get_aob_string()))
-        aob.set_bases([x[0] for x in addrs])
+        aob.set_bases([x['address'] for x in addrs])
         self._on_aob_found(aob)
 
     def compare_aob(self, aob:AOB):
@@ -122,7 +123,7 @@ class BaseScript:
         bases_length = len(bases)
         for i in range(bases_length - 1, -1, -1):
             base = bases[i]
-            res, old, new = self.searcher.compare_aob(base, aob.get_aob_string())
+            res, old, new = self.utilities.compare_aob(base, aob)
             if not res:
                 bases.pop(i)
                 logging.warning('aob {} does not match!\n{}\n{}'.format(aob.get_name(), old, new))

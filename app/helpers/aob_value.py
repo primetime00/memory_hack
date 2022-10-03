@@ -2,6 +2,7 @@ import ctypes
 
 from app.helpers.exceptions import AOBException
 
+
 class AOBValue:
     def __init__(self, aob_string: str):
         self.aob_search_value = None

@@ -1,5 +1,3 @@
-from app.helpers.exceptions import ProgressException
-
 class Progress:
     def __init__(self, _min=0, _max=100):
         self.min = _min

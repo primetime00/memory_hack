@@ -60,6 +60,22 @@ def string_to_address(address_string: str, assume_hex=True):
         address = int(address_string, 10)
     return address
 
+def get_ctype(value: str, size: str):
+    if size == 'byte_1':
+        return ctypes.c_int8 if int(value) < 128 else ctypes.c_uint8
+    elif size == 'byte_2':
+        return ctypes.c_int16 if int(value) < 32768 else ctypes.c_uint16
+    elif size == 'byte_4':
+        return ctypes.c_int32 if int(value) < 2147483648 else ctypes.c_uint32
+    elif size == 'float':
+        return ctypes.c_float
+    return ctypes.c_ubyte
+
+
+
+
+
+
 
 typeToCType = {
     ('byte_1', True):   ctypes.c_int8,

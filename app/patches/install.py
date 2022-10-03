@@ -1,11 +1,12 @@
-import os, sys, stat
+import os
 import shutil
+import stat
 import subprocess
+import sys
+import venv
 import zipfile
 from pathlib import Path
 from urllib import request
-
-import venv
 
 #run with: python3 <(wget -qO- https://github.com/primetime00/memory_hack/raw/master/app/patches/install.py)
 
