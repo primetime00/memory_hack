@@ -156,3 +156,6 @@ sdhci
 sddm*
 dconf*
 sftp-*
+pressure-vessel*
+wine64
+wineserver

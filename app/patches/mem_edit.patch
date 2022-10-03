@@ -1,5 +1,30 @@
+diff -uN ./__init__.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/__init__.py
+--- ./__init__.py	2022-10-03 15:11:25.129656939 -0400
++++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/__init__.py	2022-10-03 15:09:09.665805370 -0400
+@@ -11,7 +11,7 @@
+     help(Process)
+ 
+ """
+-import platform
++import platform, os
+ 
+ from .utils import MemEditError
+ 
+@@ -26,6 +26,11 @@
+ if system == 'Windows':
+     from .windows import Process
+ elif system == 'Linux':
+-    from .linux import Process
++    kv = os.uname().release.split(".")
++    major, minor = int(kv[0]), int(kv[1])
++    if (os.geteuid() == 0) and ((major > 3) or (major == 3 and minor >= 2)):
++        from .linux_vm import Process
++    else:
++        from .linux import Process
+ else:
+     raise MemEditError('Only Linux and Windows are currently supported.')
 diff -uN ./linux.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux.py
---- ./linux.py	2022-09-27 14:23:25.263568093 -0400
+--- ./linux.py	2022-10-03 15:11:25.129656939 -0400
 +++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux.py	2022-09-13 10:48:40.633411290 -0400
 @@ -58,7 +58,9 @@
  
@@ -20,9 +45,138 @@ diff -uN ./linux.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/si
                  bounds, privileges = line.split()[0:2]
  
                  if 'r' not in privileges:
+diff -uN ./linux_vm.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux_vm.py
+--- ./linux_vm.py	1969-12-31 19:00:00.000000000 -0500
++++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux_vm.py	2022-10-03 14:35:00.782367790 -0400
+@@ -0,0 +1,125 @@
++"""
++Implementation of Process class for Linux with kernel >= 3.2
++"""
++
++from typing import List, Tuple, Optional
++from os import strerror
++import os
++import os.path
++import signal
++import ctypes
++import ctypes.util
++import logging
++
++from .abstract import Process as AbstractProcess
++from .utils import ctypes_buffer_t, MemEditError
++
++
++logger = logging.getLogger(__name__)
++
++
++def _error_checker(result, function, arguments):
++    if result == -1:
++        errno = ctypes.get_errno()
++        raise MemEditError(errno, os.strerror(errno))
++
++class IOBuffer(ctypes.Structure): # iovec struct
++    _fields_ = [("base", ctypes.c_void_p),
++                ("size", ctypes.c_size_t)]
++
++_libc = ctypes.CDLL(ctypes.util.find_library('c'), use_errno=True)
++_read_process_memory = _libc.process_vm_readv
++_read_process_memory.restype = ctypes.c_ssize_t
++_read_process_memory.errcheck = _error_checker
++_read_process_memory.args = [ctypes.c_ulong, ctypes.POINTER(IOBuffer),
++                            ctypes.c_ulong, ctypes.POINTER(IOBuffer),
++                            ctypes.c_ulong, ctypes.c_ulong]
++
++_write_process_memory = _libc.process_vm_writev
++_write_process_memory.restype = ctypes.c_ssize_t
++_write_process_memory.errcheck = _error_checker
++_write_process_memory.args = [ctypes.c_ulong, ctypes.POINTER(IOBuffer),
++                            ctypes.c_ulong, ctypes.POINTER(IOBuffer),
++                            ctypes.c_ulong, ctypes.c_ulong]
++
++def read_process_memory(pid: int, base: int, buffer: ctypes_buffer_t) -> ctypes_buffer_t:
++    size = ctypes.sizeof(buffer)
++    local = IOBuffer(ctypes.addressof(buffer), size)
++    remote = IOBuffer(base, size)
++    res_size = _read_process_memory(pid, ctypes.byref(local), 1, ctypes.byref(remote), 1, 0)
++    return buffer
++
++def write_process_memory(pid: int, base: int, buffer: ctypes_buffer_t) -> ctypes_buffer_t:
++    size = ctypes.sizeof(buffer)
++    local = IOBuffer(ctypes.addressof(buffer), size)
++    remote = IOBuffer(base, size)
++    res_size = _write_process_memory(pid, ctypes.byref(local), 1, ctypes.byref(remote), 1, 0)
++    return res_size
++
++class Process(AbstractProcess):
++    pid = None
++
++    def __init__(self, process_id: int):
++        self.pid = process_id
++
++    def close(self):
++        self.pid = None
++
++    def write_memory(self, base_address: int, write_buffer: ctypes_buffer_t):
++        write_process_memory(self.pid, base_address, write_buffer)
++
++    def read_memory(self, base_address: int, read_buffer: ctypes_buffer_t) -> ctypes_buffer_t:
++        return read_process_memory(self.pid, base_address, read_buffer)
++
++    def get_path(self) -> str:
++        try:
++            with open('/proc/{}/cmdline', 'rb') as f:
++                return f.read().decode().split('\x00')[0]
++        except FileNotFoundError:
++            return ''
++
++    @staticmethod
++    def list_available_pids() -> List[int]:
++        pids = []
++        for pid_str in os.listdir('/proc'):
++            try:
++                pids.append(int(pid_str))
++            except ValueError:
++                continue
++        return pids
++
++    @staticmethod
++    def get_pid_by_name(target_name: str) -> Optional[int]:
++        for pid in Process.list_available_pids():
++            try:
++                logger.debug('Checking name for pid {}'.format(pid))
++                with open('/proc/{}/cmdline'.format(pid), 'rb') as cmdline:
++                    path = cmdline.read().decode().split('\x00')[0]
++            except FileNotFoundError:
++                continue
++
++            name = os.path.basename(path)
++            logger.debug('Name was "{}"'.format(name))
++            if path is not None and name == target_name:
++                return pid
++
++        logger.info('Found no process with name {}'.format(target_name))
++        return None
++
++    def list_mapped_regions(self, writeable_only: bool = True) -> List[Tuple[int, int]]:
++        regions = []
++        with open('/proc/{}/maps'.format(self.pid), 'r') as maps:
++            for line in maps:
++                if "/dev/dri/" in line:
++                    continue
++                bounds, privileges = line.split()[0:2]
++
++                if 'r' not in privileges:
++                    continue
++
++                if writeable_only and 'w' not in privileges:
++                    continue
++
++                start, stop = (int(bound, 16) for bound in bounds.split('-'))
++                regions.append((start, stop))
++        return regions
 Common subdirectories: ./__pycache__ and /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/__pycache__
 diff -uN ./windows.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/windows.py
---- ./windows.py	2022-09-27 14:23:25.267568087 -0400
+--- ./windows.py	2022-10-03 15:11:25.129656939 -0400
 +++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/windows.py	2022-09-16 16:00:19.662437213 -0400
 @@ -134,6 +134,7 @@
  
