@@ -12,6 +12,9 @@ class AOBException(MemManipException):
 class ProgressException(MemManipException):
     pass
 
+class CodelistException(MemManipException):
+    pass
+
 class ProcessException(MemManipException):
     pass
 class BreakException(MemManipException):

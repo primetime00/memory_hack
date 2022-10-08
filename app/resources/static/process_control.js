@@ -35,17 +35,22 @@
             request_id += 1
             if (result.hasOwnProperty('set')) {
                 search.on_update_process_list(result.set, []);
+                codelist.on_update_process_list(result.set, []);
                 aob.on_update_process_list(result.set, []);
             }
             else {
                 if (result.add.length > 0 || result.remove.length > 0) {
                     search.on_update_process_list(result.add, result.remove);
+                    codelist.on_update_process_list(result.add, result.remove);
                     aob.on_update_process_list(result.add, result.remove);
                 }
             }
             for (const service of result.services) {
                 if (service.name === 'search') {
                     search.on_update_selected_process(service.process);
+                }
+                else if (service.name === 'codelist') {
+                    codelist.on_update_selected_process(service.process);
                 }
                 else if (service.name === 'aob') {
                     aob.on_update_selected_process(service.process);

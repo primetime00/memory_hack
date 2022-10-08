@@ -6,6 +6,7 @@ from app.services.aob import AOB
 from app.services.process import Process
 from app.services.script import Script
 from app.services.searcher import Search
+from app.services.codes import CodeList
 
 
 def initialize():
@@ -14,6 +15,7 @@ def initialize():
     data_store.set_service('search', Search())
     data_store.set_service('aob', AOB())
     data_store.set_service('script', Script())
+    data_store.set_service('codelist', CodeList())
 
 
 
@@ -66,6 +68,18 @@ class AOBResource:
         if resp.status == 200:
             resp.media['process'] = aob_instance.get_process_name()
 
+
+class CodeListResource:
+    def on_get(self, req, resp):
+        codelist_instance = DataStore().get_service('codelist')
+        resp.content_type = falcon.MEDIA_HTML
+        resp.text = codelist_instance.html_main()
+
+    def on_post(self, req: falcon.Request, resp: falcon.Response):
+        codelist_instance = DataStore().get_service('codelist')
+        codelist_instance.process(req, resp)
+        if resp.status == 200:
+            resp.media['process'] = codelist_instance.get_process_name()
 
 class InfoResource:
     data_store = DataStore()

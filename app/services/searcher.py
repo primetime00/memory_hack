@@ -211,6 +211,7 @@ class Search(MemoryHandler):
         self.search_thread = Thread(target=self._search, args=[searcher])
         self.previous_stats['flow'] = self.flow
         self.previous_stats['round'] = self.round
+        print(self.search_results.copy())
         self.previous_stats['results'] = self.search_results.copy()
         self.flow = self.FLOW_SEARCHING
         resp.media['progress'] = 0

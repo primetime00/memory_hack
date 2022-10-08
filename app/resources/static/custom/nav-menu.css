@@ -1,0 +1,96 @@
+.navigation {
+    position: relative;
+    background-color: #555;
+    border-radius: 5px;
+    font-size: 0;
+    margin-left: 5px;
+    padding: 2px;
+    width: 1px;
+}
+
+.navigation:before {
+    position: absolute;
+    left: -8px;
+    top: 0;
+    content: '';
+
+    background-color: #555;
+    border-radius: 5px;
+    font-size: 0;
+    padding: 2px;
+    width: 1px;
+}
+
+.navigation:after {
+    position: absolute;
+    left: 8px;
+    top: 0;
+    content: '';
+    background-color: #555;
+    border-radius: 5px;
+    font-size: 0;
+    padding: 2px;
+    width: 1px;
+}
+
+button.tp {
+    background-color: transparent;
+    background-repeat: no-repeat;
+    border: none;
+    cursor: pointer;
+    overflow: hidden;
+    outline: none;
+    min-width: 35px;
+    min-height: 22px;
+}
+
+
+.menu-nav {
+    display: flex;
+    justify-content: space-between;
+}
+
+.menu-item {
+    color: #FCC;
+    padding: 3px;
+}
+
+.three-dots:after {
+    //cursor: pointer;
+    color: #444;
+    content: '\2807';
+    font-size: 20px;
+    padding: 0 5px;
+}
+
+a {
+    text-decoration: none;
+    color: white;
+}
+
+a div {
+    padding: 2px;
+}
+
+.dropdown {
+    position: absolute;
+    right: 50px;
+    background-color: #aaa;
+
+    outline: none;
+    opacity: 0;
+    z-index: -1;
+    max-height: 0;
+    transition: opacity 0.1s, z-index 0.1s, max-height: 5s;
+}
+
+.dropdown-container:focus {
+    outline: none;
+}
+
+.dropdown-container:focus .dropdown {
+    opacity: 1;
+    z-index: 100;
+    max-height: 100vh;
+    transition: opacity 0.2s, z-index 0.2s, max-height: 0.2s;
+}

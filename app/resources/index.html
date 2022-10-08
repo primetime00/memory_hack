@@ -3,6 +3,7 @@
 <body>
   <link rel="stylesheet" href="resources/static/onsenui.min.css">
   <link rel="stylesheet" href="resources/static/onsen-css-components.min.css">
+  <link rel="stylesheet" href="resources/static/custom/nav-menu.css">
 
   <script src="resources/static/onsenui.min.js"></script>
   <script src="resources/static/jquery.js" type="text/javascript"></script>
@@ -17,7 +18,7 @@
     return jQuery.ajax({
         url: url,
         type: "POST",
-/*        contentType:"application/json; charset=utf-8",*/
+        //contentType:"application/json; charset=utf-8",
         dataType: "json",
         data: data,
         success: callback
@@ -31,7 +32,7 @@
 
   $(document).on('init', function(event) {
     load_count += 1;
-    if (load_count >= 4) {
+    if (load_count >= 5) {
       main_page_ready(event);
     }
   });
@@ -46,6 +47,7 @@
   main_page_ready = function(event) {
     process_control.ready()
     search.ready()
+    codelist.ready()
     aob.ready()
     script.ready()
   };
@@ -77,10 +79,10 @@ input.value {
   border-left: 1px solid #CCCCCC;
 }
 .col {
-/*
-  border: 1px solid #ccc;
-  background: #fff;
-  */
+
+  //border: 1px solid #ccc;
+  //background: #fff;
+
   overflow: hidden;
   padding: 4px;
   color: #999;
@@ -89,6 +91,15 @@ input.value {
 .page__content {
   background-color: #f6f6f6;
   padding: 8px;
+}
+
+.codeblock {
+  margin-bottom: 5px;
+  margin-top: 5px;
+}
+
+.text-full {
+  width: 95%;
 }
 
 .spacer > * + * {
@@ -107,12 +118,15 @@ div .input_item{
   </style>
 
   <ons-page on-show="main_page_ready(event)">
+
   <ons-toolbar>
     <div class="center">MemMinip</div>
   </ons-toolbar>
 
   <ons-tabbar position="auto">
     <ons-tab page="/search" label="Search" icon="md-search" #search_active#>
+    </ons-tab>
+    <ons-tab page="/codelist" label="Codes" icon="md-search" active #codelist_active#>
     </ons-tab>
     <ons-tab page="/aob" label="AOB" icon="md-trending-up" #aob_active#>
     </ons-tab>
@@ -131,8 +145,58 @@ div .input_item{
     </div>
   </ons-dialog>
 </template>
+
+  <ons-template id="code_menu">
+    <ons-popover cancelable direction="down">
+      <ons-list id="popover-list">
+        <ons-list-item class="more-options" tappable>
+          <div class="center">Delete</div>
+        </ons-list-item>
+        <ons-list-item class="more-options" tappable>
+          <div class="center">Copy</div>
+        </ons-list-item>
+      </ons-list>
+    </ons-popover>
+  </ons-template>
+
+  <ons-template id="code_save">
+    <ons-popover cancelable direction="down">
+      <ons-row>
+        <ons-col align="center" width="80px" class="col ons-col-inner">
+          Save As:
+        </ons-col>
+        <ons-col align="center" width="130px" class="col ons-col-inner">
+          <input type="text" name="save_file" class="text-input text-input--material text-full">
+        </ons-col>
+      </ons-row>
+      <ons-row>
+        <ons-col align="center" width="50%" class="col ons-col-inner">
+          <ons-button modifier="quiet" name="save_button">Save</ons-button>
+        </ons-col>
+        <ons-col align="center" width="50%" class="col ons-col-inner">
+          <ons-button modifier="quiet" name="cancel_button">Cancel</ons-button>
+        </ons-col>
+      </ons-row>
+    </ons-popover>
+  </ons-template>
+
+  <template id="delete_code_file">
+    <ons-alert-dialog id="delete_code_file_dialog" modifier="rowfooter">
+      <div class="alert-dialog-title">Delete</div>
+      <div class="alert-dialog-content">
+        Do you want to delete <span id="delete_code_file_name"></span>?
+      </div>
+      <div class="alert-dialog-footer">
+        <ons-alert-dialog-button name="cancel_button">Cancel</ons-alert-dialog-button>
+        <ons-alert-dialog-button name="delete_button">Delete</ons-alert-dialog-button>
+      </div>
+    </ons-alert-dialog>
+  </template>
+
+
   <script src="resources/static/process_control.js" type="text/javascript"></script>
   <script src="resources/static/search.js" type="text/javascript"></script>
+  <script src="resources/static/codelist.js" type="text/javascript"></script>
   <script src="resources/static/aob.js" type="text/javascript"></script>
   <script src="resources/static/script.js" type="text/javascript"></script>
 </body>

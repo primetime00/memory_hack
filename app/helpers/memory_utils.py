@@ -1,4 +1,5 @@
 import ctypes
+import struct
 
 import psutil
 
@@ -70,6 +71,47 @@ def get_ctype(value: str, size: str):
     elif size == 'float':
         return ctypes.c_float
     return ctypes.c_ubyte
+
+def get_ctype_from_size(size: str):
+    if size == 'byte_1':
+        return (ctypes.c_byte*1)()
+    elif size == 'byte_2':
+        return (ctypes.c_byte*2)()
+    elif size == 'byte_4':
+        return (ctypes.c_byte*4)()
+    elif size == 'float':
+        return (ctypes.c_byte*4)()
+    return (ctypes.c_byte*1)()
+
+def get_ctype_from_buffer(buffer: ctypes.Array, size: str, signed: bool):
+    if size == 'byte_2':
+        return ctypes.c_int16.from_buffer(buffer) if signed else ctypes.c_uint16.from_buffer(buffer)
+    elif size == 'byte_4':
+        return ctypes.c_int32.from_buffer(buffer) if signed else ctypes.c_uint32.from_buffer(buffer)
+    elif size == 'float':
+        return ctypes.c_float.from_buffer(buffer)
+    else:
+        return ctypes.c_int8.from_buffer(buffer) if signed else ctypes.c_uint8.from_buffer(buffer)
+
+def get_ctype_from_int_value(value:int, size:str, signed: bool):
+    if size == 'byte_2':
+        return ctypes.c_int16(value) if signed else ctypes.c_uint16(value)
+    elif size == 'byte_4':
+        return ctypes.c_int32(value) if signed else ctypes.c_uint32(value)
+    else:
+        return ctypes.c_int8(value) if signed else ctypes.c_uint8(value)
+
+
+
+def limit(value, size:str):
+    if size == 'byte_1':
+        return min(value, 255)
+    elif size == 'byte_2':
+        return min(value, 65535)
+    elif size == 'byte_4':
+        return min(value, 4294967295)
+    else:
+        return value
 
 
 

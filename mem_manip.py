@@ -3,7 +3,7 @@ import os
 import falcon
 
 from falcon_multipart.middleware import MultipartMiddleware
-from app import ScriptResource, SearchResource, MainResource, AOBResource, InfoResource
+from app import ScriptResource, SearchResource, MainResource, AOBResource, InfoResource, CodeListResource
 from app.main import initialize
 from app.helpers.data_store import DataStore
 from wsgiref.simple_server import make_server, WSGIRequestHandler
@@ -19,6 +19,7 @@ if __name__ == '__main__':
     initialize()
     app.add_route('/', MainResource())
     app.add_route('/search', SearchResource())
+    app.add_route('/codelist', CodeListResource())
     app.add_route('/script', ScriptResource())
     app.add_route('/aob', AOBResource())
     app.add_route('/info', InfoResource())
