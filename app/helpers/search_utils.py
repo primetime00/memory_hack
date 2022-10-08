@@ -232,7 +232,7 @@ class SearchUtilities:
                     return results
                 mem_value = value.get_type().from_buffer(region_buffer, i)
                 cap_value = value.get_type().from_buffer(capture_buffer, i)
-                if cmp_func(mem_value, cap_value, value.get_value()):
+                if cmp_func(mem_value, cap_value, value):
                     results.add(start+i, value.get_type().from_buffer_copy(region_buffer, i))
                 if i % 8000 == 0 or i == size-1:
                     shared[write_location:write_location+8] = (last_cap+i).to_bytes(8, sys.byteorder, signed=False)
