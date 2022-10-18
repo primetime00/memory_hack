@@ -4,8 +4,11 @@
     var div_codelist_block;
     var row_codelist_loadsave;
     var sel_codelist_file;
+    var btn_add_code;
+    var btn_paste_code;
 
     var code_list;
+    var code_data;
 
     //Public Method
     codelist.on_process_changed = function(process) {
@@ -47,6 +50,10 @@
     codelist.ready = function()  {
         sel_codelist_process = $("#codelist_process");
         div_codelist_block = $("#codelist_block");
+        btn_add_code = $("#add_new_code_button");
+        btn_add_code[0].hide()
+        btn_paste_code = $("#paste_new_code_button");
+        btn_paste_code[0].hide()
         row_codelist_loadsave = $("#row_codelist_loadsave");
         sel_codelist_file = $("#codelist_file_selection")
         component_list.forEach(item => {
@@ -99,29 +106,62 @@
     codelist.option_clicked = function(list_id, code_index) {
         switch (list_id) {
             case 0:
+                var source = code_data[code_index]['Source']
+                var dt = {'title': 'Edit Code', 'index': code_index}
+                if (source === 'address') {
+                    dt['address'] = code_data[code_index]['Address'].toString(16).toUpperCase()
+                } else {
+                    dt['aob'] = code_data[code_index]['AOB']
+                    dt['offset'] = code_data[code_index]['Offset']
+                }
+                component_code_dialog.create(dt)
+               break
+            case 1:
+                var source = code_data[code_index]['Source']
+                var dt = {'title': 'Copy Code'}
+                if (source === 'address') {
+                    dt['address'] = code_data[code_index]['Address'].toString(16).toUpperCase()
+                } else {
+                    dt['aob'] = code_data[code_index]['AOB']
+                    dt['offset'] = code_data[code_index]['Offset']
+                }
+                component_code_dialog.create(dt)
+               break
+            case 2:
                 $.send('/codelist', { 'command': "CODELIST_DELETE_CODE", 'index': code_index}, on_codelist_status);
                 break
-            case 1:
-               break
         }
     }
 
     codelist.on_save_clicked = function(ele) {
         console.log(component_codelist_file.file)
         ons.createElement('code_save', { append: true }).then(function(popover) {
-            $(popover).find('input[name="save_file"').val(component_codelist_file.file)
-            $(popover).find('ons-button[name="cancel_button"').bind('click', (event) => {popover.hide()})
-            $(popover).find('ons-button[name="save_button"').bind('click', (event) => {
-                var file = $(popover).find('input[name="save_file"').val()
+            var fname = component_codelist_file.file === '_null' ? '' : component_codelist_file.file
+            $(popover).find('input[name="save_file"]').val(fname)
+            $(popover).find('input[name="save_file"]').bind('input', (event) => {
+                if (event.target.value.length > 0) {
+                    $(popover).find('ons-button[name="save_button"]').removeAttr('disabled')
+                } else {
+                    $(popover).find('ons-button[name="save_button"]').attr('disabled', 'disabled')
+                }
+            })
+            $(popover).find('ons-button[name="cancel_button"]').bind('click', (event) => {popover.hide()})
+
+            if (fname.length == 0) {
+                $(popover).find('ons-button[name="save_button"]').attr('disabled', 'disabled')
+            }
+            $(popover).find('ons-button[name="save_button"]').bind('click', (event) => {
+                var file = $(popover).find('input[name="save_file"]').val()
                 $.send('/codelist', { 'command': "CODELIST_SAVE", 'file': file}, on_codelist_status);
                 popover.hide()
             })
+
+
             popover.show("#"+"codelist_save_button");
         });
     }
 
     codelist.on_delete_clicked = function(ele) {
-        console.log(component_codelist_file.file)
         ons.createElement('delete_code_file', { append: true }).then(function(dialog) {
             $(dialog).find('#delete_code_file_name').text(component_codelist_file.file)
             $(dialog).find('ons-alert-dialog-button[name="cancel_button"]').bind('click', () => {dialog.hide()})
@@ -133,6 +173,32 @@
         });
     }
 
+    codelist.on_add_clicked = function(ele) {
+        component_code_dialog.create({})
+    }
+
+    codelist.get_dialog = function() {
+        return component_code_dialog
+    }
+
+    codelist.clipboard_data_copied = function(data) {
+        btn_paste_code[0].show()
+    }
+
+    codelist.clipboard_data_pasted = function(data) {
+        var cmd = { 'command': "CODELIST_ADD_CODE", 'type': has(data, 'address') ? 'address' : 'aob',
+                              'address': has(data, 'address') ? parseInt(data.address).toString(16) : 0,
+                              'aob': has(data, 'aob') ? data.aob : 0,
+                              'offset': has(data, 'offset') ? data.offset : 0 }
+
+        $.send('/codelist', cmd, on_codelist_status);
+    }
+
+    codelist.clipboard_data_cleared = function() {
+        btn_paste_code[0].hide()
+
+    }
+
 
     //Private Methods
     function on_codelist_ready() {
@@ -141,10 +207,11 @@
 
     function on_codelist_status(result) {
         if (has(result, 'file_data')) {
-            console.log('GOT IT')
+            code_data = result.file_data
             component_code_list.empty()
             if (result.file_data === null) {
                 code_list = undefined
+                code_data = []
             } else {
                 code_list = component_code_list
                 code_list.setup(result, code_list)
@@ -700,6 +767,109 @@
         }
     }
 
+    var component_code_dialog = {
+        'id': 'add_code_dialog',
+        'obj': undefined,
+        'setup': (result, _this) => {
+        },
+        'update': (_this) => {console.log('code name update')},
+        'setup': (data) => {
+            if (has(data, 'title')) {
+                component_code_dialog.obj.find('p').text(data.title)
+            } else {
+                component_code_dialog.obj.find('p').text('Add Code')
+            }
+            if (has(data, 'index')) {
+                component_code_dialog.index = data.index
+                $("#add_code_button").text('Ok')
+            } else {
+                component_code_dialog.index = -1
+                $("#add_code_button").text('Add')
+            }
+            $("#add_code_address").val('')
+            $("#add_code_aob").val('')
+            $("#add_code_offset").val('')
+            if (has(data, 'address')) {
+                $("#add_code_type").val('address')
+                $("#add_code_address").val(data.address)
+                $("#add_code_address").parents("ons-row").show()
+                $("#add_code_aob").parents("ons-row").hide()
+                $("#add_code_offset").parents("ons-row").hide()
+            } else if (has(data, 'aob')) {
+                $("#add_code_type").val('aob')
+                $("#add_code_aob").val(data.aob)
+                $("#add_code_offset").val(data.offset)
+                $("#add_code_address").parents("ons-row").hide()
+                $("#add_code_aob").parents("ons-row").show()
+                $("#add_code_offset").parents("ons-row").show()
+            } else {
+                $("#add_code_type").val('address')
+                $("#add_code_aob").parents("ons-row").hide()
+                $("#add_code_offset").parents("ons-row").hide()
+                $("#add_code_address").parents("ons-row").show()
+            }
+            component_code_dialog.validate()
+        },
+        'create': (data) => {
+            if (component_code_dialog.obj === undefined) {
+                ons.createElement('add_code', { append: true })
+                .then(function(dialog) {
+                    component_code_dialog.obj = $(dialog)
+                    component_code_dialog.setup(data)
+                    dialog.show();
+                });
+            } else {
+                component_code_dialog.setup(data)
+                component_code_dialog.obj[0].show()
+            }
+        },
+        'type_changed': () => {
+            if ($("#add_code_type").val() === 'address') {
+                $("#add_code_aob").parents("ons-row").hide()
+                $("#add_code_offset").parents("ons-row").hide()
+                $("#add_code_address").parents("ons-row").show()
+            } else {
+                $("#add_code_address").parents("ons-row").hide()
+                $("#add_code_aob").parents("ons-row").show()
+                $("#add_code_offset").parents("ons-row").show()
+            }
+            component_code_dialog.validate()
+        },
+        'index': -1,
+        'validate': () => {
+            if ($("#add_code_type").val() === 'address') {
+                var addr = $("#add_code_address").val()
+                if (/^[0-9A-F]{5,16}$/i.test(addr)) {
+                    $("#add_code_button").removeAttr('disabled')
+                } else {
+                    $("#add_code_button").attr('disabled', 'disabled')
+                }
+            } else {
+                var aob = $("#add_code_aob").val()
+                var offset = $("#add_code_offset").val()
+                if (/^(?:([0-9A-F]{2}|\?{2}) )*([0-9A-F]{2}|\?{2})$/i.test(aob) && /^-?[0-9A-F]{1,12}$/i.test(offset)) {
+                    $("#add_code_button").removeAttr('disabled')
+                } else {
+                    $("#add_code_button").attr('disabled', 'disabled')
+                }
+            }
+        },
+        'on_cancel': () => {
+            component_code_dialog.obj[0].hide()
+        },
+        'on_add': () => {
+            var cmd = { 'command': "CODELIST_ADD_CODE", 'type': $("#add_code_type").val(),
+                                  'address': $("#add_code_address").val(), 'aob': $("#add_code_aob").val(),
+                                  'offset': $("#add_code_offset").val() }
+            if (component_code_dialog.index >= 0) {
+                cmd['index'] = component_code_dialog.index
+            }
+
+            $.send('/codelist', cmd, on_codelist_status);
+            component_code_dialog.obj[0].hide()
+        }
+    }
+
 
     var component_list = [component_codelist_file, component_codelist_save, component_codelist_delete, component_code_list]
 
@@ -708,11 +878,15 @@
         if (process_name === '_null') {
             process_name = ''
         }
+        btn_add_code.removeClass('hide-fab')
+        btn_paste_code.removeClass('hide-fab')
         if (process_name.length > 0) {
             div_codelist_block.show()
+            btn_add_code[0].show()
             on_codelist_ready()
         } else {
             div_codelist_block.hide()
+            btn_add_code[0].hide()
         }
         component_code_list.empty()
     }

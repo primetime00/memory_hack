@@ -161,6 +161,14 @@
       -->
     </ons-list>
   </div>
+    <ons-fab id="add_new_code_button" class="hide-fab" position="bottom right" onclick="codelist.on_add_clicked(this)">
+      <ons-icon icon="md-plus"></ons-icon>
+    </ons-fab>
+
+    <ons-fab id="paste_new_code_button" class="hide-fab" style="margin-bottom:90px;" position="bottom right" onclick="document.clipboard.paste(codelist)">
+      <ons-icon icon="md-paste"></ons-icon>
+    </ons-fab>
+
 
 </ons-page>
 

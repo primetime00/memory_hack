@@ -1,25 +1,17 @@
 import copy
 import ctypes
-import logging
+import json
 import os
-import traceback
+from pathlib import Path
 from threading import Thread, Lock, Event
 from typing import Union
-from pathlib import Path
-import json
-import copy
 
 from falcon import Request, Response
 from falcon.app_helpers import MEDIA_JSON
 
-from app.helpers import DynamicHTML, MemoryHandler, DataStore, Progress
+from app.helpers import DynamicHTML, MemoryHandler
 from app.helpers import memory_utils
-from app.helpers.aob_value import AOBValue
-from app.helpers.exceptions import CodelistException, BreakException
-from app.helpers.search_results import SearchResults
-from app.helpers.search_utils import SearchUtilities
-from app.helpers.search_value import SearchValue
-
+from app.helpers.exceptions import CodelistException
 from app.helpers.memory_utils import get_ctype
 from app.script_common.aob import AOB
 from app.script_common.utilities import ScriptUtilities
@@ -43,6 +35,7 @@ class CodeList(MemoryHandler):
             "CODELIST_DELETE_CODE": self.handle_delete_code,
             "CODELIST_SAVE": self.handle_save,
             "CODELIST_DELETE_LIST": self.handle_delete_list,
+            "CODELIST_ADD_CODE": self.handle_add_code,
         }
         self.update_thread: Thread = None
         self.update_event: Event = None
@@ -95,14 +88,15 @@ class CodeList(MemoryHandler):
         resp.media['repeat'] = 1000 if self.code_data else 0
         if self.code_data:
             resp.media['results'] = []
-            for i in range(0, len(self.code_data)):
-                code = self.code_data[i]
-                result = self.get_results()[i]
-                value = str(result['Value'].value) if result['Value'] is not None else '??'
-                res = {'Value': value}
-                if 'Addresses' in result:
-                    res['Addresses'] = result['Addresses']
-                resp.media['results'].append(res)
+            with self.update_lock:
+                results = self.get_results()
+                for i in range(0, len(results)):
+                    result = results[i]
+                    value = str(result['Value'].value) if result['Value'] is not None else '??'
+                    res = {'Value': value}
+                    if 'Addresses' in result:
+                        res['Addresses'] = result['Addresses']
+                    resp.media['results'].append(res)
 
     def handle_write(self, req: Request, resp: Response):
         index = int(req.media['index'])
@@ -135,21 +129,20 @@ class CodeList(MemoryHandler):
         index = int(req.media['index'])
         if index < 0 or index >= len(self.code_data):
             raise CodelistException("Can't write code that isn't in the list")
-        value = copy.copy(self.get_results()[index])
-        code = self.code_data[index]
-        code['Freeze'] = frozen
-        if frozen:
-            self.freeze_map[index] = {'value': value['Value'], 'index': index, 'code': code}
-        else:
-            if index in self.freeze_map:
-                del self.freeze_map[index]
+        with self.update_lock:
+            value = copy.copy(self.get_results()[index])
+            code = self.code_data[index]
+            code['Freeze'] = frozen
+            if frozen:
+                self.freeze_map[index] = {'value': value['Value'], 'index': index, 'code': code}
+            else:
+                if index in self.freeze_map:
+                    del self.freeze_map[index]
 
         if not (self.freeze_thread and self.freeze_thread.is_alive()) and self.freeze_map:
             self.start_freezer()
         if not self.freeze_map:
             self.stop_freezer()
-
-
 
 
     def handle_size(self, req: Request, resp: Response):
@@ -174,6 +167,60 @@ class CodeList(MemoryHandler):
         self.code_data.pop(index)
         resp.media['file_data'] = self.code_data
 
+    def handle_add_code(self, req: Request, resp: Response):
+        tp = req.media['type']
+        if not self.code_data:
+            self.code_data = []
+        with self.update_lock:
+            if 'index' in req.media:
+                index = int(req.media['index'])
+                cd = self.code_data[index]
+                if index in self.freeze_map:
+                    del self.freeze_map[index]
+                    cd['Freeze'] = False
+                if tp == 'address':
+                    cd['Source'] = 'address'
+                    cd['Address'] = int(req.media['address'], 16)
+                    if 'AOB' in cd:
+                        del cd['AOB']
+                    if 'Offset' in cd:
+                        del cd['Offset']
+                else:
+                    cd['Source'] = 'aob'
+                    cd['AOB'] = req.media['aob'].upper()
+                    cd['Offset'] = req.media['offset'].upper()
+                    if 'Address' in cd:
+                        del cd['Address']
+            else:
+                index = len(self.code_data)+1
+                if tp == 'address':
+                    self.code_data.append({
+                        "Name": "Code #{}".format(index),
+                        "Type": "byte_4",
+                        "Signed": False,
+                        "Freeze": False,
+                        "Source": "address",
+                        "Address": int(req.media['address'], 16)
+                    })
+                else:
+                    self.code_data.append({
+                        "Name": "Code #{}".format(index),
+                        "Type": "byte_4",
+                        "Signed": False,
+                        "Freeze": False,
+                        "Source": "aob",
+                        "AOB": req.media['aob'].upper(),
+                        "Offset": req.media['offset'].upper()
+                    })
+        resp.media['file_data'] = self.code_data
+        if not (self.freeze_thread and self.freeze_thread.is_alive()) and self.freeze_map:
+            self.start_freezer()
+        if not self.freeze_map:
+            self.stop_freezer()
+        if not (self.update_thread and self.update_thread.is_alive()):
+            self.start_updater()
+            resp.media['repeat'] = 1000
+
     def handle_save(self, req: Request, resp: Response):
         file = req.media['file']
         write_data = copy.copy(self.code_data)
@@ -186,6 +233,11 @@ class CodeList(MemoryHandler):
                 json.dump(write_data, f, indent=4)
         except:
             raise CodelistException('Could not save codes.')
+        if pt.stem != self.loaded_file:
+            self.loaded_file = pt.stem
+            resp.media['file_data'] = self.code_data
+            resp.media['file'] = self.loaded_file
+            resp.media['files'] = self.get_code_files()
 
     def handle_delete_list(self, req: Request, resp: Response):
         file = req.media['file']
@@ -360,8 +412,7 @@ class CodeList(MemoryHandler):
             self.update_thread.join()
 
     def get_results(self):
-        with self.update_lock:
-            res = self.result_list.copy()
+        res = self.result_list.copy()
         return res
 
     def _freeze_process(self):

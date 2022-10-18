@@ -28,8 +28,15 @@
     var btn_download;
 
     var aob_list = [];
+    var result_list = [];
 
-    var row_item_template = '<ons-row class="result_row" id="result_##count##"><ons-col align="center" width="75px" class="col ons-col-inner aob_size" id="result_size_##count##">##size##</ons-col><ons-col align="center" width="100px" class="col ons-col-inner aob_offset" id="result_offset_##count##">##offset##</ons-col> <ons-col align="center" width="50%" class="col ons-col-inner aob" id="result_aob_##count##">##aob##</ons-col></ons-row>'
+    var row_item_template = [
+        '<ons-row class="result_row" id="result_##count##" style="margin-bottom:10px;">',
+            '<ons-col align="center" width="10%" class="col ons-col-inner aob_size" id="result_size_##count##">##size##</ons-col>',
+            '<ons-col align="center" width="14%" class="col ons-col-inner aob_offset" id="result_offset_##count##">##offset##</ons-col>',
+            '<ons-col align="center" width="50%" class="col ons-col-inner aob" id="result_aob_##count##">##aob##</ons-col>',
+            '<ons-col align="center" width="26%" class="col ons-col-inner aob" id="result_aob_##count##"><ons-button modifier="quiet" name="copy_button" onclick="aob.copy_result(##count##, this)" ##disabled##>Copy</ons-button></ons-col>',
+        '</ons-row>'].join('\n')
 
     //Public Property
     aob.test = "Bacon Strips";
@@ -53,6 +60,7 @@
         row_search_progress = $("#aob_search_progress_row");
         row_aob_initial_search = $("#aob_initial_search_row");
         search_progress = $("#aob_search_progress");
+        $("#aob_paste_button").hide()
 
         row_search_results_header = $("#aob_search_results_header");
         row_search_result_count = $("#aob_search_result_count_row");
@@ -201,6 +209,43 @@
             var fileName = file.name;
             $.post('/aob', { "command": "AOB_UPLOAD", data: result, name: fileName }, on_aob_status);
         }
+    }
+
+    aob.copy_result = function(index, element) {
+        var offset = result_list[index].offset.startsWith('-') ? result_list[index].offset.replace('-', '') : '-'+result_list[index].offset
+        document.clipboard.copy({'aob': result_list[index].aob, 'offset': offset})
+    }
+
+    aob.clipboard_data_copied = function(data) {
+        if (has(data, 'address') || has(data, 'value')) {
+            $("#aob_paste_button").show()
+        }
+    }
+
+    aob.clipboard_data_pasted = function(data) {
+        if (sel_aob_search_type.val() === 'value') {
+            if (has(data, 'value')) {
+                inp_address_value.val(data.value)
+            } else {
+                sel_aob_search_type.val('address')
+                update(sel_aob_search_type)
+                inp_address_value.val(parseInt(data.address).toString(16).toUpperCase())
+            }
+            update(inp_address_value)
+        } else {
+            if (has(data, 'address')) {
+                inp_address_value.val(parseInt(data.address).toString(16).toUpperCase())
+            } else if (sel_aob_search_type.find('option[value="value"]').length > 0) {
+                sel_aob_search_type.val('value')
+                update(sel_aob_search_type)
+                inp_address_value.val(data.value)
+            }
+            update(inp_address_value)
+        }
+    }
+
+    aob.clipboard_data_cleared = function() {
+        $("#aob_paste_button").hide()
     }
 
     //Private Methods
@@ -663,6 +708,7 @@
             case flow_map["FLOW_RESULTS"]:
                 row_aob_initial_search.hide()
                 if (has(result, 'results')){
+                    result_list = result.results
                     result_count.text(result.results.length)
                     div_search_results.children('.result_row').remove()
                     for (i=0; i<result.results.length; i++) {
@@ -670,7 +716,7 @@
                         var size = rz.size
                         var offset = rz.offset
                         var aob = rz.aob
-                        var ele_txt = row_item_template.replaceAll('##count##', i).replaceAll('##size##', size).replaceAll('##offset##', offset).replaceAll('##aob##', aob)
+                        var ele_txt = row_item_template.replaceAll('##count##', i).replaceAll('##size##', size).replaceAll('##offset##', offset).replaceAll('##aob##', aob).replaceAll('##disabled##', aob == '...' ? 'disabled' : '')
                         div_search_results.append(ele_txt)
                     }
                 }
@@ -967,11 +1013,8 @@
             value_valid = false
             return
         }
-        if (!Number.isInteger(Number(_value))) {
-            value_valid = false
-        } else if (_type === 'address') {
-            var n = Number(_value)
-            value_valid = n > 0xFFFF
+        if (_type === 'address') {
+            value_valid = /^[0-9A-F]{5,16}$/i.test(_value)
         } else {
             var n = Number(_value)
             switch (_size) {

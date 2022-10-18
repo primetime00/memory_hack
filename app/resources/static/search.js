@@ -25,26 +25,16 @@
 
     var li_template = (['<ons-list-item class="result-row">',
           '<ons-row>',
-            '<ons-col align="center" width="300px" class="col ons-col-inner">',
+            '<ons-col align="center" width="40%" class="col ons-col-inner">',
               '<ons-row>',
-                '<ons-col align="center" width="280px" class="col ons-col-inner address">##address##</ons-col>',
-                '<ons-col align="center" width="280px" class="col ons-col-inner"><input type="text" id="result_value_##index##" data-address="##address##" name="search_value" class="text-input text-input--material value" value="##value##" onkeydown="search.result_change(this)"></ons-col>',
+                '<ons-col width="100%" align="center" class="col ons-col-inner address">##address##</ons-col>',
+              '</ons-row>',
+              '<ons-row>',
+                '<ons-col width="100%" align="center" class="col ons-col-inner"><input type="text" id="result_value_##index##" data-address="##address##" name="search_value" class="text-input text-input--material value" value="##value##" onkeydown="search.result_change(this)"></ons-col>',
               '</ons-row>',
             '</ons-col>',
-          '</ons-row>',
-      '</ons-list-item>',
-    ]).join("\n");
-
-    var li_template2 = (['<ons-list-item class="result-row">',
-          '<ons-row>',
-            '<ons-col align="center" width="190px" class="col ons-col-inner address">##address##</ons-col>',
-            '<ons-col align="center" width="190px" class="col ons-col-inner"><input type="text" id="result_value_##index##" data-address="##address##" name="search_value" class="text-input text-input--material value" value="##value##" onkeydown="search.result_change(this)"></ons-col>',
-            '<ons-col align="center" class="col ons-col-inner">',
-              '<label class="checkbox checkbox--material" style="padding-left: 10px">',
-                '<input type="checkbox" id="freeze_result_value_##index##" class="checkbox__input checkbox--material__input freeze" data-address="##address##" onclick="search.result_freeze(this)">',
-                '<div class="checkbox__checkmark checkbox--material__checkmark"></div>',
-                'Freeze',
-              '</label>',
+            '<ons-col align="center" width="50%" class="col ons-col-inner">',
+                '<ons-col align="center" width="98px" class="col ons-col-inner"><ons-button modifier="quiet" name="add_button" data-address="##address##" onclick="search.copy_result(##index##, this)">Copy</ons-button></ons-col>',
             '</ons-col>',
           '</ons-row>',
       '</ons-list-item>',
@@ -150,6 +140,7 @@
       $('#search_result_table').hide();
       $('#search_reset_button').prop("disabled",true);
       $('#search_button').prop("disabled",true);
+      $("#search_paste_button").hide()
 
       list_search_result_list.children("ons-list-item").remove()
       for (i=0; i<40; i++) {
@@ -157,6 +148,43 @@
         list_search_result_list.append(el)
       }
     };
+
+    search.copy_result = function(index, element) {
+        document.clipboard.copy({'address': current_search_results[index].address, 'value': current_search_results[index].value})
+    }
+
+    search.clipboard_data_copied = function(data) {
+        if (has(data, 'aob') || has(data, 'value')) {
+            $("#search_paste_button").show()
+        }
+    }
+    search.clipboard_data_pasted = function(data) {
+        console.log('ah', data, sel_search_type.val() )
+        if (sel_search_type.val() === 'array') {
+            if (has(data, 'aob')) {
+                inp_search_value.val(data.aob)
+            } else {
+                sel_search_size.val('byte_4')
+                update()
+                inp_search_value.val(data.value)
+            }
+            update()
+        } else {
+            if (has(data, 'value')) {
+                inp_search_value.val(data.value)
+            } else {
+                sel_search_size.val('array')
+                update()
+                inp_search_value.val(data.aob)
+            }
+            update()
+        }
+    }
+
+    search.clipboard_data_cleared = function() {
+        $("#search_paste_button").hide()
+    }
+
 
     //Private Methods
     function on_search_ready() {
@@ -819,36 +847,8 @@
 
 
 
-    function on_search_status2(result) {
-        current_state = result.state || current_state
-        current_search_type = result.search_type || current_search_type
-        current_search_round = result.search_round || current_search_round
-        current_search_results = result.search_results || current_search_results
-        var repeat = result.repeat || 0
-        var error = result.error || ""
-        if (!initialized) {
-            initialized = true
-        }
-        switch (result.state) {
-            case 'SEARCH_STATE_START':
-                setup_start_state()
-                break;
-            case 'SEARCH_STATE_SEARCHING':
-                setup_searching_state(result)
-                break;
-            case 'SEARCH_STATE_CONTINUE':
-                setup_continue_state(result)
-                break;
-        }
-        if (repeat > 0) {
-            setTimeout(function() {$.send('/search', { "command": "SEARCH_STATUS" }, on_search_status);}, repeat)
-        }
-        if (error.length > 0) {
-            ons.notification.toast(error, { timeout: 5000, animation: 'fall' })
-        }
-    }
-
     function populate_results(results) {
+        current_search_results = results
         var elements = $(".result-row")
         for (i=0; i<40; i++) {
             var el = $(elements[i])
@@ -856,6 +856,7 @@
                 var item = results[i]
                 var address_element = el.find(".address")
                 var value_element = el.find(".value")
+                var add_element = el.find("ons-button")
                 var freeze_element = el.find(".freeze")
                 if (value_element.is(":focus")) {
                     continue
@@ -866,6 +867,7 @@
                 }
                 value_element.attr('data-address', item.address)
                 freeze_element.attr('data-address', item.address)
+                add_element.attr('data-address', item.address)
                 value_element.val(item.value)
                 el.show()
             } else {

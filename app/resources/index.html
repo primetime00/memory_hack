@@ -50,6 +50,31 @@
     codelist.ready()
     aob.ready()
     script.ready()
+    document.clipboard = {
+      'copy': (data) => {
+        document.clipboard.data = data;
+        search.clipboard_data_copied(data)
+        aob.clipboard_data_copied(data)
+        codelist.clipboard_data_copied(data)
+      },
+      'paste': (ctrl) => {
+        if (ctrl === codelist) {
+          codelist.clipboard_data_pasted(document.clipboard.data)
+        } else if (ctrl === aob) {
+          aob.clipboard_data_pasted(document.clipboard.data)
+        } else if (ctrl === search) {
+          search.clipboard_data_pasted(document.clipboard.data)
+        }
+        document.clipboard.clear()
+      },
+      'clear': () => {
+        document.clipboard.data = {}
+        search.clipboard_data_cleared()
+        aob.clipboard_data_cleared()
+        codelist.clipboard_data_cleared()
+      },
+      'data': {}
+    }
   };
   </script>
   <style>
@@ -61,6 +86,7 @@
 }
 input.value {
   text-align: right;
+  width: 100%;
 }
 .textarea {
     width: 100%;
@@ -100,6 +126,10 @@ input.value {
 
 .text-full {
   width: 95%;
+}
+
+ons-fab.hide-fab {
+  display:none;
 }
 
 .spacer > * + * {
@@ -150,10 +180,13 @@ div .input_item{
     <ons-popover cancelable direction="down">
       <ons-list id="popover-list">
         <ons-list-item class="more-options" tappable>
-          <div class="center">Delete</div>
+          <div class="center">Edit</div>
         </ons-list-item>
         <ons-list-item class="more-options" tappable>
           <div class="center">Copy</div>
+        </ons-list-item>
+        <ons-list-item class="more-options" tappable>
+          <div class="center">Delete</div>
         </ons-list-item>
       </ons-list>
     </ons-popover>
@@ -191,6 +224,61 @@ div .input_item{
         <ons-alert-dialog-button name="delete_button">Delete</ons-alert-dialog-button>
       </div>
     </ons-alert-dialog>
+  </template>
+
+  <template id="add_code">
+    <ons-dialog id="add_code_dialog">
+      <div style="text-align: center; padding: 10px;">
+        <p>
+          Add Code
+        </p>
+      </div>
+      <ons-row>
+        <ons-col align="center" width="30%" class="col ons-col-inner">
+          Type:
+        </ons-col>
+        <ons-col align="center" width="70%" class="col ons-col-inner">
+          <select id="add_code_type" class="select-input select-input--material" onchange="codelist.get_dialog().type_changed()">
+            <option value="address">Address</option>
+            <option value="aob">AOB</option>
+          </select>
+        </ons-col>
+      </ons-row>
+      </ons-row>
+      <ons-row>
+        <ons-col align="center" width="30%" class="col ons-col-inner">
+          Address:
+        </ons-col>
+        <ons-col align="center" width="70%" class="col ons-col-inner">
+          <input type="text" id="add_code_address" name="code_address" class="text-input text-input--material text-full" oninput="codelist.get_dialog().validate()">
+        </ons-col>
+      </ons-row>
+      <ons-row>
+        <ons-col align="center" width="30%" class="col ons-col-inner">
+          AOB:
+        </ons-col>
+        <ons-col align="center" width="70%" class="col ons-col-inner">
+          <input type="text" id="add_code_aob" name="code_address" class="text-input text-input--material text-full" oninput="codelist.get_dialog().validate()">
+        </ons-col>
+      </ons-row>
+      <ons-row>
+        <ons-col align="center" width="30%" class="col ons-col-inner">
+          Offset:
+        </ons-col>
+        <ons-col align="center" width="40%" class="col ons-col-inner">
+          <input type="text" id="add_code_offset" name="code_address" class="text-input text-input--material text-full" oninput="codelist.get_dialog().validate()">
+        </ons-col>
+      </ons-row>
+      <ons-row>
+        <ons-col align="center" width="50%" class="col ons-col-inner">
+          <ons-button modifier="quiet" id="add_code_button" style="display:block;" onclick="codelist.get_dialog().on_add()">Add</ons-button>
+        </ons-col>
+        <ons-col align="center" width="50%" class="col ons-col-inner">
+          <ons-button modifier="quiet" id="add_code_cancel" style="display:block;" onclick="codelist.get_dialog().on_cancel()">Cancel</ons-button>
+        </ons-col>
+      </ons-row>
+
+    </ons-dialog>
   </template>
 
 
