@@ -67,7 +67,7 @@
     }
 
     search.result_change = function(ele) {
-        if(event.key === 'Enter' || event.key === 'Return') {
+        if(event.key === 'Enter' || event.key === 'Return' || event.keyCode == 13) {
             $.send('/search', {'command': 'SEARCH_WRITE', 'address': ele.dataset.address, 'value': ele.value}, on_search_status)
             ele.blur()
         }

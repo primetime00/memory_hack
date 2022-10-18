@@ -66,14 +66,14 @@
     };
 
     codelist.code_value_changed = function(ele, index) {
-        if(event.key === 'Enter' || event.key === 'Return') {
+        if(event.key === 'Enter' || event.key === 'Return'  || event.keyCode == 13) {
             $.send('/codelist', {'command': 'CODELIST_WRITE', 'index': index, 'value': ele.value}, on_codelist_status)
             ele.blur()
         }
     }
 
     codelist.code_name_changed = function(ele, index) {
-        if(event.key === 'Enter' || event.key === 'Return') {
+        if(event.key === 'Enter' || event.key === 'Return'  || event.keyCode == 13) {
             $.send('/codelist', {'command': 'CODELIST_NAME', 'index': index, 'name': ele.value}, on_codelist_status)
             ele.blur()
         }
