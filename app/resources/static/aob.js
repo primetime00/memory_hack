@@ -89,7 +89,7 @@
     aob.on_update_selected_process = function(process_name) {
         var value = sel_aob_process.val()
         if (value != process_name){
-            sel_aob_process(process_name)
+            set_process(process_name)
         }
     }
 
@@ -912,6 +912,9 @@
                 inp_address_value.removeAttr('disabled')
                 validate_value(_value, _size, _search_type)
                 break
+        }
+        if (_component == sel_aob_search_type) {
+            inp_address_value.attr('inputmode', _search_type === 'value' ? 'decimal' : 'text')
         }
     }
 

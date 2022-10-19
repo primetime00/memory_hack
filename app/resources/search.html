@@ -49,22 +49,20 @@
       <ons-row id="row_search_value">
         <ons-col align="center" width="20%" class="col ons-col-inner">Value:</ons-col>
         <ons-col align="center" width="40%" class="col ons-col-inner">
-          <input type="text" id="search_value" name="search_value" class="text-input text-input--material value" oninput="search.search_value_changed(this.value)">
+          <input id="search_value" inputmode="decimal" name="search_value" class="text-input text-input--material r-value" oninput="search.search_value_changed(this.value)" autocomplete="off">
         </ons-col>
         <ons-col align="center" width="50px" class="col ons-col-inner"><ons-button id="search_paste_button" modifier="material--flat" onclick="document.clipboard.paste(search)"><ons-icon style="color:#777;" size="28px" icon="md-paste"></ons-icon></ons-button></ons-col>
       </ons-row>
 
-      <ons-row>
+      <ons-row style="margin-top:15px;">
         <ons-col align="center" width="20%" class="col ons-col-inner">
-
         </ons-col>
-        <ons-col align="center" width="40%" class="col ons-col-inner">
-        <section class="spacer">
+        <ons-col align="center" width="23%" class="col ons-col-inner">
           <ons-button id="search_button" onclick="search.on_search_clicked()">Search</ons-button>
-          <ons-button id="search_reset_button" onclick="search.on_reset_clicked()">Reset</ons-button>
-        </section>
         </ons-col>
-        <ons-col align="center" class="col ons-col-inner"></ons-col>
+        <ons-col align="center" width="20%" class="col ons-col-inner">
+          <ons-button id="search_reset_button" onclick="search.on_reset_clicked()">Reset</ons-button>
+        </ons-col>
       </ons-row>
     </div>
 

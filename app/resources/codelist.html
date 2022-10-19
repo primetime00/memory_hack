@@ -13,152 +13,31 @@
 
   <div id="codelist_block" hidden>
     <ons-row id="row_codelist_loadsave">
-      <ons-col align="center" width="60px" class="col ons-col-inner">
-        Load:
-      </ons-col>
-      <ons-col align="center" width="200px" class="col ons-col-inner">
-        <select id="codelist_file_selection" class="select-input select-input--material" style="width:inherit;">
-          <option value="_null"></option>
-        </select>
-      </ons-col>
-      <ons-col align="left" width="75px" class="col ons-col-inner">
-        <ons-button modifier="" id="codelist_save_button" onclick="codelist.on_save_clicked(this)">Save</ons-button>
-      </ons-col>
-      <ons-col align="left" width="90px" class="col ons-col-inner">
-        <ons-button modifier="" id="codelist_delete_button" onclick="codelist.on_delete_clicked(this)">Delete</ons-button>
+      <ons-col align="center" width="100%" class="col ons-col-inner">
+        <ons-row>
+          <ons-col align="center" width="18%" class="col ons-col-inner">
+            Load:
+          </ons-col>
+          <ons-col align="center" width="82%" class="col ons-col-inner">
+            <select id="codelist_file_selection" class="select-input select-input--material" style="width:inherit;">
+              <option value="_null"></option>
+            </select>
+          </ons-col>
+        </ons-row>
+        <ons-row>
+          <ons-col align="center" width="18%" class="col ons-col-inner">
+          </ons-col>
+          <ons-col align="left" width="25%" class="col ons-col-inner">
+            <ons-button modifier="" id="codelist_save_button" onclick="codelist.on_save_clicked(this)">Save</ons-button>
+          </ons-col>
+          <ons-col align="left" width="25%" class="col ons-col-inner">
+            <ons-button modifier="" id="codelist_delete_button" onclick="codelist.on_delete_clicked(this)">Delete</ons-button>
+          </ons-col>
+        </ons-row>
       </ons-col>
     </ons-row>
 
     <ons-list id="code_list">
-      <!--
-      <ons-list-item>
-        <ons-row>
-          <ons-col align="center" width="75%" class="col ons-col-inner">
-            <input type="text" id="code_name_##index##" name="code_address" class="text-input text-input--material text-full" oninput="codelist.name_value_changed(this)" value="Infinite Lives">
-          </ons-col>
-          <ons-col align="center" width="10%" class="col ons-col-inner">
-            <button class="tp" onclick="codelist.code_menu_clicked(this.id)" id="code_menu_button_##index##">
-              <div class="navigation"></div>
-            </button>
-          </ons-col>
-        </ons-row>
-
-        <ons-row>
-          <ons-col align="center" width="15%" class="col ons-col-inner">
-            <select name="code_size" id="code_size_##index##" class="select-input select-input--material" onchange="codelist.code_size_changed(this)">
-              <option value="byte_1">BYTE</option>
-              <option value="byte_2">2 BYTES</option>
-              <option value="byte_4" selected>4 BYTES</option>
-              <option value="float">FLOAT</option>
-            </select>
-          </ons-col>
-          <ons-col align="center" width="45%" class="col ons-col-inner">
-            <input type="text" id="code_value_##index##" name="code_value" class="text-input text-input--material text-full" oninput="codelist.code_value_changed(this)">
-          </ons-col>
-          <ons-col align="center" width="15%" class="col ons-col-inner">
-            <div class="checkbox__checkmark checkbox--material__checkmark"></div>
-          </ons-col>
-        </ons-row>
-
-        <ons-row>
-          <ons-col align="center" width="15%" class="col ons-col-inner">
-            Address:
-          </ons-col>
-          <ons-col align="center" width="60%" class="col ons-col-inner">
-            <input type="text" id="code_address_##index##" name="code_address" class="text-input text-input--material text-full" oninput="codelist.address_value_changed(this)">
-          </ons-col>
-        </ons-row>
-      </ons-list-item>
-    </ons-list>
-
-    <ons-list id="code_list">
-      <ons-list-item>
-        <ons-row id="row_desc_01">
-          <ons-col align="center" width="75%" class="col ons-col-inner">
-            <input type="text" id="code_name_01" name="code_address" class="text-input text-input--material text-full" oninput="codelist.name_value_changed(this)" value="Infinite Lives">
-          </ons-col>
-          <ons-col align="center" width="10%" class="col ons-col-inner">
-            <button class="tp" onclick="codelist.code_menu_clicked(this.id)" id="code_menu_button_01">
-              <div class="navigation"></div>
-            </button>
-          </ons-col>
-        </ons-row>
-
-        <ons-row id="row_value_01">
-          <ons-col align="center" width="15%" class="col ons-col-inner">
-            <select name="code_size" id="code_size_01" class="select-input select-input--material" onchange="codelist.code_size_changed(this)">
-              <option value="byte_1">BYTE</option>
-              <option value="byte_2">2 BYTES</option>
-              <option value="byte_4" selected>4 BYTES</option>
-              <option value="float">FLOAT</option>
-            </select>
-          </ons-col>
-          <ons-col align="center" width="45%" class="col ons-col-inner">
-            <input type="text" id="code_value_01" name="code_value" class="text-input text-input--material text-full" oninput="codelist.code_value_changed(this)">
-          </ons-col>
-          <ons-col align="center" width="15%" class="col ons-col-inner">
-            <div class="checkbox__checkmark checkbox--material__checkmark"></div>
-          </ons-col>
-        </ons-row>
-
-        <ons-row id="row_address_01">
-          <ons-col align="center" width="15%" class="col ons-col-inner">
-            Address:
-          </ons-col>
-          <ons-col align="center" width="60%" class="col ons-col-inner">
-            <input type="text" id="code_address_01" name="code_address" class="text-input text-input--material text-full" oninput="codelist.address_value_changed(this)">
-          </ons-col>
-        </ons-row>
-      </ons-list-item>
-
-      <ons-list-item>
-        <ons-row id="row_desc_02">
-          <ons-col align="center" width="75%" class="col ons-col-inner">
-            <input type="text" id="code_name_02" name="code_address" class="text-input text-input--material text-full" oninput="codelist.name_value_changed(this)" value="Infinite Cash">
-          </ons-col>
-          <ons-col align="center" width="10%" class="col ons-col-inner">
-            <button class="tp" onclick="codelist.code_menu_clicked(this.id)" id="code_menu_button_02">
-              <div class="navigation"></div>
-            </button>
-          </ons-col>
-        </ons-row>
-
-        <ons-row id="row_value_02">
-          <ons-col align="center" width="15%" class="col ons-col-inner">
-            <select name="code_size" id="code_size_02" class="select-input select-input--material" onchange="codelist.code_size_changed(this)">
-              <option value="byte_1">BYTE</option>
-              <option value="byte_2">2 BYTES</option>
-              <option value="byte_4" selected>4 BYTES</option>
-              <option value="float">FLOAT</option>
-            </select>
-          </ons-col>
-          <ons-col align="center" width="45%" class="col ons-col-inner">
-            <input type="text" id="code_value_02" name="code_value" class="text-input text-input--material text-full" oninput="codelist.code_value_changed(this)">
-          </ons-col>
-          <ons-col align="center" width="15%" class="col ons-col-inner">
-            <div class="checkbox__checkmark checkbox--material__checkmark"></div>
-          </ons-col>
-        </ons-row>
-
-        <ons-row id="row_aob_02">
-          <ons-col align="center" width="15%" class="col ons-col-inner">
-            AOB:
-          </ons-col>
-          <ons-col align="center" width="60%" class="col ons-col-inner">
-            <input type="text" id="code_aob_02" name="code_address" class="text-input text-input--material text-full" oninput="codelist.aob_value_changed(this)">
-          </ons-col>
-        </ons-row>
-
-        <ons-row id="row_offset_02">
-          <ons-col align="center" width="15%" class="col ons-col-inner">
-            Offset:
-          </ons-col>
-          <ons-col align="center" width="60%" class="col ons-col-inner">
-            <input type="text" id="code_offset_02" name="code_address" class="text-input text-input--material text-full" oninput="codelist.offset_value_changed(this)">
-          </ons-col>
-        </ons-row>
-      </ons-list-item>
-      -->
     </ons-list>
   </div>
     <ons-fab id="add_new_code_button" class="hide-fab" position="bottom right" onclick="codelist.on_add_clicked(this)">

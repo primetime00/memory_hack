@@ -256,6 +256,7 @@ class Search(MemoryHandler):
 
     def handle_result_update(self, req: Request, resp: Response):
         resp.media['results'] = self.get_updated_addresses()
+        resp.media['array'] = isinstance(self.update_thread.parsed_value, ctypes.Array)
         resp.media['count'] = len(self.search_results)
 
     def get_updated_addresses(self):

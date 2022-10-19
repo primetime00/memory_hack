@@ -72,10 +72,14 @@
         }
     }
 
-    codelist.code_name_changed = function(ele, index) {
-        if(event.key === 'Enter' || event.key === 'Return'  || event.keyCode == 13) {
+    codelist.code_name_changed = function(did_blur, ele, index) {
+        if (!did_blur) {
+            if(event.key === 'Enter' || event.key === 'Return'  || event.keyCode === 13) {
+                ele.blur()
+            }
+        }
+        else {
             $.send('/codelist', {'command': 'CODELIST_NAME', 'index': index, 'name': ele.value}, on_codelist_status)
-            ele.blur()
         }
     }
 
@@ -304,17 +308,21 @@
             if (has(result, 'file_data')) {
                 _this.items = []
                 result.file_data.forEach((item, index) => {
+                    var head = component_code_header.create(index, result.file_data[index])
                     var comp = component_code.create(index, result.file_data[index])
-                    _this.items.push(comp);
+                    _this.items.push({'header':head, 'item': comp});
+                    _this.obj.append(head.obj)
                     _this.obj.append(comp.obj)
                 });
                 result.file_data.forEach((res, index) => {
-                    _this.items[index].setup(res, _this.items[index])
+                    _this.items[index].header.setup(res, _this.items[index].header)
+                    _this.items[index].item.setup(res, _this.items[index].item)
                 });
             }
             if (has(result, 'results')) {
                 result.results.forEach((res, index) => {
-                    _this.items[index].setup(res, _this.items[index])
+                    _this.items[index].header.setup(res, _this.items[index].header)
+                    _this.items[index].item.setup(res, _this.items[index].item)
                 });
             }
         },
@@ -335,6 +343,35 @@
         'items': []
     }
 
+    var component_code_header = {
+        'id': 'code_header_',
+        'obj': undefined,
+        'index': -1,
+        'name_component': {},
+        'setup': (result, _this) => {
+            _this.rows.forEach( (item, index) => {
+                item.setup(result, item)
+            })
+        },
+        'update': (_this) => {console.log('code item update')},
+        'template': '<ons-list-header id="##id##" style="background-color:#ddd;"></ons-list-header>',
+        'create': (index, data) => {
+            var t = {...component_code_header};
+            t.id = component_code_header.id+index
+            t.index = index
+            t.template = component_code_header.template.replaceAll("##index##", index).replaceAll('##id##', t.id)
+            t.obj = $(ons.createElement(t.template))
+            //create the elements
+            t.rows = []
+            t.rows.push(component_row_name.create(index))
+            t.rows.forEach((item, index) =>{
+                t.obj.append(item.obj)
+            })
+            return t;
+        },
+        'rows': []
+    }
+
     var component_code = {
         'id': 'code_item_',
         'obj': undefined,
@@ -346,7 +383,7 @@
             })
         },
         'update': (_this) => {console.log('code item update')},
-        'template': '<ons-list-item id="##id##"></ons-list-item>',
+        'template': '<ons-list-item id="##id##" modifier="longdivider"></ons-list-item>',
         'create': (index, data) => {
             var t = {...component_code};
             t.id = component_code.id+index
@@ -355,7 +392,6 @@
             t.obj = $(ons.createElement(t.template))
             //create the elements
             t.rows = []
-            t.rows.push(component_row_name.create(index))
             t.rows.push(component_row_value.create(index))
             if (data.Source == 'address') {
                 t.rows.push(component_row_address.create(index))
@@ -381,7 +417,7 @@
             })
         },
         'update': (_this) => {console.log('code name update')},
-        'template': `<ons-row id="##id##">
+        'template': `<ons-row id="##id##" style="margin-bottom:10px; margin-top:0px;">
                         <ons-col align="center" width="75%" class="col ons-col-inner">
                         </ons-col>
                         <ons-col align="center" width="10%" class="col ons-col-inner">
@@ -412,7 +448,7 @@
             }
         },
         'update': (_this) => {console.log('code name update')},
-        'template': '<input type="text" id="##id##" name="code_address" class="text-input text-input--material text-full" onkeydown="codelist.code_name_changed(this, ##index##)" value="Name">',
+        'template': '<input type="text" id="##id##" name="code_address" class="text-input text-input--material text-full" onkeydown="codelist.code_name_changed(false, this, ##index##)" onblur="codelist.code_name_changed(true, this, ##index##)" value="Name" autocomplete="chrome-off" autocapitalize="off" style="font-weight: bold;">',
         'create': index => {
             var t = {...component_code_name};
             t.id = component_code_name.id+index
@@ -451,11 +487,11 @@
         },
         'update': (_this) => {console.log('code name update')},
         'template': `<ons-row id="##id##">
-                        <ons-col align="center" width="15%" class="col ons-col-inner">
+                        <ons-col align="center" width="25%" class="col ons-col-inner">
                         </ons-col>
-                        <ons-col align="center" width="45%" class="col ons-col-inner">
+                        <ons-col align="center" width="55%" class="col ons-col-inner">
                         </ons-col>
-                        <ons-col align="center" width="15%" class="col ons-col-inner">
+                        <ons-col align="right" width="15%" class="col ons-col-inner">
                         </ons-col>
                     </ons-row>`,
         'create': index => {
@@ -518,7 +554,7 @@
             }
         },
         'update': (_this) => {console.log('code name update')},
-        'template': '<input type="text" id="##id##" name="code_value" class="text-input text-input--material text-full value" onkeydown="codelist.code_value_changed(this, ##index##)">',
+        'template': '<input inputmode="decimal" autocomplete="chrome-off" type="text" id="##id##" name="code_value" class="text-input text-input--material text-full r-value" onkeydown="codelist.code_value_changed(this, ##index##)">',
         'create': index => {
             var t = {...component_code_value};
             t.id = component_code_value.id+index
@@ -569,7 +605,7 @@
         },
         'update': (_this) => {console.log('code name update')},
         'template': `<ons-row id="##id##">
-                        <ons-col align="center" width="15%" class="col ons-col-inner">
+                        <ons-col align="center" width="20%" class="col ons-col-inner">
                             Address:
                         </ons-col>
                         <ons-col align="center" width="60%" class="col ons-col-inner">
@@ -598,7 +634,7 @@
             }
         },
         'update': (_this) => {console.log('code name update')},
-        'template': '<input type="text" id="##id##" name="code_address" class="text-input text-input--material text-full" oninput="codelist.address_value_changed(this)" readonly>',
+        'template': '<input type="text" id="##id##" name="code_address" class="text-input text-input--material text-full r-value" oninput="codelist.address_value_changed(this)" readonly>',
         'create': index => {
             var t = {...component_code_address};
             t.id = component_code_address.id+index
@@ -620,7 +656,7 @@
         },
         'update': (_this) => {console.log('code name update')},
         'template': `<ons-row id="##id##">
-                        <ons-col align="center" width="15%" class="col ons-col-inner">
+                        <ons-col align="center" width="20%" class="col ons-col-inner">
                             AOB:
                         </ons-col>
                         <ons-col align="center" width="60%" class="col ons-col-inner">
@@ -649,7 +685,7 @@
             }
         },
         'update': (_this) => {console.log('code name update')},
-        'template': '<input type="text" id="##id##" name="code_address" class="text-input text-input--material text-full" oninput="codelist.aob_value_changed(this)" readonly>',
+        'template': '<input type="text" id="##id##" name="code_address" class="text-input text-input--material text-full r-value" oninput="codelist.aob_value_changed(this)" readonly>',
         'create': index => {
             var t = {...component_code_aob};
             t.id = component_code_aob.id+index
@@ -671,14 +707,20 @@
         },
         'update': (_this) => {console.log('code name update')},
         'template': `<ons-row id="##id##">
-                        <ons-col align="center" width="15%" class="col ons-col-inner">
+                        <ons-col align="center" width="20%" class="col ons-col-inner">
                             Offset:
                         </ons-col>
-                        <ons-col align="center" width="15%" class="col ons-col-inner">
+                        <ons-col align="center" width="25%" class="col ons-col-inner" name="offset_refresh">
+                            <ons-row>
+                                <ons-col align="center" class="col ons-col-inner" name="first">
+                                </ons-col>
+                            </ons-row>
+                            <ons-row>
+                                <ons-col align="center" class="col ons-col-inner" name="second">
+                                </ons-col>
+                            </ons-row>
                         </ons-col>
-                        <ons-col align="center" width="28%" class="col ons-col-inner">
-                        </ons-col>
-                        <ons-col align="center" width="17%" class="col ons-col-inner">
+                        <ons-col align="center" width="55%" class="col ons-col-inner" name="addresses">
                         </ons-col>
                     </ons-row>`,
         'create': index => {
@@ -688,11 +730,14 @@
             t.template = component_row_offset.template.replaceAll("##index##", index).replaceAll('##id##', t.id)
             t.obj = $(ons.createElement(t.template))
             var cc_offset = component_code_offset.create(index)
-            t.obj.find('ons-col').eq(1).append(cc_offset.obj)
             var cc_offset_address = component_code_offset_address.create(index)
-            t.obj.find('ons-col').eq(2).append(cc_offset_address.obj)
             var cc_offset_refresh = component_code_offset_refresh.create(index)
-            t.obj.find('ons-col').eq(3).append(cc_offset_refresh.obj)
+
+            console.log(t.obj.find('ons-col[name="offset_refresh"]').find('ons-col'))
+            t.obj.find('ons-col[name="offset_refresh"]').find('ons-col').eq(0).append(cc_offset.obj)
+            t.obj.find('ons-col[name="offset_refresh"]').find('ons-col').eq(1).append(cc_offset_refresh.obj)
+            t.obj.find('ons-col[name="addresses"]').append(cc_offset_address.obj)
+
             t.items = [cc_offset, cc_offset_address, cc_offset_refresh]
             return t;
         },
@@ -739,7 +784,7 @@
             }
         },
         'update': (_this) => {console.log('code name update')},
-        'template': '<textarea id=##id## class="textarea" rows="2" placeholder="None found" readonly></textarea>',
+        'template': '<textarea id=##id## class="textarea" rows="3" placeholder="None found" readonly></textarea>',
         'create': index => {
             var t = {...component_code_offset_address};
             t.id = component_code_offset_address.id+index

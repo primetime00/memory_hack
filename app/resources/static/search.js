@@ -25,15 +25,15 @@
 
     var li_template = (['<ons-list-item class="result-row">',
           '<ons-row>',
-            '<ons-col align="center" width="40%" class="col ons-col-inner">',
+            '<ons-col align="center" width="50%" class="col ons-col-inner">',
               '<ons-row>',
                 '<ons-col width="100%" align="center" class="col ons-col-inner address">##address##</ons-col>',
               '</ons-row>',
               '<ons-row>',
-                '<ons-col width="100%" align="center" class="col ons-col-inner"><input type="text" id="result_value_##index##" data-address="##address##" name="search_value" class="text-input text-input--material value" value="##value##" onkeydown="search.result_change(this)"></ons-col>',
+                '<ons-col width="100%" align="center" class="col ons-col-inner"><input type="text" id="result_value_##index##" data-address="##address##" name="search_value" class="text-input text-input--material r-value" value="##value##" onkeydown="search.result_change(this)" autocomplete="off"></ons-col>',
               '</ons-row>',
             '</ons-col>',
-            '<ons-col align="center" width="50%" class="col ons-col-inner">',
+            '<ons-col align="center" width="40%" class="col ons-col-inner">',
                 '<ons-col align="center" width="98px" class="col ons-col-inner"><ons-button modifier="quiet" name="add_button" data-address="##address##" onclick="search.copy_result(##index##, this)">Copy</ons-button></ons-col>',
             '</ons-col>',
           '</ons-row>',
@@ -551,14 +551,14 @@
                 } else {
                     result_count_disclaimer.hide()
                 }
-                populate_results(result.results)
+                populate_results(result.results, result.array)
                 break
             case flow_map["FLOW_NO_RESULTS"]:
                 div_search_results.show()
                 list_search_result_list.show()
                 result_count.text(0)
                 result_count_disclaimer.hide()
-                populate_results([])
+                populate_results([], false)
                 break
             case flow_map["FLOW_INITIALIZE_UNKNOWN"]:
                 div_search_results.show()
@@ -700,6 +700,7 @@
                     value_valid = true
                 } else {
                     row_search_value.show()
+                    inp_search_value.attr('inputmode', _size === 'array' ? 'text' : 'decimal')
                     validate_value(_value, _size)
                 }
                 break
@@ -713,6 +714,7 @@
                     value_valid = true
                 } else {
                     row_search_value.show()
+                    inp_search_value.attr('inputmode', _size === 'array' ? 'text' : 'decimal')
                     validate_value(_value, _size)
                 }
                 break
@@ -720,6 +722,7 @@
                 if (_type == 'changed_by') {
                     inp_search_value.removeAttr('disabled')
                     row_search_value.show()
+                    inp_search_value.attr('inputmode', _size === 'array' ? 'text' : 'decimal')
                     validate_value(_value, _size)
                 }
                 else {
@@ -847,7 +850,7 @@
 
 
 
-    function populate_results(results) {
+    function populate_results(results, is_array) {
         current_search_results = results
         var elements = $(".result-row")
         for (i=0; i<40; i++) {
@@ -855,9 +858,10 @@
             if (i < results.length) {
                 var item = results[i]
                 var address_element = el.find(".address")
-                var value_element = el.find(".value")
+                var value_element = el.find("input[name='search_value']")
                 var add_element = el.find("ons-button")
                 var freeze_element = el.find(".freeze")
+                value_element.attr('inputmode', is_array ? 'text' : 'decimal')
                 if (value_element.is(":focus")) {
                     continue
                 }

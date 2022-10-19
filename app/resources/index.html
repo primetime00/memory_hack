@@ -88,6 +88,10 @@ input.value {
   text-align: right;
   width: 100%;
 }
+input.r-value {
+  text-align: left;
+  width: 100%;
+}
 .textarea {
     width: 100%;
     display: inline-block;
@@ -154,9 +158,9 @@ div .input_item{
   </ons-toolbar>
 
   <ons-tabbar position="auto">
-    <ons-tab page="/search" label="Search" icon="md-search" #search_active#>
+    <ons-tab page="/codelist" label="Codes" icon="md-view-toc" active #codelist_active#>
     </ons-tab>
-    <ons-tab page="/codelist" label="Codes" icon="md-search" active #codelist_active#>
+    <ons-tab page="/search" label="Search" icon="md-search" #search_active#>
     </ons-tab>
     <ons-tab page="/aob" label="AOB" icon="md-trending-up" #aob_active#>
     </ons-tab>
@@ -194,22 +198,26 @@ div .input_item{
 
   <ons-template id="code_save">
     <ons-popover cancelable direction="down">
-      <ons-row>
-        <ons-col align="center" width="80px" class="col ons-col-inner">
-          Save As:
-        </ons-col>
-        <ons-col align="center" width="130px" class="col ons-col-inner">
-          <input type="text" name="save_file" class="text-input text-input--material text-full">
-        </ons-col>
-      </ons-row>
-      <ons-row>
-        <ons-col align="center" width="50%" class="col ons-col-inner">
-          <ons-button modifier="quiet" name="save_button">Save</ons-button>
-        </ons-col>
-        <ons-col align="center" width="50%" class="col ons-col-inner">
-          <ons-button modifier="quiet" name="cancel_button">Cancel</ons-button>
-        </ons-col>
-      </ons-row>
+      <div style="padding:20px;">
+        <div style="text-align: center;">
+          <p>
+            Save As
+          </p>
+        </div>
+        <ons-row>
+          <ons-col align="center" width="100%" class="col ons-col-inner">
+            <input type="text" name="save_file" class="text-input text-input--material text-full">
+          </ons-col>
+        </ons-row>
+        <ons-row style="margin-top:15px;">
+          <ons-col align="center" width="50%" class="col ons-col-inner">
+            <ons-button modifier="quiet" name="save_button">Save</ons-button>
+          </ons-col>
+          <ons-col align="center" width="50%" class="col ons-col-inner">
+            <ons-button modifier="quiet" name="cancel_button">Cancel</ons-button>
+          </ons-col>
+        </ons-row>
+      </div>
     </ons-popover>
   </ons-template>
 
@@ -244,21 +252,20 @@ div .input_item{
           </select>
         </ons-col>
       </ons-row>
-      </ons-row>
-      <ons-row>
+      <ons-row style="margin-top:10px;">
         <ons-col align="center" width="30%" class="col ons-col-inner">
           Address:
         </ons-col>
         <ons-col align="center" width="70%" class="col ons-col-inner">
-          <input type="text" id="add_code_address" name="code_address" class="text-input text-input--material text-full" oninput="codelist.get_dialog().validate()">
+          <input type="text" id="add_code_address" name="code_address" class="text-input text-input--material text-full" oninput="codelist.get_dialog().validate()" autocomplete="chrome-off" autocapitalize="off">
         </ons-col>
       </ons-row>
-      <ons-row>
+      <ons-row style="margin-top:10px;">
         <ons-col align="center" width="30%" class="col ons-col-inner">
           AOB:
         </ons-col>
         <ons-col align="center" width="70%" class="col ons-col-inner">
-          <input type="text" id="add_code_aob" name="code_address" class="text-input text-input--material text-full" oninput="codelist.get_dialog().validate()">
+          <input type="text" id="add_code_aob" name="code_address" class="text-input text-input--material text-full" oninput="codelist.get_dialog().validate()" autocomplete="chrome-off" autocapitalize="off">
         </ons-col>
       </ons-row>
       <ons-row>
@@ -266,10 +273,10 @@ div .input_item{
           Offset:
         </ons-col>
         <ons-col align="center" width="40%" class="col ons-col-inner">
-          <input type="text" id="add_code_offset" name="code_address" class="text-input text-input--material text-full" oninput="codelist.get_dialog().validate()">
+          <input type="text" id="add_code_offset" name="code_address" class="text-input text-input--material text-full" oninput="codelist.get_dialog().validate()" autocomplete="chrome-off" autocapitalize="off">
         </ons-col>
       </ons-row>
-      <ons-row>
+      <ons-row style="margin-top:10px;">
         <ons-col align="center" width="50%" class="col ons-col-inner">
           <ons-button modifier="quiet" id="add_code_button" style="display:block;" onclick="codelist.get_dialog().on_add()">Add</ons-button>
         </ons-col>
