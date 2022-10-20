@@ -65,10 +65,13 @@
 
     };
 
-    codelist.code_value_changed = function(ele, index) {
-        if(event.key === 'Enter' || event.key === 'Return'  || event.keyCode == 13) {
+    codelist.code_value_changed = function(did_blur, ele, index) {
+        if (!did_blur) {
+            if(event.key === 'Enter' || event.key === 'Return'  || event.keyCode == 13) {
+                ele.blur()
+            }
+        } else {
             $.send('/codelist', {'command': 'CODELIST_WRITE', 'index': index, 'value': ele.value}, on_codelist_status)
-            ele.blur()
         }
     }
 
@@ -448,7 +451,7 @@
             }
         },
         'update': (_this) => {console.log('code name update')},
-        'template': '<input type="text" id="##id##" name="code_address" class="text-input text-input--material text-full" onkeydown="codelist.code_name_changed(false, this, ##index##)" onblur="codelist.code_name_changed(true, this, ##index##)" value="Name" autocomplete="chrome-off" autocapitalize="off" style="font-weight: bold;">',
+        'template': '<input tabIndex="-1" type="text" id="##id##" name="code_address" class="text-input text-input--material text-full" onkeydown="codelist.code_name_changed(false, this, ##index##)" onblur="codelist.code_name_changed(true, this, ##index##)" value="Name" autocomplete="chrome-off" autocapitalize="off" style="font-weight: bold;">',
         'create': index => {
             var t = {...component_code_name};
             t.id = component_code_name.id+index
@@ -554,7 +557,7 @@
             }
         },
         'update': (_this) => {console.log('code name update')},
-        'template': '<input inputmode="decimal" autocomplete="chrome-off" type="text" id="##id##" name="code_value" class="text-input text-input--material text-full r-value" onkeydown="codelist.code_value_changed(this, ##index##)">',
+        'template': '<input tabIndex="-1" inputmode="decimal" autocomplete="chrome-off" type="text" id="##id##" name="code_value" class="text-input text-input--material text-full r-value" onkeydown="codelist.code_value_changed(false, this, ##index##)" onblur="codelist.code_value_changed(true, this, ##index##)">',
         'create': index => {
             var t = {...component_code_value};
             t.id = component_code_value.id+index
@@ -583,7 +586,7 @@
 
         },
         'update': (_this) => {console.log('code name update')},
-        'template': '<label class="checkbox checkbox--material"><input id="##id##" type="checkbox" class="checkbox__input checkbox--material__input" onchange="codelist.code_freeze_changed(this, ##index##)"> <div class="checkbox__checkmark checkbox--material__checkmark"></div>',
+        'template': '<label class="checkbox checkbox--material"><input tabIndex="-1" id="##id##" type="checkbox" class="checkbox__input checkbox--material__input" onchange="codelist.code_freeze_changed(this, ##index##)"> <div class="checkbox__checkmark checkbox--material__checkmark"></div>',
         'create': index => {
             var t = {...component_code_freeze};
             t.id = component_code_freeze.id+index
@@ -634,7 +637,7 @@
             }
         },
         'update': (_this) => {console.log('code name update')},
-        'template': '<input type="text" id="##id##" name="code_address" class="text-input text-input--material text-full r-value" oninput="codelist.address_value_changed(this)" readonly>',
+        'template': '<input tabIndex="-1" type="text" id="##id##" name="code_address" class="text-input text-input--material text-full r-value" oninput="codelist.address_value_changed(this)" readonly>',
         'create': index => {
             var t = {...component_code_address};
             t.id = component_code_address.id+index
@@ -685,7 +688,7 @@
             }
         },
         'update': (_this) => {console.log('code name update')},
-        'template': '<input type="text" id="##id##" name="code_address" class="text-input text-input--material text-full r-value" oninput="codelist.aob_value_changed(this)" readonly>',
+        'template': '<input tabIndex="-1" type="text" id="##id##" name="code_address" class="text-input text-input--material text-full r-value" oninput="codelist.aob_value_changed(this)" readonly>',
         'create': index => {
             var t = {...component_code_aob};
             t.id = component_code_aob.id+index
@@ -753,7 +756,7 @@
             }
         },
         'update': (_this) => {console.log('code name update')},
-        'template': '<input type="text" id="##id##" name="code_address" class="text-input text-input--material text-full" oninput="codelist.offset_value_changed(this)" readonly>',
+        'template': '<input tabIndex="-1" type="text" id="##id##" name="code_address" class="text-input text-input--material text-full" oninput="codelist.offset_value_changed(this)" readonly>',
         'create': index => {
             var t = {...component_code_offset};
             t.id = component_code_offset.id+index
