@@ -85,7 +85,6 @@ class CodeList(MemoryHandler):
         resp.media['file'] = self.loaded_file
         if self.code_data:
             resp.media['file_data'] = self.code_data
-            print(self.code_data)
 
     def handle_status(self, req: Request, resp: Response):
         resp.media['repeat'] = 1000 if self.code_data else 0
@@ -352,6 +351,9 @@ class CodeList(MemoryHandler):
                         addr = code['Address']
                         try:
                             read = self.get_read(code, addr)
+                        except (ProcessLookupError, PermissionError):
+                            self.update_event.set()
+                            read = None
                         except OSError:
                             read = None
                         self.result_list.append({'Value': read})
@@ -361,6 +363,9 @@ class CodeList(MemoryHandler):
                             self.aob_map[aob_str] = AOB(code['Name'], aob_str)
                         try:
                             read, addrs = self.read_aob_value(self.aob_map[aob_str], code)
+                        except (ProcessLookupError, PermissionError):
+                            self.update_event.set()
+                            read, addrs = (None, None)
                         except OSError:
                             read, addrs = (None, None)
                         self.result_list.append({'Value': read, 'Addresses': addrs})
@@ -421,10 +426,14 @@ class CodeList(MemoryHandler):
     def _freeze_process(self):
         while not self.freeze_event.is_set():
             with self.update_lock:
-                for key, value in self.freeze_map.items():
-                    addrs = self.get_addresses(value['code'])
-                    for addr in addrs:
-                        self.mem().write_memory(addr, value['value'])
+                try:
+                    for key, value in self.freeze_map.items():
+                        addrs = self.get_addresses(value['code'])
+                        for addr in addrs:
+                            self.mem().write_memory(addr, value['value'])
+                except (ProcessLookupError, PermissionError) as e:
+                    self.freeze_map.clear()
+                    self.freeze_event.set()
             self.freeze_event.wait(0.5)
 
     def get_addresses(self, code):

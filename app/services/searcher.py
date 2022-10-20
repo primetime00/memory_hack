@@ -48,7 +48,6 @@ class Search(MemoryHandler):
             'changed_by': self._changed_by_search
         }
         self.flow = self.FLOW_START
-
         self.type = ""
         self.size = ""
         self.value: SearchValue = None
@@ -62,9 +61,7 @@ class Search(MemoryHandler):
 
         self.previous_stats = {'results': [], 'flow': self.FLOW_START, 'round': 0}
         self.round = 0
-        self.error = ""
         self.progress = Progress()
-
         self.delete_memory()
 
     def kill(self):
@@ -128,7 +125,6 @@ class Search(MemoryHandler):
         self.search_thread: Thread = None
         self.update_thread: Search.UpdateThread = None
         self.previous_stats = {'results': [], 'flow': self.FLOW_START, 'round': 0}
-        self.error = ""
         self.progress = Progress()
         self.flow = self.FLOW_START
 
@@ -196,7 +192,6 @@ class Search(MemoryHandler):
             self.memory.break_search()
             self.search_thread.join()
         self.stop_updater()
-        self.error = ""
         self.type = req.media['type']
         self.size = req.media['size']
         self.value = SearchValue(req.media['value'], req.media['size'])
@@ -211,7 +206,6 @@ class Search(MemoryHandler):
         self.search_thread = Thread(target=self._search, args=[searcher])
         self.previous_stats['flow'] = self.flow
         self.previous_stats['round'] = self.round
-        print(self.search_results.copy())
         self.previous_stats['results'] = self.search_results.copy()
         self.flow = self.FLOW_SEARCHING
         resp.media['progress'] = 0
@@ -255,13 +249,21 @@ class Search(MemoryHandler):
         self.update_thread.freeze(addr, val, freeze)
 
     def handle_result_update(self, req: Request, resp: Response):
-        resp.media['results'] = self.get_updated_addresses()
-        resp.media['array'] = isinstance(self.update_thread.parsed_value, ctypes.Array)
-        resp.media['count'] = len(self.search_results)
+        if not self.update_thread or not self.update_thread.is_alive():
+            resp.media['repeat'] = 0
+            resp.media['array'] = False
+            resp.media['count'] = 0
+            resp.media['results'] = []
+        else:
+            resp.media['results'] = self.get_updated_addresses()
+            resp.media['array'] = isinstance(self.update_thread.parsed_value, ctypes.Array)
+            resp.media['count'] = len(self.search_results)
+            resp.media['repeat'] = 1000
 
     def get_updated_addresses(self):
         if not self.update_thread:
-            return self.search_results
+            raise Exception("ah")
+            #return self.search_results
         return self.update_thread.get_addresses()
 
 

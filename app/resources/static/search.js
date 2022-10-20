@@ -237,7 +237,9 @@
             current_flow = has(result, 'flow') ? result.flow : current_flow
             if (current_flow === flow_map["FLOW_RESULTS"]){
                 setup_results_list(result)
-                updater = setTimeout(request_update, 1000)
+                if (result.repeat > 0) {
+                    updater = setTimeout(request_update, result.repeat)
+                }
             }
         });
     }

@@ -27,6 +27,7 @@ class Process(Service):
         self.process_names = []
         self.last_update_time = 0
         self.last_id = 0xffffffff
+        self.error = ""
 
         self.handle_map = {
             "GET_PROCESSES": self.handle_processes,
@@ -52,9 +53,13 @@ class Process(Service):
 
     def process(self, req: Request, resp: Response):
         resp.media = {}
+        resp.content_type = MEDIA_JSON
+        if self.error:
+            resp.media['error'] = self.error
+            self.error = ""
+            return
         command = req.media['command']
         assert (command in self.handle_map)
-        resp.content_type = MEDIA_JSON
         try:
             self.handle_map[command](req, resp)
         except ProcessException as e:
@@ -62,11 +67,12 @@ class Process(Service):
 
     def handle_processes(self, req: Request, resp: Response):
         _id = int(req.media['id'])
-        if _id < self.last_id:
-            resp.media = {'status': 'INFO_GET_SUCCESS', 'set': self.get_process_list(), 'last_update': self.get_last_update_time()}
-        else:
-            adds, removes = self.generate_pid_difference()
-            resp.media = {'status': 'INFO_GET_SUCCESS', 'add': adds, 'remove': removes, 'last_update': self.get_last_update_time()}
+        #if _id < self.last_id:
+        #    resp.media = {'status': 'INFO_GET_SUCCESS', 'set': self.get_process_list(), 'last_update': self.get_last_update_time()}
+        #else:
+        #    adds, removes = self.generate_pid_difference()
+        #    resp.media = {'status': 'INFO_GET_SUCCESS', 'add': adds, 'remove': removes, 'last_update': self.get_last_update_time()}
+        resp.media = {'status': 'INFO_GET_SUCCESS', 'processes': self.get_process_list(), 'last_update': self.get_last_update_time()}
         resp.media['services'] = [{'name':x[0], 'process': x[1]['name']} for x in self.service_pids.items()]
         self.pid_map_copy = self.pid_map.copy()
         self.last_id = _id
@@ -127,6 +133,7 @@ class Process(Service):
         return cls
 
     def error_process(self, pid: int, msg: str):
+        self.error = msg
         for c in self.get_open_process_classes(pid):
             c.p_error(msg)
         self.close_process(pid)
@@ -183,7 +190,7 @@ class Process(Service):
             pids = self.open_pids.copy().keys()
             for pid in pids:
                 if not is_process_valid(pid):
-                    self.error_process(pid, 'Process is no longer valid')
+                    self.error_process(pid, 'Process "{}" is no longer valid'.format(self.pid_map[pid]['name']))
                     self.remove_open_pid(pid)
             self._process_monitor_event.wait(0.6)
         self._process_monitor_thread = None

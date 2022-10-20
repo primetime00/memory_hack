@@ -3,6 +3,7 @@
     var process_map = {}
     var last_update_time = -1
     var request_id = 0
+    var process_list = []
 
 
     //Public Property
@@ -29,21 +30,27 @@
         get_info()
     };
 
+    function generate_process_list(new_list) {
+        var same = process_list.filter(x => new_list.includes(x))
+        var remove = process_list.filter(x => !new_list.includes(x))
+        var add = new_list.filter(x => !process_list.includes(x))
+        return {'add': add, 'remove': remove, 'processes': same.concat(add) }
+    }
+
     function get_info() {
         $.post('/info', { "command": "GET_PROCESSES", 'id': request_id}, function(result)
         {
             request_id += 1
-            if (result.hasOwnProperty('set')) {
-                search.on_update_process_list(result.set, []);
-                codelist.on_update_process_list(result.set, []);
-                aob.on_update_process_list(result.set, []);
+            if (result.hasOwnProperty('error')) {
+                ons.notification.toast(result.error, { timeout: 4000, animation: 'fall' })
+                return
             }
-            else {
-                if (result.add.length > 0 || result.remove.length > 0) {
-                    search.on_update_process_list(result.add, result.remove);
-                    codelist.on_update_process_list(result.add, result.remove);
-                    aob.on_update_process_list(result.add, result.remove);
-                }
+            if (result.hasOwnProperty('processes')) {
+                var p_data = generate_process_list(result.processes)
+                process_list = p_data.processes
+                search.on_update_process_list(p_data.add, p_data.remove);
+                codelist.on_update_process_list(p_data.add, p_data.remove);
+                aob.on_update_process_list(p_data.add, p_data.remove);
             }
             for (const service of result.services) {
                 if (service.name === 'search') {
