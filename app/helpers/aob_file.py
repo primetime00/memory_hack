@@ -181,7 +181,7 @@ class AOBFile():
         results = []
         for item in sorted(self.aob_list, key=lambda x: x['offset']):
             res = {'size': item['size'], 'offset': '{:X}'.format(item['offset']),
-                   'aob': item['aob_string'] if item['size'] <= 50 else '...'}
+                   'aob': item['aob_string'] if item['size'] <= 50 else " ".join(item['aob_array'][0:50])}
             results.append(res)
         return results
 

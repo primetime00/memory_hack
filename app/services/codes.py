@@ -20,7 +20,7 @@ ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, cty
 
 
 class CodeList(MemoryHandler):
-    directory = Path('codes')
+    directory = Path.home().joinpath('mem_manip/user_codes') if '/root' not in str(Path.home()) else Path('/opt/mem_manip/user_codes')
     def __init__(self):
         super().__init__('codelist')
         self.handle_map = {
@@ -50,6 +50,9 @@ class CodeList(MemoryHandler):
         self.result_list = []
         self.freeze_map = {}
         self.utilities = ScriptUtilities()
+
+        if not self.directory.exists():
+            self.directory.mkdir(parents=True, exist_ok=True)
 
     def kill(self):
         self.reset()
