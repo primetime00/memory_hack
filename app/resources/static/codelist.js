@@ -9,6 +9,7 @@
 
     var code_list;
     var code_data;
+    var aob_resolve_map = {}
 
     //Public Method
     codelist.on_process_changed = function(process) {
@@ -101,10 +102,14 @@
 
     codelist.code_menu_clicked = function(ele, index) {
         ons.createElement('code_menu', { append: true }).then(function(popover) {
+
             items = $(popover).find('ons-list-item')
             for (i=0; i<items.length; i++) {
                 var item = items[i]
-                $(item).bind('click', {list_id: i, code_index: index}, (event) => {codelist.option_clicked(event.data.list_id, event.data.code_index); popover.hide()})
+                if (item.getAttribute("name") === 'copy_clipboard' && document.clipboard.has_address() && aob_resolve_map.hasOwnProperty(index) && aob_resolve_map[index].length > 0) {
+                    $(item).removeClass('hidden')
+                }
+                $(item).bind('click', {list_id: item.getAttribute("name"), code_index: index}, (event) => {codelist.option_clicked(event.data.list_id, event.data.code_index); popover.hide()})
             }
             popover.show("#"+ele.id);
         });
@@ -112,7 +117,7 @@
 
     codelist.option_clicked = function(list_id, code_index) {
         switch (list_id) {
-            case 0:
+            case 'edit':
                 var source = code_data[code_index]['Source']
                 var dt = {'title': 'Edit Code', 'index': code_index}
                 if (source === 'address') {
@@ -123,7 +128,7 @@
                 }
                 component_code_dialog.create(dt)
                break
-            case 1:
+            case 'copy':
                 var source = code_data[code_index]['Source']
                 var dt = {'title': 'Copy Code'}
                 if (source === 'address') {
@@ -134,14 +139,25 @@
                 }
                 component_code_dialog.create(dt)
                break
-            case 2:
+            case 'delete':
                 $.send('/codelist', { 'command': "CODELIST_DELETE_CODE", 'index': code_index}, on_codelist_status);
+                break
+            case 'copy_clipboard':
+                var new_address = document.clipboard.data.address
+                var offset = parseInt(code_data[code_index].Offset, 16)
+                var resolved = aob_resolve_map[code_index][0] - offset
+                var new_offset = new_address - resolved
+                var cmd = { 'command': "CODELIST_ADD_CODE", 'type': 'aob',
+                              'address': 0,
+                              'aob': code_data[code_index].AOB,
+                              'offset': new_offset.toString(16) }
+
+                $.send('/codelist', cmd, on_codelist_status);
                 break
         }
     }
 
     codelist.on_save_clicked = function(ele) {
-        console.log(component_codelist_file.file)
         ons.createElement('code_save', { append: true }).then(function(popover) {
             var fname = component_codelist_file.file === '_null' ? '' : component_codelist_file.file
             $(popover).find('input[name="save_file"]').val(fname)
@@ -736,7 +752,6 @@
             var cc_offset_address = component_code_offset_address.create(index)
             var cc_offset_refresh = component_code_offset_refresh.create(index)
 
-            console.log(t.obj.find('ons-col[name="offset_refresh"]').find('ons-col'))
             t.obj.find('ons-col[name="offset_refresh"]').find('ons-col').eq(0).append(cc_offset.obj)
             t.obj.find('ons-col[name="offset_refresh"]').find('ons-col').eq(1).append(cc_offset_refresh.obj)
             t.obj.find('ons-col[name="addresses"]').append(cc_offset_address.obj)
@@ -771,19 +786,24 @@
         'obj': undefined,
         'index': -1,
         'setup': (result, _this) => {
-            if (has(result, 'Addresses') && result.Addresses != null) {
-                if ($(":focus")[0] && $(":focus")[0].id === _this.obj[0].id){
-                    return
-                }
-                _this.obj.val("")
-                var addrs = ""
-                result.Addresses.forEach((item, index) =>{
-                    addrs += item.toString(16).toUpperCase()
-                    if (index < result.Addresses.length-1){
-                        addrs+='\n'
+            aob_resolve_map = {}
+            if (has(result, 'Addresses')) {
+                aob_resolve_map[_this.index] = []
+                    if (result.Addresses != null) {
+                    aob_resolve_map[_this.index] = result.Addresses
+                    if ($(":focus")[0] && $(":focus")[0].id === _this.obj[0].id){
+                        return
                     }
-                })
-                _this.obj.val(addrs)
+                    _this.obj.val("")
+                    var addrs = ""
+                    result.Addresses.forEach((item, index) =>{
+                        addrs += item.toString(16).toUpperCase()
+                        if (index < result.Addresses.length-1){
+                            addrs+='\n'
+                        }
+                    })
+                    _this.obj.val(addrs)
+                }
             }
         },
         'update': (_this) => {console.log('code name update')},

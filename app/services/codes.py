@@ -294,6 +294,7 @@ class CodeList(MemoryHandler):
                 self.code_data = json.load(ifile)
                 for v in self.code_data:
                     v['Value'] = "??"
+                    v['Freeze'] = False
                 self.loaded_file = pt.stem
         except:
             raise CodelistException('Could not load code file')

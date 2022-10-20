@@ -67,6 +67,15 @@
         }
         document.clipboard.clear()
       },
+      'has_address': () => {
+        if (Object.keys(document.clipboard.data).length === 0) {
+          return false;
+        }
+        if (document.clipboard.data.hasOwnProperty("address")) {
+          return true;
+        }
+        return false;
+      },
       'clear': () => {
         document.clipboard.data = {}
         search.clipboard_data_cleared()
@@ -135,6 +144,9 @@ input.r-value {
 ons-fab.hide-fab {
   display:none;
 }
+ons-list-item.hidden {
+  display:none;
+}
 
 .spacer > * + * {
     margin-left: 30px
@@ -183,13 +195,16 @@ div .input_item{
   <ons-template id="code_menu">
     <ons-popover cancelable direction="down">
       <ons-list id="popover-list">
-        <ons-list-item class="more-options" tappable>
+        <ons-list-item class="more-options" name="edit" tappable>
           <div class="center">Edit</div>
         </ons-list-item>
-        <ons-list-item class="more-options" tappable>
+        <ons-list-item class="more-options" name="copy" tappable>
           <div class="center">Copy</div>
         </ons-list-item>
-        <ons-list-item class="more-options" tappable>
+        <ons-list-item class="more-options hidden" name="copy_clipboard" tappable>
+          <div class="center">Copy From Clipboard</div>
+        </ons-list-item>
+        <ons-list-item class="more-options" name="delete" tappable>
           <div class="center">Delete</div>
         </ons-list-item>
       </ons-list>
