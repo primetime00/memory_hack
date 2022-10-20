@@ -41,6 +41,7 @@ class Search(MemoryHandler):
             'greater_than': self._greater_search,
             'less_than': self._lesser_search,
             'unknown': self._unknown_search,
+            'unknown_near': self._unknown_near_search,
             'increase': self._increase_search,
             'decrease': self._decrease_search,
             'changed': self._changed_search,
@@ -194,7 +195,7 @@ class Search(MemoryHandler):
         self.stop_updater()
         self.type = req.media['type']
         self.size = req.media['size']
-        self.value = SearchValue(req.media['value'], req.media['size'])
+        self.value = SearchValue(req.media['value'], req.media['size'], req.media['type'])
         resp.media['type'] = self.type
         resp.media['size'] = self.size
         resp.media['value'] = self.value.get_raw_value()
@@ -287,6 +288,9 @@ class Search(MemoryHandler):
             searcher(self.value, SearchResults.fromValue(self.value))
         except BreakException:
             return
+        except SearchException:
+            self._search_error()
+            return
         self._search_complete()
 
     def _search_complete(self):
@@ -294,10 +298,15 @@ class Search(MemoryHandler):
         if len(self.search_results) > 0:
             self.start_updater()
             self.flow = self.FLOW_RESULTS
-        elif self.type == 'unknown':
+        elif self.type == 'unknown' or self.type == 'unknown_near':
             self.flow = self.FLOW_INITIALIZE_UNKNOWN
         else:
             self.flow = self.FLOW_NO_RESULTS
+
+    def _search_error(self):
+        self.round += 1
+        self.flow = self.FLOW_NO_RESULTS
+
 
     def _equal_search(self, value: SearchValue, results: SearchResults):
         su = SearchUtilities(self.mem(), value, results, DataStore().get_operation_control(), self.progress)
@@ -336,6 +345,10 @@ class Search(MemoryHandler):
     def _unknown_search(self, value: SearchValue, results: SearchResults):
         su = SearchUtilities(self.mem(), value, results, DataStore().get_operation_control(), self.progress)
         su.capture_memory()
+
+    def _unknown_near_search(self, value: SearchValue, results: SearchResults):
+        su = SearchUtilities(self.mem(), value, results, DataStore().get_operation_control(), self.progress)
+        su.capture_memory_range(value.address, 0x100000)
 
     def _inc_dec_search(self, value: SearchValue, results: SearchResults, cmp):
         su = SearchUtilities(self.mem(), value, results, DataStore().get_operation_control(), self.progress)

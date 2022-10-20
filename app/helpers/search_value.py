@@ -8,12 +8,16 @@ from app.helpers.exceptions import SearchException
 ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, ctypes.Union]
 
 class SearchValue:
-    def __init__(self, value: str, size: str):
+    def __init__(self, value: str, size: str, _type: str):
         self.aob: AOBValue = None
         self.cmp = None
         self.cmp_other = None
         self.value = None
-        if not value:
+        self.address = None
+        self.type = _type
+        if _type == 'unknown_near':
+            self.address = int(value, 16)
+        if not value or _type == 'unknown_near':
             value = "0"
         self.raw_value = value if not value.lower().startswith('0x') else str(int(value, 16))
         self.parse_value(self.raw_value, size)

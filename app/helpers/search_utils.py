@@ -177,6 +177,33 @@ class SearchUtilities:
         self.progress.mark()
         return found
 
+    def capture_memory_range(self, _position, _range):
+        if self.mem_path.absolute().exists():
+            shutil.rmtree(self.mem_path.absolute())
+        mem_list = list(self.mem.list_mapped_regions())
+        self.progress.add_constraint(0, mem_list[-1][1], 1.0)
+        self.mem_path.mkdir(exist_ok=True)
+        abs_start = mem_list[0][0]
+        if _position < abs_start:
+            raise SearchException("Could not search around this position")
+
+        for start, stop in self.mem.list_mapped_regions():
+            self.op_control.test()
+            if _position < start or _position >= stop:
+                continue
+            _start = int(max((_position - _range/2), start))
+            _end = int(min((_position + _range/2), stop))
+            cap_file = self.mem_path.joinpath('capture_{}_{}'.format(_start-abs_start, (_end-_start)))
+            try:
+                region_buffer = (ctypes.c_byte * (_end - _start))()
+                self.mem.read_memory(_start, region_buffer)
+                cap_file.write_bytes(bytes(region_buffer))
+                break
+            except OSError:
+                continue
+        self.progress.mark()
+
+
     def capture_memory(self):
         if self.mem_path.absolute().exists():
             shutil.rmtree(self.mem_path.absolute())
@@ -242,14 +269,24 @@ class SearchUtilities:
             return results
 
     def search_cmp_capture(self, cmp_func) -> SearchResults:
-        shared_mem = SharedMemory(create=True, size=32*8*2)
         if not self.mem_path.absolute().exists():
             raise SearchException('cannot find capture')
+        total_size = 0
+        total_count = 0
+        for f in self.mem_path.glob('*'):
+            total_size += os.path.getsize(f)
+            total_count += 1
+        if total_size > 6000000 and total_count > 4:
+            return self._search_cmp_capture_multi(cmp_func)
+        return self._search_cmp_capture_single(cmp_func)
+
+    def _search_cmp_capture_multi(self, cmp_func) -> SearchResults:
         mem_list = list(self.mem.list_mapped_regions())
         abs_start = mem_list[0][0]
         self.progress.add_constraint(0, self.total_size, 1.0)
         mm_interval = []
         index=1
+        shared_mem = SharedMemory(create=True, size=32*8*2)
         for start, stop in self.mem.list_mapped_regions():
             mm_interval.append((start, stop, abs_start, shared_mem, cmp_func, self.value, SearchResults.fromValue(self.value, name='region{:03}'.format(index))))
             index += 1
@@ -273,6 +310,29 @@ class SearchUtilities:
         shared_mem.close()
         shared_mem.unlink()
         self.progress.mark()
+        return self.results
+
+    def _search_cmp_capture_single(self, cmp_func) -> SearchResults:
+        mem_list = list(self.mem.list_mapped_regions())
+        abs_start = mem_list[0][0]
+        self.progress.add_constraint(0, self.total_size, 1.0)
+        for f in self.mem_path.glob('*'):
+            try:
+                start = abs_start+int(f.parts[-1].split('_')[1])
+                stop = start+int(f.parts[-1].split('_')[2])
+                cap_file = f
+                read_bytes = cap_file.read_bytes()
+                capture_buffer = (ctypes.c_byte * len(read_bytes))(*read_bytes)
+                region_buffer = (ctypes.c_byte * (stop - start))()
+                self.mem.read_memory(start, region_buffer)
+                size = (stop - start) - (self.value.get_size() - 1)
+                for i in range(0, size):
+                    mem_value = self.value.get_type().from_buffer(region_buffer, i)
+                    cap_value = self.value.get_type().from_buffer(capture_buffer, i)
+                    if cmp_func(mem_value, cap_value, self.value):
+                        self.results.add(start+i, self.value.get_type().from_buffer_copy(region_buffer, i))
+            except OSError:
+                continue
         return self.results
 
     def search_cmp_addresses(self, results: SearchResults, cmp_func = None) -> SearchResults:

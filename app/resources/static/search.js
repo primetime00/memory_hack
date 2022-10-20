@@ -252,6 +252,7 @@
                 sel_search_type.find('option[value="greater_than"]').show()
                 sel_search_type.find('option[value="less_than"]').show()
                 sel_search_type.find('option[value="unknown"]').show()
+                sel_search_type.find('option[value="unknown_near"]').show()
                 sel_search_type.find('option[value="increase"]').hide()
                 sel_search_type.find('option[value="decrease"]').hide()
                 sel_search_type.find('option[value="unchanged"]').hide()
@@ -275,6 +276,7 @@
                     sel_search_type.find('option[value="greater_than"]').hide()
                     sel_search_type.find('option[value="less_than"]').hide()
                     sel_search_type.find('option[value="unknown"]').hide()
+                    sel_search_type.find('option[value="unknown_near"]').hide()
                     sel_search_type.find('option[value="increase"]').hide()
                     sel_search_type.find('option[value="decrease"]').hide()
                     sel_search_type.find('option[value="unchanged"]').show()
@@ -286,6 +288,7 @@
                     sel_search_type.find('option[value="greater_than"]').show()
                     sel_search_type.find('option[value="less_than"]').show()
                     sel_search_type.find('option[value="unknown"]').hide()
+                    sel_search_type.find('option[value="unknown_near"]').hide()
                     sel_search_type.find('option[value="increase"]').show()
                     sel_search_type.find('option[value="decrease"]').show()
                     sel_search_type.find('option[value="unchanged"]').show()
@@ -309,6 +312,7 @@
                 sel_search_type.find('option[value="greater_than"]').hide()
                 sel_search_type.find('option[value="less_than"]').hide()
                 sel_search_type.find('option[value="unknown"]').hide()
+                sel_search_type.find('option[value="unknown_near"]').hide()
                 sel_search_type.find('option[value="increase"]').show()
                 sel_search_type.find('option[value="decrease"]').show()
                 sel_search_type.find('option[value="unchanged"]').show()
@@ -322,7 +326,7 @@
     function setup_search_size(result) {
         switch (current_flow) {
             case flow_map["FLOW_START"]:
-                if (has(result, 'type') && result.type === 'unknown') {
+                if (has(result, 'type') && (result.type === 'unknown' || result.type === 'unknown_near')) {
                     row_search_size.hide()
                 } else {
                     row_search_size.show()
@@ -398,7 +402,7 @@
                     row_search_value.show()
                     if (has(result, "value") && has(result, "size")) {
                         inp_search_value.val(result.value)
-                        validate_value(String(result.value), result.size)
+                        validate_value(String(result.value), result.size, result.type)
                     }else {
                         inp_search_value.val("")
                         value_valid = false
@@ -409,7 +413,7 @@
                 inp_search_value.attr('disabled', 'disabled')
                 if (has(result, "value") && has(result, "size")) {
                     inp_search_value.val(result.value)
-                    validate_value(String(result.value), result.size)
+                    validate_value(String(result.value), result.size, result.type)
                 }else {
                     inp_search_value.val("")
                     value_valid = false
@@ -419,7 +423,7 @@
                 inp_search_value.removeAttr('disabled')
                 if (has(result, "value") && has(result, "size")) {
                     inp_search_value.val(result.value)
-                    validate_value(String(result.value), result.size)
+                    validate_value(String(result.value), result.size, result.type)
                 }else {
                     inp_search_value.val("")
                     value_valid = false
@@ -429,7 +433,7 @@
                 inp_search_value.attr('disabled', 'disabled')
                 if (has(result, "value") && has(result, "size")) {
                     inp_search_value.val(result.value)
-                    validate_value(String(result.value), result.size)
+                    validate_value(String(result.value), result.size, result.type)
                 }else {
                     inp_search_value.val("")
                     value_valid = false
@@ -460,7 +464,7 @@
                 break
             case flow_map["FLOW_RESULTS"]:
                 btn_search_button.attr('disabled', 'disabled')
-                if (has(result, 'type') && (result.type == 'unknown' || result.type == 'increase' || result.type == 'decrease' || result.type == 'changed' || result.type == 'unchanged')) {
+                if (has(result, 'type') && (result.type == 'unknown' || result.type == 'unknown_near' || result.type == 'increase' || result.type == 'decrease' || result.type == 'changed' || result.type == 'unchanged')) {
                     btn_search_button.removeAttr('disabled')
                 } else {
                     if (value_valid) {
@@ -600,6 +604,7 @@
                         sel_search_type.find('option[value="greater_than"]').show()
                         sel_search_type.find('option[value="less_than"]').show()
                         sel_search_type.find('option[value="unknown"]').show()
+                        sel_search_type.find('option[value="unknown_near"]').show()
                         sel_search_type.find('option[value="increase"]').hide()
                         sel_search_type.find('option[value="decrease"]').hide()
                         sel_search_type.find('option[value="unchanged"]').hide()
@@ -620,6 +625,7 @@
                         sel_search_type.find('option[value="greater_than"]').hide()
                         sel_search_type.find('option[value="less_than"]').hide()
                         sel_search_type.find('option[value="unknown"]').hide()
+                        sel_search_type.find('option[value="unknown_near"]').hide()
                         sel_search_type.find('option[value="increase"]').hide()
                         sel_search_type.find('option[value="decrease"]').hide()
                         sel_search_type.find('option[value="unchanged"]').show()
@@ -633,6 +639,7 @@
                         sel_search_type.find('option[value="greater_than"]').show()
                         sel_search_type.find('option[value="less_than"]').show()
                         sel_search_type.find('option[value="unknown"]').hide()
+                        sel_search_type.find('option[value="unknown_near"]').hide()
                         sel_search_type.find('option[value="increase"]').show()
                         sel_search_type.find('option[value="decrease"]').show()
                         sel_search_type.find('option[value="unchanged"]').show()
@@ -647,6 +654,7 @@
                 sel_search_type.find('option[value="greater_than"]').hide()
                 sel_search_type.find('option[value="less_than"]').hide()
                 sel_search_type.find('option[value="unknown"]').hide()
+                sel_search_type.find('option[value="unknown_near"]').hide()
                 sel_search_type.find('option[value="increase"]').show()
                 sel_search_type.find('option[value="decrease"]').show()
                 sel_search_type.find('option[value="unchanged"]').show()
@@ -666,6 +674,7 @@
                         sel_search_size.find('option[value="array"]').show()
                         break
                     case 'unknown':
+                    case 'unknown_near':
                         row_search_size.hide()
                         break
                     default:
@@ -703,7 +712,7 @@
                 } else {
                     row_search_value.show()
                     inp_search_value.attr('inputmode', _size === 'array' ? 'text' : 'decimal')
-                    validate_value(_value, _size)
+                    validate_value(_value, _size, _type)
                 }
                 break
             case flow_map["FLOW_SEARCHING"]:
@@ -717,7 +726,7 @@
                 } else {
                     row_search_value.show()
                     inp_search_value.attr('inputmode', _size === 'array' ? 'text' : 'decimal')
-                    validate_value(_value, _size)
+                    validate_value(_value, _size, _type)
                 }
                 break
             case flow_map["FLOW_INITIALIZE_UNKNOWN"]:
@@ -725,7 +734,7 @@
                     inp_search_value.removeAttr('disabled')
                     row_search_value.show()
                     inp_search_value.attr('inputmode', _size === 'array' ? 'text' : 'decimal')
-                    validate_value(_value, _size)
+                    validate_value(_value, _size, _type)
                 }
                 else {
                     row_search_value.hide()
@@ -820,9 +829,13 @@
     }
 
 
-    function validate_value(_value, _size) {
+    function validate_value(_value, _size, _type) {
         if (_value === "") {
             value_valid = false
+            return
+        }
+        if (_type == 'unknown_near') {
+            value_valid = /^[0-9A-F]{5,16}$/i.test(_value)
             return
         }
         const array_regex = new RegExp('^(?:([0-9A-F]{2}|\\?{2}) )*([0-9A-F]{2}|\\?{2})$');
