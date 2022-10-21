@@ -16,8 +16,11 @@ def value_to_bytes(value: str, byte_size: int):
     return (ctypes.c_byte * len(bc))(*bc)
 
 def is_process_valid(pid):
-    proc = psutil.Process(pid)
-    return proc.is_running() and proc.status() != 'zombie'
+    try:
+        proc = psutil.Process(pid)
+        return proc.is_running() and proc.status() != 'zombie'
+    except psutil.NoSuchProcess:
+        return False
 
 def bytes_to_aob(bts: ctypes.Array):
     new_values = []

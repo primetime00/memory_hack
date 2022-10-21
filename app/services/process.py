@@ -1,5 +1,6 @@
 import fnmatch
 import os
+import threading
 import time
 from pathlib import Path
 from threading import Thread, Event
@@ -28,6 +29,7 @@ class Process(Service):
         self.last_update_time = 0
         self.last_id = 0xffffffff
         self.error = ""
+        self.pid_map_lock = threading.Lock()
 
         self.handle_map = {
             "GET_PROCESSES": self.handle_processes,
@@ -67,11 +69,6 @@ class Process(Service):
 
     def handle_processes(self, req: Request, resp: Response):
         _id = int(req.media['id'])
-        #if _id < self.last_id:
-        #    resp.media = {'status': 'INFO_GET_SUCCESS', 'set': self.get_process_list(), 'last_update': self.get_last_update_time()}
-        #else:
-        #    adds, removes = self.generate_pid_difference()
-        #    resp.media = {'status': 'INFO_GET_SUCCESS', 'add': adds, 'remove': removes, 'last_update': self.get_last_update_time()}
         resp.media = {'status': 'INFO_GET_SUCCESS', 'processes': self.get_process_list(), 'last_update': self.get_last_update_time()}
         resp.media['services'] = [{'name':x[0], 'process': x[1]['name']} for x in self.service_pids.items()]
         self.pid_map_copy = self.pid_map.copy()
@@ -86,23 +83,6 @@ class Process(Service):
         except:
             resp.media['success'] = False
             resp.media['error'] = "Could not request this process."
-
-    def generate_pid_difference(self):
-        adds = []
-        removes = []
-        current_set = set(self.pid_map)
-        previous_set = set(self.pid_map_copy)
-        difference = current_set ^ previous_set
-        for d in difference:
-            if d in current_set:
-                # this is an addition
-                if self.pid_map[d]['valid']:
-                    adds.append(self.pid_map[d]['name'])
-            else:
-                # this is a removal
-                if self.pid_map_copy[d]['valid']:
-                    removes.append(self.pid_map_copy[d]['name'])
-        return adds, removes
 
     def get_process(self, cls):
         if cls not in self.process_classes:
@@ -189,9 +169,14 @@ class Process(Service):
         while self.open_pids and not self.thread_break:
             pids = self.open_pids.copy().keys()
             for pid in pids:
-                if not is_process_valid(pid):
-                    self.error_process(pid, 'Process "{}" is no longer valid'.format(self.pid_map[pid]['name']))
-                    self.remove_open_pid(pid)
+                with self.pid_map_lock:
+                    if not is_process_valid(pid):
+                        if pid in self.pid_map:
+                            err = 'Process "{}" is no longer valid'.format(self.pid_map[pid]['name'])
+                        else:
+                            err = 'Process is not longer valid'
+                        self.error_process(pid, err)
+                        self.remove_open_pid(pid)
             self._process_monitor_event.wait(0.6)
         self._process_monitor_thread = None
 
@@ -210,27 +195,28 @@ class Process(Service):
             current_pid_set = set(mem_edit.Process.list_available_pids())
             previous_pid_set = set(self.pids)
             difference = current_pid_set ^ previous_pid_set
-            for d in difference:
-                if d in current_pid_set:
-                    # this is a new pid
-                    try:
-                        proc = psutil.Process(d)
-                        with proc.oneshot():
-                            if os.name == "nt":
-                                try:
+            with self.pid_map_lock:
+                for d in difference:
+                    if d in current_pid_set:
+                        # this is a new pid
+                        try:
+                            proc = psutil.Process(d)
+                            with proc.oneshot():
+                                if os.name == "nt":
+                                    try:
+                                        user = proc.username()
+                                    except psutil.AccessDenied:
+                                        user = 'NT AUTHORITY\\SYSTEM'
+                                else:
                                     user = proc.username()
-                                except psutil.AccessDenied:
-                                    user = 'NT AUTHORITY\\SYSTEM'
-                            else:
-                                user = proc.username()
-                            self.pid_map[d] = {'pid': d, 'name': proc.name(), 'user': user, 'status': proc.status(), 'valid': is_pid_valid(proc.pid) and not self.is_blacklisted(proc.name()) and can_attach(proc.pid)}
-                            self.pids.append(d)
-                    except psutil.NoSuchProcess:
-                        continue
-                else:
-                    # this pid is gone
-                    self.pids.remove(d)
-                    del self.pid_map[d]
+                                self.pid_map[d] = {'pid': d, 'name': proc.name(), 'user': user, 'status': proc.status(), 'valid': is_pid_valid(proc.pid) and not self.is_blacklisted(proc.name()) and can_attach(proc.pid)}
+                                self.pids.append(d)
+                        except psutil.NoSuchProcess:
+                            continue
+                    else:
+                        # this pid is gone
+                        self.pids.remove(d)
+                        del self.pid_map[d]
             if len(difference) > 0:
                 self.last_update_time = int(time.time() * 100) - 160000000000
             self._pid_monitor_event.wait(1)

@@ -253,20 +253,7 @@
         } else if (code_list !== undefined) {
             code_list.setup(result, code_list)
         }
-        if (component_codelist_file.obj === undefined) {
-            component_codelist_file.obj = $('#'+component_codelist_file.id)
-        }
-        if (component_codelist_save.obj === undefined) {
-            component_codelist_save.obj = $('#'+component_codelist_save.id)
-        }
-        if (component_codelist_delete.obj === undefined) {
-            component_codelist_delete.obj = $('#'+component_codelist_delete.id)
-        }
-
-
-        component_codelist_file.setup(result, component_codelist_file)
-        component_codelist_save.setup(result, component_codelist_save)
-        component_codelist_delete.setup(result, component_codelist_delete)
+        component_codelist_file_row.setup(result, component_codelist_file_row)
 
         if (has(result, 'error')) {
             ons.notification.toast(result.error, { timeout: 4000, animation: 'fall' })
@@ -274,6 +261,26 @@
         if (has(result, 'repeat') && result.repeat > 0) {
             setTimeout(()=>{$.send('/codelist', { "command": "CODELIST_STATUS" }, on_codelist_status);}, result.repeat)
         }
+    }
+
+    var component_codelist_file_row = {
+        'id': "row_codelist_loadsave",
+        'obj': undefined,
+        'setup': (result, _this) => {
+            if (component_codelist_file.obj === undefined) {
+                component_codelist_file.obj = $('#'+component_codelist_file.id)
+            }
+            if (component_codelist_save.obj === undefined) {
+                component_codelist_save.obj = $('#'+component_codelist_save.id)
+            }
+            if (component_codelist_delete.obj === undefined) {
+                component_codelist_delete.obj = $('#'+component_codelist_delete.id)
+            }
+            component_codelist_file.setup(result, component_codelist_file)
+            component_codelist_save.setup(result, component_codelist_save)
+            component_codelist_delete.setup(result, component_codelist_delete)
+        },
+        'update': (_this) => {}
     }
 
     var component_codelist_save = {
@@ -293,7 +300,7 @@
         'id': "codelist_delete_button",
         'obj': undefined,
         'setup': (result, _this) => {
-            if (code_list && code_list.items.length > 0) {
+            if (code_list && code_list.items.length > 0 && component_codelist_file.file !== '_null') {
                 _this.obj.removeAttr('disabled')
             } else {
                 _this.obj.attr('disabled', 'disabled')
@@ -325,7 +332,8 @@
         'in': (name) => {return _this.files.includes(name);},
         'files': [],
         'file': "_null",
-        'update': (_this) => {}
+        'update': (_this) => {
+        }
     }
 
 
@@ -737,7 +745,7 @@
         'obj': undefined,
         'index': -1,
         'setup': (result, _this) => {
-            if (has(result, "Addresses") && result.Addresses.length > 0) {
+            if (has(result, "Addresses") && result.Addresses !== null && result.Addresses.length > 0) {
                 _this.obj.show()
             } else {
                 _this.obj.hide()
