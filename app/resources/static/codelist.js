@@ -60,12 +60,25 @@
         sel_codelist_file = $("#codelist_file_selection")
         component_list.forEach(item => {
             item['obj'] = $("#"+item.id)
-            if (has(item, 'changed')) {
-                item.obj.bind('change', {item: item}, (event) => event.data.item.changed(event.data.item))
-            }
+            apply_events(item)
         })
 
     };
+
+    apply_events = function(component) {
+        if (has(component, 'changed')) {
+            component.obj.bind('change', {component: component}, (event) => event.data.component.changed(event.data.component))
+        }
+        if (has(component, 'children')) {
+            component.children.forEach((item, index) => {
+                if (Array.isArray(item)) {
+                    item.forEach((sub) => {apply_events(sub)})
+                } else {
+                    apply_events(item)
+                }
+            })
+        }
+    }
 
     codelist.code_value_changed = function(did_blur, ele, index) {
         if (!did_blur) {
@@ -146,7 +159,9 @@
             case 'copy_clipboard':
                 var new_address = document.clipboard.data.address
                 var offset = parseInt(code_data[code_index].Offset, 16)
-                var resolved = aob_resolve_map[code_index][0] - offset
+                var selected = code_data[code_index].Selected
+                //var resolved = aob_resolve_map[code_index][0] - offset
+                var resolved = selected - offset
                 var new_offset = new_address - resolved
                 var cmd = { 'command': "CODELIST_ADD_CODE", 'type': 'aob',
                               'address': 0,
@@ -249,6 +264,7 @@
                 code_list = component_code_list
                 code_list.setup(result, code_list)
                 code_list.obj = $('#code_list')
+                apply_events(code_list)
             }
         } else if (code_list !== undefined) {
             code_list.setup(result, code_list)
@@ -287,7 +303,7 @@
         'id': "codelist_save_button",
         'obj': undefined,
         'setup': (result, _this) => {
-            if (code_list && code_list.items.length > 0) {
+            if (code_list && code_list.children.length > 0) {
                 _this.obj.removeAttr('disabled')
             } else {
                 _this.obj.attr('disabled', 'disabled')
@@ -300,7 +316,7 @@
         'id': "codelist_delete_button",
         'obj': undefined,
         'setup': (result, _this) => {
-            if (code_list && code_list.items.length > 0 && component_codelist_file.file !== '_null') {
+            if (code_list && code_list.children.length > 0 && component_codelist_file.file !== '_null') {
                 _this.obj.removeAttr('disabled')
             } else {
                 _this.obj.attr('disabled', 'disabled')
@@ -343,43 +359,34 @@
         'obj': undefined,
         'setup': (result, _this) => {
             if (has(result, 'file_data')) {
-                _this.items = []
+                _this.children = []
                 result.file_data.forEach((item, index) => {
                     var head = component_code_header.create(index, result.file_data[index])
                     var comp = component_code.create(index, result.file_data[index])
-                    _this.items.push({'header':head, 'item': comp});
+                    _this.children.push([head, comp])
                     _this.obj.append(head.obj)
                     _this.obj.append(comp.obj)
-                });
-                result.file_data.forEach((res, index) => {
-                    _this.items[index].header.setup(res, _this.items[index].header)
-                    _this.items[index].item.setup(res, _this.items[index].item)
+                    head.setup(item, head)
+                    comp.setup(item, comp)
                 });
             }
             if (has(result, 'results')) {
                 aob_resolve_map = {}
                 value_map = {}
                 result.results.forEach((res, index) => {
-                    _this.items[index].header.setup(res, _this.items[index].header)
-                    _this.items[index].item.setup(res, _this.items[index].item)
+                    _this.children[index][0].setup(res, _this.children[index][0])
+                    _this.children[index][1].setup(res, _this.children[index][1])
                 });
             }
         },
         'update': (_this) => {console.log('i update')},
         'template': '<ons-list id="code_list">##code_components##</ons-list>',
-        'items-html': (_this) => {
-            var html = ''
-            _this.items.forEach((item, index) => {
-                html+=item.template;
-            });
-            return html;
-        },
         'empty': () => {
             $('#code_list').empty()
             component_code_list.obj = $('#code_list')
-            while (component_code_list.items.length) { component_code_list.items.pop(); }
+            while (component_code_list.children.length) { component_code_list.children.pop(); }
         },
-        'items': []
+        'children': []
     }
 
     var component_code_header = {
@@ -388,7 +395,7 @@
         'index': -1,
         'name_component': {},
         'setup': (result, _this) => {
-            _this.rows.forEach( (item, index) => {
+            _this.children.forEach( (item, index) => {
                 item.setup(result, item)
             })
         },
@@ -401,14 +408,14 @@
             t.template = component_code_header.template.replaceAll("##index##", index).replaceAll('##id##', t.id)
             t.obj = $(ons.createElement(t.template))
             //create the elements
-            t.rows = []
-            t.rows.push(component_row_name.create(index))
-            t.rows.forEach((item, index) =>{
+            t.children = []
+            t.children.push(component_row_name.create(index))
+            t.children.forEach((item, index) =>{
                 t.obj.append(item.obj)
             })
             return t;
         },
-        'rows': []
+        'children': []
     }
 
     var component_code = {
@@ -417,7 +424,7 @@
         'index': -1,
         'name_component': {},
         'setup': (result, _this) => {
-            _this.rows.forEach( (item, index) => {
+            _this.children.forEach( (item, index) => {
                 item.setup(result, item)
             })
         },
@@ -430,20 +437,20 @@
             t.template = component_code.template.replaceAll("##index##", index).replaceAll('##id##', t.id)
             t.obj = $(ons.createElement(t.template))
             //create the elements
-            t.rows = []
-            t.rows.push(component_row_value.create(index))
+            t.children = []
+            t.children.push(component_row_value.create(index))
             if (data.Source == 'address') {
-                t.rows.push(component_row_address.create(index))
+                t.children.push(component_row_address.create(index))
             } else {
-                t.rows.push(component_row_aob.create(index))
-                t.rows.push(component_row_offset.create(index))
+                t.children.push(component_row_aob.create(index))
+                t.children.push(component_row_offset.create(index))
             }
-            t.rows.forEach((item, index) =>{
+            t.children.forEach((item, index) =>{
                 t.obj.append(item.obj)
             })
             return t;
         },
-        'rows': []
+        'children': []
     }
 
     var component_row_name = {
@@ -451,7 +458,7 @@
         'obj': undefined,
         'index': -1,
         'setup': (result, _this) => {
-            _this.items.forEach((item, index) => {
+            _this.children.forEach((item, index) => {
                 item.setup(result, item)
             })
         },
@@ -472,10 +479,10 @@
             t.obj.find('ons-col').eq(0).append(cc_name.obj)
             var cc_options = component_code_options.create(index)
             t.obj.find('ons-col').eq(1).append(cc_options.obj)
-            t.items = [cc_name, cc_options]
+            t.children = [cc_name, cc_options]
             return t;
         },
-        'items': []
+        'children': []
     }
     var component_code_name = {
         'id': 'code_component_name_',
@@ -520,7 +527,7 @@
         'obj': undefined,
         'index': -1,
         'setup': (result, _this) => {
-            _this.items.forEach((item, index) => {
+            _this.children.forEach((item, index) => {
                 item.setup(result, item)
             })
         },
@@ -545,10 +552,10 @@
             t.obj.find('ons-col').eq(1).append(cc_value.obj)
             var cc_freeze = component_code_freeze.create(index)
             t.obj.find('ons-col').eq(2).append(cc_freeze.obj)
-            t.items = [cc_size, cc_value, cc_freeze]
+            t.children = [cc_size, cc_value, cc_freeze]
             return t;
         },
-        'items': []
+        'children': []
     }
     var component_code_size = {
         'id': 'code_component_size_',
@@ -639,7 +646,7 @@
         'obj': undefined,
         'index': -1,
         'setup': (result, _this) => {
-            _this.items.forEach((item, index) => {
+            _this.children.forEach((item, index) => {
                 item.setup(result, item)
             })
         },
@@ -659,10 +666,10 @@
             t.obj = $(ons.createElement(t.template))
             var cc_address = component_code_address.create(index)
             t.obj.find('ons-col').eq(1).append(cc_address.obj)
-            t.items = [cc_address]
+            t.children = [cc_address]
             return t;
         },
-        'items': []
+        'children': []
     }
     var component_code_address = {
         'id': 'code_component_address_',
@@ -690,7 +697,7 @@
         'obj': undefined,
         'index': -1,
         'setup': (result, _this) => {
-            _this.items.forEach((item, index) => {
+            _this.children.forEach((item, index) => {
                 item.setup(result, item)
             })
         },
@@ -714,10 +721,10 @@
             t.obj.find('ons-col').eq(1).append(cc_aob.obj)
             var cc_copy = component_copy.create(index)
             t.obj.find('ons-col').eq(2).append(cc_copy.obj)
-            t.items = [cc_aob, cc_copy]
+            t.children = [cc_aob, cc_copy]
             return t;
         },
-        'items': []
+        'children': []
     }
     var component_code_aob = {
         'id': 'code_component_aob_',
@@ -768,7 +775,7 @@
         'obj': undefined,
         'index': -1,
         'setup': (result, _this) => {
-            _this.items.forEach((item, index) => {
+            _this.children.forEach((item, index) => {
                 item.setup(result, item)
             })
         },
@@ -804,10 +811,10 @@
             t.obj.find('ons-col[name="offset_refresh"]').find('ons-col').eq(1).append(cc_offset_refresh.obj)
             t.obj.find('ons-col[name="addresses"]').append(cc_offset_address.obj)
 
-            t.items = [cc_offset, cc_offset_address, cc_offset_refresh]
+            t.children = [cc_offset, cc_offset_address, cc_offset_refresh]
             return t;
         },
-        'items': []
+        'children': []
     }
     var component_code_offset = {
         'id': 'code_component_offset_',
@@ -836,25 +843,37 @@
         'setup': (result, _this) => {
             if (has(result, 'Addresses')) {
                 aob_resolve_map[_this.index] = []
-                    if (result.Addresses != null) {
+                if (result.Addresses != null) {
                     aob_resolve_map[_this.index] = result.Addresses
                     if ($(":focus")[0] && $(":focus")[0].id === _this.obj[0].id){
                         return
                     }
-                    _this.obj.val("")
-                    var addrs = ""
+                    _this.obj.empty()
                     result.Addresses.forEach((item, index) =>{
-                        addrs += item.toString(16).toUpperCase()
-                        if (index < result.Addresses.length-1){
-                            addrs+='\n'
-                        }
+                        var v = item.toString(16).toUpperCase()
+                        _this.obj.append($('<option>', {
+                            value: v,
+                            text: v
+                        }));
                     })
-                    _this.obj.val(addrs)
+                    if (has(result, 'Selected') && result.Selected !== null) {
+                        var val = result.Selected.toString(16).toUpperCase()
+                        if (_this.obj.find(`option[value="${val}"]`).length > 0) {
+                            _this.obj.val(val)
+                            code_data[_this.index]['Selected'] = result.Selected
+                        }
+                    }
                 }
             }
         },
         'update': (_this) => {console.log('code name update')},
-        'template': '<textarea id=##id## class="textarea" rows="3" placeholder="None found" readonly></textarea>',
+        'template': '<select id=##id## size="3" style="min-width:100px;"></select>',
+        'changed': (_this) => {
+            _this.selected = _this.obj.val()
+            $.send('/codelist', {'command': 'CODELIST_AOB_SELECT', 'index': _this.index, 'selected': _this.selected}, () => {
+                code_data[_this.index]['Selected'] = _this.selected
+            })
+        },
         'create': index => {
             var t = {...component_code_offset_address};
             t.id = component_code_offset_address.id+index
@@ -862,7 +881,8 @@
             t.template = component_code_offset_address.template.replaceAll("##index##", index).replaceAll('##id##', t.id)
             t.obj = $(ons.createElement(t.template))
             return t;
-        }
+        },
+        'selected': '_null'
     }
     var component_code_offset_refresh = {
         'id': 'code_component_offset_refresh_',

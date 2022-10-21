@@ -36,6 +36,7 @@ class CodeList(MemoryHandler):
             "CODELIST_SAVE": self.handle_save,
             "CODELIST_DELETE_LIST": self.handle_delete_list,
             "CODELIST_ADD_CODE": self.handle_add_code,
+            "CODELIST_AOB_SELECT": self.handle_aob_base_select
         }
         self.update_thread: Thread = None
         self.update_event: Event = None
@@ -98,6 +99,8 @@ class CodeList(MemoryHandler):
                     res = {'Value': value}
                     if 'Addresses' in result:
                         res['Addresses'] = result['Addresses']
+                    if 'Selected' in result:
+                        res['Selected'] = result['Selected']
                     resp.media['results'].append(res)
 
     def handle_write(self, req: Request, resp: Response):
@@ -223,6 +226,12 @@ class CodeList(MemoryHandler):
             self.start_updater()
             resp.media['repeat'] = 1000
 
+    def handle_aob_base_select(self, req: Request, resp: Response):
+        with self.update_lock:
+            index = int(req.media['index'])
+            cd = self.code_data[index]
+            cd['Selected'] = int(req.media['selected'], 16)
+
     def handle_save(self, req: Request, resp: Response):
         file = req.media['file']
         write_data = copy.copy(self.code_data)
@@ -322,6 +331,7 @@ class CodeList(MemoryHandler):
 
     def read_aob_value(self, aob: AOB, code):
         offset = int(code['Offset'], 16)
+        selected = (code['Selected'] - offset) if 'Selected' in code else -1
         if aob.is_found():
             bases = aob.get_bases()
             for i in range(len(bases) - 1, -1, -1):
@@ -332,7 +342,8 @@ class CodeList(MemoryHandler):
             if not bases:
                 aob.clear_bases()
             else:
-                return self.get_read(code, aob.get_bases()[0] + offset), [x+offset for x in aob.get_bases()]
+                pos = selected if selected in aob.get_bases() else aob.get_bases()[0]
+                return self.get_read(code, pos + offset), [x+offset for x in aob.get_bases()], pos+offset, selected in aob.get_bases()
 
         if not aob.is_found():
             addrs = self.utilities.search_aob_all_memory(self.mem(), aob)
@@ -340,7 +351,8 @@ class CodeList(MemoryHandler):
                 aob.clear_bases()
             else:
                 aob.set_bases([x['address'] for x in addrs])
-                return self.get_read(code, addrs[0]['address'] + offset), [x+offset for x in aob.get_bases()]
+                pos = selected if selected in [x['address'] for x in addrs] else addrs[0]['address']
+                return self.get_read(code, pos + offset), [x+offset for x in aob.get_bases()], pos+offset, selected in [x['address'] for x in addrs]
         return None, []
 
     def _update_process(self):
@@ -363,13 +375,14 @@ class CodeList(MemoryHandler):
                         if aob_str not in self.aob_map:
                             self.aob_map[aob_str] = AOB(code['Name'], aob_str)
                         try:
-                            read, addrs = self.read_aob_value(self.aob_map[aob_str], code)
+                            read, addrs, selected, select_valid = self.read_aob_value(self.aob_map[aob_str], code)
                         except (ProcessLookupError, PermissionError):
                             self.update_event.set()
-                            read, addrs = (None, None)
+                            read, addrs, selected = (None, None, None)
                         except OSError:
-                            read, addrs = (None, None)
-                        self.result_list.append({'Value': read, 'Addresses': addrs})
+                            read, addrs, selected = (None, None, None)
+                        code['Selected'] = selected
+                        self.result_list.append({'Value': read, 'Addresses': addrs, 'Selected': selected})
             self.update_event.wait(0.5)
 
     def get_read(self, code, addr: int):
