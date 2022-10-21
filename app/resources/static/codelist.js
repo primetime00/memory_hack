@@ -10,6 +10,7 @@
     var code_list;
     var code_data;
     var aob_resolve_map = {}
+    var value_map = {}
 
     //Public Method
     codelist.on_process_changed = function(process) {
@@ -204,6 +205,15 @@
         return component_code_dialog
     }
 
+    codelist.address_copy = function(index) {
+        var source = code_data[index]['Source']
+        if (source === 'address') {
+            document.clipboard.copy({'address': code_data[index]['Address'], 'value': value_map[index]})
+        } else {
+            document.clipboard.copy({'address': aob_resolve_map[index][0], 'value': value_map[index]})
+        }
+    }
+
     codelist.clipboard_data_copied = function(data) {
         btn_paste_code[0].show()
     }
@@ -339,6 +349,8 @@
                 });
             }
             if (has(result, 'results')) {
+                aob_resolve_map = {}
+                value_map = {}
                 result.results.forEach((res, index) => {
                     _this.items[index].header.setup(res, _this.items[index].header)
                     _this.items[index].item.setup(res, _this.items[index].item)
@@ -561,6 +573,7 @@
         'index': -1,
         'setup': (result, _this) => {
             if (has(result, 'Value')) {
+                value_map[_this.index] = result.Value
                 if ($(":focus")[0] && $(":focus")[0].id === _this.obj[0].id){
                     return
                 }
@@ -680,6 +693,8 @@
                         </ons-col>
                         <ons-col align="center" width="60%" class="col ons-col-inner">
                         </ons-col>
+                        <ons-col align="center" width="20%" class="col ons-col-inner">
+                        </ons-col>
                     </ons-row>`,
         'create': index => {
             var t = {...component_row_aob};
@@ -689,7 +704,9 @@
             t.obj = $(ons.createElement(t.template))
             var cc_aob = component_code_aob.create(index)
             t.obj.find('ons-col').eq(1).append(cc_aob.obj)
-            t.items = [cc_aob]
+            var cc_copy = component_copy.create(index)
+            t.obj.find('ons-col').eq(2).append(cc_copy.obj)
+            t.items = [cc_aob, cc_copy]
             return t;
         },
         'items': []
@@ -710,6 +727,29 @@
             t.id = component_code_aob.id+index
             t.index = index
             t.template = component_code_aob.template.replaceAll("##index##", index).replaceAll('##id##', t.id)
+            t.obj = $(ons.createElement(t.template))
+            return t;
+        }
+    }
+
+    var component_copy = {
+        'id': 'code_component_copy_',
+        'obj': undefined,
+        'index': -1,
+        'setup': (result, _this) => {
+            if (has(result, "Addresses") && result.Addresses.length > 0) {
+                _this.obj.show()
+            } else {
+                _this.obj.hide()
+            }
+        },
+        'update': (_this) => {console.log('code name update')},
+        'template': '<ons-button id="##id##" modifier="material--flat" onclick="codelist.address_copy(##index##)"><ons-icon style="color:#777;" size="26px" icon="md-copy"></ons-icon></ons-button>',
+        'create': index => {
+            var t = {...component_copy};
+            t.id = component_copy.id+index
+            t.index = index
+            t.template = component_copy.template.replaceAll("##index##", index).replaceAll('##id##', t.id)
             t.obj = $(ons.createElement(t.template))
             return t;
         }
@@ -786,7 +826,6 @@
         'obj': undefined,
         'index': -1,
         'setup': (result, _this) => {
-            aob_resolve_map = {}
             if (has(result, 'Addresses')) {
                 aob_resolve_map[_this.index] = []
                     if (result.Addresses != null) {

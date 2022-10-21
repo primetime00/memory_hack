@@ -159,7 +159,13 @@
         }
     }
     search.clipboard_data_pasted = function(data) {
-        console.log('ah', data, sel_search_type.val() )
+        if (sel_search_type.val() === 'unknown_near') {
+            if (has(data, 'address')) {
+                inp_search_value.val(data.address.toString(16).toUpperCase())
+                update()
+                return
+            }
+        }
         if (sel_search_type.val() === 'array') {
             if (has(data, 'aob')) {
                 inp_search_value.val(data.aob)
@@ -706,6 +712,11 @@
         switch (current_flow) {
             case flow_map["FLOW_START"]:
                 inp_search_value.removeAttr('disabled')
+                if (_type == 'unknown_near') {
+                    $("#value_header").text("Address")
+                } else {
+                    $("#value_header").text("Value")
+                }
                 if (_type == 'unknown') {
                     row_search_value.hide()
                     value_valid = true
