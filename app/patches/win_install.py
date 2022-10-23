@@ -63,7 +63,7 @@ def patch_mem_edit():
     print('patching memory editor')
     patch_path = Path(".\\app\\patches\\mem_edit.patch")
     lib_path = Path("venv\\Lib\\site-packages\\mem_edit")
-    subprocess.check_call(['.\\venv\\Scripts\\python.exe', "-m", "patch", "-p0", "-d", str(lib_path.absolute()), str(patch_path.absolute())])
+    subprocess.call(['.\\venv\\Scripts\\python.exe', "-m", "patch", "-p0", "-d", str(lib_path.absolute()), str(patch_path.absolute())])
 
 def extract_onsen():
     print('extracting front-end...')
