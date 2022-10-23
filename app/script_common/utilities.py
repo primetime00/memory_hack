@@ -68,7 +68,10 @@ class ScriptUtilities:
         size = aob.aob.aob_item['size']
         values = aob.aob.aob_item['aob_bytes']
         new_values = []
-        mem = mem.read_memory(addr, (ctypes.c_ubyte * size)())
+        try:
+            mem = mem.read_memory(addr, (ctypes.c_ubyte * size)())
+        except OSError:
+            return False, ['invalid'], aob.aob.aob_item['aob_string']
         for i in range(0, len(mem)):
             new_values.append('{0:0{1}X}'.format(mem[i], 2))
             if values[i] > 255:

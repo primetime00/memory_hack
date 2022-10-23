@@ -138,9 +138,12 @@ class SearchUtilities:
         for result in results:
             address = result['address']
             self.op_control.test()
-            self.mem.read_memory(address, current_read)
-            if cmp_func(current_read):
-                self.results.add(address, type(current_read).from_buffer_copy(current_read))
+            try:
+                self.mem.read_memory(address, current_read)
+                if cmp_func(current_read):
+                    self.results.add(address, type(current_read).from_buffer_copy(current_read))
+            except OSError:
+                pass
             self.progress.increment(1)
         results.clear()
         self.progress.mark()
@@ -342,9 +345,12 @@ class SearchUtilities:
             read = result['value']
             self.op_control.test()
             read_buffer = copy.copy(self.value.get_type()(0))
-            self.mem.read_memory(address, read_buffer)
-            if cmp_func(read_buffer, read, self.value):
-                self.results.add(address, read_buffer)
+            try:
+                self.mem.read_memory(address, read_buffer)
+                if cmp_func(read_buffer, read, self.value):
+                    self.results.add(address, read_buffer)
+            except OSError:
+                pass
             self.progress.increment(1)
         self.progress.mark()
         results.clear()
@@ -379,9 +385,12 @@ class SearchUtilities:
             item = search_results[i]
             addr = item['address']
             size = val.aob_item['size']
-            read = self.mem.read_memory(addr, (ctypes.c_ubyte*size)())
-            if cmp_func(read, item['value'], val.aob_item['aob_bytes']):
-                found.append((item['address'], read))
+            try:
+                read = self.mem.read_memory(addr, (ctypes.c_ubyte*size)())
+                if cmp_func(read, item['value'], val.aob_item['aob_bytes']):
+                    found.append((item['address'], read))
+            except OSError:
+                pass
         return found
 
     def search_aob_cmp(self, search_results: List, cmp_func):
@@ -390,23 +399,30 @@ class SearchUtilities:
             item = search_results[i]
             addr = item['address']
             size = ctypes.sizeof(search_results[0]['value'])
-            read = self.mem.read_memory(addr, (ctypes.c_ubyte*size)())
-            if cmp_func(read, item['value']):
-                found.append((item['address'], read))
+            try:
+                read = self.mem.read_memory(addr, (ctypes.c_ubyte*size)())
+                if cmp_func(read, item['value']):
+                    found.append((item['address'], read))
+            except OSError:
+                pass
         return found
 
     def compare_aob(self, addr:int, aob:str):
         res = True
         values = aob.upper().split()
         new_values = []
-        mem = self.mem.read_memory(addr, (ctypes.c_byte * len(values))())
-        for i in range(0, len(mem)):
-            new_values.append('{0:0{1}X}'.format((mem[i] + (1 << 8)) % (1 << 8), 2))
-            if values[i] == '??':
-                continue
-            orig = bytes.fromhex(values[i])
-            if res and orig[0] != ((mem[i] + (1 << 8)) % (1 << 8)):
-                res = False
+        try:
+            mem = self.mem.read_memory(addr, (ctypes.c_byte * len(values))())
+            for i in range(0, len(mem)):
+                new_values.append('{0:0{1}X}'.format((mem[i] + (1 << 8)) % (1 << 8), 2))
+                if values[i] == '??':
+                    continue
+                orig = bytes.fromhex(values[i])
+                if res and orig[0] != ((mem[i] + (1 << 8)) % (1 << 8)):
+                    res = False
+        except OSError:
+            res = False
+            new_values = ['invalid']
         return res, new_values, values
 
     def get_process_memory(self):

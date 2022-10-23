@@ -41,7 +41,10 @@ Mem Manip uses a number of open source projects to work properly:
 - [mem_edit](https://mpxd.net/code/jan/mem_edit) - Multi-platform memory editing library written in Python.
 
 ## Installation
-
+### Windows
+```
+powershell -Command "(new-object System.Net.WebClient).DownloadFile('https://github.com/primetime00/memory_hack/raw/master/app/patches/win_install.py','install.py')"
+```
 Dillinger requires [Node.js](https://nodejs.org/) v10+ to run.
 
 Install the dependencies and devDependencies and start the server.

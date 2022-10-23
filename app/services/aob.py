@@ -307,7 +307,11 @@ class AOB(MemoryHandler):
                     self.error = "Invalid address for this process."
                     return
                 self.progress.increment(30)
-                data = self.memory.read_memory(start, (ctypes.c_byte * (end - start))())
+                try:
+                    data = self.memory.read_memory(start, (ctypes.c_byte * (end - start))())
+                except OSError:
+                    self.error = "Invalid region to scan."
+                    return
                 self.progress.increment(40)
                 self.aob_file.set_process(DataStore().get_process('aob'))
                 self.aob_file.set_name(self.current_name)
@@ -381,7 +385,11 @@ class AOB(MemoryHandler):
             self.progress.add_constraint(0, 1, 0.1)
             start = self.current_address - self.aob_file.get_offset()
             end = start+self.aob_file.get_length()
-            new_data = self.memory.read_memory(start, (ctypes.c_byte * (end - start))())
+            try:
+                new_data = self.memory.read_memory(start, (ctypes.c_byte * (end - start))())
+            except OSError:
+                self.progress.mark()
+                return 0
             self.progress.mark()
             if self.aob_file.count_aob_results() == 0:
                 number_of_results = self.aob_address_search_memory(new_data)
