@@ -11,6 +11,7 @@
     var code_data;
     var aob_resolve_map = {}
     var value_map = {}
+    var repeater = undefined
 
     //Public Method
     codelist.on_process_changed = function(process) {
@@ -275,7 +276,10 @@
             ons.notification.toast(result.error, { timeout: 4000, animation: 'fall' })
         }
         if (has(result, 'repeat') && result.repeat > 0) {
-            setTimeout(()=>{$.send('/codelist', { "command": "CODELIST_STATUS" }, on_codelist_status);}, result.repeat)
+            if (repeater !== undefined) {
+                clearTimeout(repeater);
+            }
+            repeater = setTimeout(()=>{$.send('/codelist', { "command": "CODELIST_STATUS" }, on_codelist_status);}, result.repeat)
         }
     }
 
@@ -374,8 +378,10 @@
                 aob_resolve_map = {}
                 value_map = {}
                 result.results.forEach((res, index) => {
-                    _this.children[index][0].setup(res, _this.children[index][0])
-                    _this.children[index][1].setup(res, _this.children[index][1])
+                    if (index < _this.children.length) {
+                        _this.children[index][0].setup(res, _this.children[index][0])
+                        _this.children[index][1].setup(res, _this.children[index][1])
+                    }
                 });
             }
         },

@@ -224,7 +224,7 @@ class CodeList(MemoryHandler):
             self.stop_freezer()
         if not (self.update_thread and self.update_thread.is_alive()):
             self.start_updater()
-            resp.media['repeat'] = 1000
+        resp.media['repeat'] = 1000
 
     def handle_aob_base_select(self, req: Request, resp: Response):
         with self.update_lock:
@@ -294,6 +294,8 @@ class CodeList(MemoryHandler):
             self.loaded_file = "_null"
             resp.media['file_data'] = self.code_data
             resp.media['file'] = self.loaded_file
+            self.freeze_map = {}
+            self.aob_map = {}
             return
         pt = self.directory.joinpath(req.media['file']+'.codes')
         if not pt.exists():
@@ -353,7 +355,7 @@ class CodeList(MemoryHandler):
                 aob.set_bases([x['address'] for x in addrs])
                 pos = selected if selected in [x['address'] for x in addrs] else addrs[0]['address']
                 return self.get_read(code, pos + offset), [x+offset for x in aob.get_bases()], pos+offset, selected in [x['address'] for x in addrs]
-        return None, []
+        return None, [], 0, 0
 
     def _update_process(self):
         while not self.update_event.is_set():
@@ -424,6 +426,8 @@ class CodeList(MemoryHandler):
 
 
     def start_updater(self):
+        self.freeze_map = {}
+        self.aob_map = {}
         self.update_thread = Thread(target=self._update_process)
         self.update_event = Event()
         self.update_thread.start()
@@ -477,12 +481,3 @@ class CodeList(MemoryHandler):
         if self.freeze_thread and self.freeze_thread.is_alive():
             self.freeze_event.set()
             self.freeze_thread.join()
-
-
-
-
-
-
-
-
-
