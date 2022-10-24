@@ -45,7 +45,10 @@ class SearchValue:
 
     def get_type(self):
         if self.aob:
-            return type(self.aob.aob_search_value) * self.aob.aob_item['size']
+            if isinstance(self.aob.aob_search_value, ctypes.Array):
+                return type(self.aob.aob_search_value)
+            else:
+                return type(self.aob.aob_search_value) * self.aob.aob_item['size']
         return type(self.value)
 
     def get_raw_value(self):
@@ -121,10 +124,3 @@ class SearchValue:
         if round(current.value, 3) < round(previous.value, 3):
             return -1
         return 0
-
-
-
-
-
-
-
