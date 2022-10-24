@@ -2,13 +2,12 @@ import copy
 import ctypes
 import os
 import shutil
-import sys
 from pathlib import Path
 from typing import List, Union
 
 import multiprocess
 from mem_edit import Process
-from multiprocess.shared_memory import SharedMemory
+from multiprocess.connection import Pipe
 
 from app.helpers.aob_value import AOBValue
 from app.helpers.exceptions import SearchException, BreakException
@@ -18,6 +17,9 @@ from app.helpers.search_results import SearchResults
 from app.helpers.search_value import SearchValue
 
 ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, ctypes.Union]
+
+
+
 class SearchUtilities:
     mem_path = Path(".memory")
     def __init__(self, mem: Process, value: SearchValue, results: SearchResults, op_control: OperationControl = None, progress:Progress = None):
@@ -227,29 +229,16 @@ class SearchUtilities:
                 continue
         self.progress.mark()
 
-
     def _pool_process(self, data):
-        #mm_interval.append((start, stop, abs_start, shared_mem, cmp_func, self.value, SearchResults.fromValue(self.value)))
+        #mm_interval.append((start, stop, abs_start, connection, cmp_func, self.value, SearchResults.fromValue(self.value)))
         start = data[0]
         stop = data[1]
         abs_start = data[2]
-        shared = data[3].buf
+        conn = data[3]
         cmp_func = data[4]
         value: SearchValue = data[5]
         results: SearchResults = data[6]
-        write_location = 0
-        for i in range(0, 32):
-            pid_pos = i*16
-            count_pos = (i*16)+8
-            v = int.from_bytes(bytes(shared[pid_pos:pid_pos+8]), byteorder=sys.byteorder)
-            if v == 0:
-                shared[pid_pos:pid_pos+8] = os.getpid().to_bytes(8, sys.byteorder, signed=False)
-                write_location = count_pos
-                break
-            elif v == os.getpid():
-                write_location = count_pos
-                break
-        last_cap = int.from_bytes(bytes(shared[write_location:write_location+8]), byteorder=sys.byteorder)
+        last = 0
         try:
             cap_file = self.mem_path.joinpath('capture_{}_{}'.format(start-abs_start, (stop-start)))
             read_bytes = cap_file.read_bytes()
@@ -258,17 +247,17 @@ class SearchUtilities:
             self.mem.read_memory(start, region_buffer)
             size = (stop - start) - (value.get_size() - 1)
             for i in range(0, size):
-                if int.from_bytes(shared[-1:], byteorder=sys.byteorder, signed=False) > 0:
-                    return results
                 mem_value = value.get_type().from_buffer(region_buffer, i)
                 cap_value = value.get_type().from_buffer(capture_buffer, i)
                 if cmp_func(mem_value, cap_value, value):
                     results.add(start+i, value.get_type().from_buffer_copy(region_buffer, i))
                 if i % 8000 == 0 or i == size-1:
-                    shared[write_location:write_location+8] = (last_cap+i).to_bytes(8, sys.byteorder, signed=False)
+                    conn.send([os.getpid(), i-last])
+                    last = i
             return results
         except OSError:
-            shared[write_location:write_location + 8] = (last_cap + (stop-start)).to_bytes(8, sys.byteorder, signed=False)
+            conn.send([os.getpid(), stop-start])
+            conn.close()
             return results
 
     def search_cmp_capture(self, cmp_func) -> SearchResults:
@@ -289,29 +278,30 @@ class SearchUtilities:
         self.progress.add_constraint(0, self.total_size, 1.0)
         mm_interval = []
         index=1
-        shared_mem = SharedMemory(create=True, size=32*8*2)
+        recv_bytes = 0
+        connection = Pipe(duplex=False)
         for start, stop in self.mem.list_mapped_regions():
-            mm_interval.append((start, stop, abs_start, shared_mem, cmp_func, self.value, SearchResults.fromValue(self.value, name='region{:03}'.format(index))))
+            mm_interval.append((start, stop, abs_start, connection[1], cmp_func, self.value, SearchResults.fromValue(self.value, name='region{:03}'.format(index))))
             index += 1
         with multiprocess.get_context("spawn").Pool(processes=multiprocess.cpu_count()-1) as pool:
             try:
                 res = pool.map_async(self._pool_process, mm_interval, chunksize=1)
                 while not res.ready():
+                    if connection[0].poll():
+                        pid, bt = connection[0].recv()
+                        recv_bytes += bt
+                        continue
                     res.wait(1.0)
-                    pc = sum([int.from_bytes(bytes(shared_mem.buf[i: i + 8]), byteorder=sys.byteorder) for i in range(8, 8 * 63, 16)])
                     self.op_control.test()
-                    self.progress.set(pc)
+                    self.progress.set(recv_bytes)
                 for r in res.get():
                     self.results.extend(r)
+                connection[0].close()
             except BreakException as e:
-                shared_mem.buf[-1:] = (1).to_bytes(1, byteorder=sys.byteorder, signed=False)
+                connection[0].close()
                 pool.terminate()
                 pool.join()
-                shared_mem.close()
-                shared_mem.unlink()
                 raise e
-        shared_mem.close()
-        shared_mem.unlink()
         self.progress.mark()
         return self.results
 
