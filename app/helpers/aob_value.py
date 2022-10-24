@@ -6,6 +6,7 @@ from app.helpers.exceptions import AOBException
 class AOBValue:
     def __init__(self, aob_string: str):
         self.aob_search_value = None
+        self._has_wildcards = False
         aob_array = aob_string.split(" ")
         self.aob_item = self.create_aob(len(aob_array), 0, aob_string)
         aob = aob_array
@@ -13,6 +14,12 @@ class AOBValue:
 
         if all(x == '??' for x in aob):
             raise AOBException('Invalid AOB')
+
+        if not any(x == '??' for x in aob):
+            self.aob_search_value = (ctypes.c_byte * len(aob))(*bytes(self.aob_item['aob_bytes']))
+            self.offset = 0
+            return
+        self._has_wildcards = True
 
         for i in range(0, len(aob)):
             if aob[i] not in ['00, ??']:
@@ -52,6 +59,9 @@ class AOBValue:
 
     def get_offset(self):
         return self.offset
+
+    def has_wildcards(self):
+        return self._has_wildcards
 
 
     @staticmethod

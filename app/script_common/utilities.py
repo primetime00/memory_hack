@@ -55,13 +55,16 @@ class ScriptUtilities:
             try:
                 region_buffer = (ctypes.c_byte * (stop - start))()
                 mem.read_memory(start, region_buffer)
-                found += [x for x in self._haystack_search(aob.aob.get_search_value(), region_buffer, filter_func=filter_func, filter_args=filter_args, offset=start)]
+                if filter_func:
+                    found += [x for x in self._haystack_search(aob.aob.get_search_value(), region_buffer, filter_func=filter_func, filter_args=filter_args, offset=start)]
+                else:
+                    found += [x for x in self._haystack_search(aob.aob.get_search_value(), region_buffer, offset=start)]
             except OSError:
                 pass
         return found
 
     def search_aob_all_memory(self, mem: Process, aob: AOB) -> List:
-        return self.search_all_memory(mem, aob, filter_func=self._filter, filter_args=aob)
+        return self.search_all_memory(mem, aob, filter_func=self._filter if aob.has_wildcards() else None, filter_args=aob)
 
     def compare_aob(self, mem:Process, addr:int, aob:AOB):
         res = True

@@ -30,5 +30,8 @@ class AOB:
     def will_warn(self):
         return self._last_found != 0
 
+    def has_wildcards(self):
+        return self.aob.has_wildcards()
+
 
 
