@@ -1,11 +1,7 @@
 # Mem Manip
-## _Cross platform memory editor for games_
+## _Cross-platform memory editor for games_
 
-[![N|Solid](https://cldup.com/dTxpPi9lDf.thumb.png)](https://nodesource.com/products/nsolid)
-
-[![Build Status](https://travis-ci.org/joemccann/dillinger.svg?branch=master)](https://travis-ci.org/joemccann/dillinger)
-
-Mem Manip is a cross platform memory editor with a web based front-end.
+Mem Manip is a cross-platform memory editor with a web based front-end.
 
 - Search and modify memory regions.
 - Save and load codes for use in games.
@@ -19,6 +15,9 @@ Mem Manip is a cross platform memory editor with a web based front-end.
 - Code list that can store memory addresses and AOB values for reuse.
 - Python script importer that can load scripts to enable trainer-like abilities.
 - Web-based front-end that can be accessed from PC or phone.
+
+## Requirements
+- Python >= 3.7
 
 ## Screenshots
 
@@ -35,147 +34,104 @@ Mem Manip is a cross platform memory editor with a web based front-end.
 
 Mem Manip uses a number of open source projects to work properly:
 
-- [Falcon](https://github.com/falconry/falcon) - Minimalist ASGI/WSGI framework for building mission-critical REST APIs.
-- [OnsenUI](https://onsen.io/) - A rich variety of UI components specially designed for mobile apps.
+- [Falcon] - Minimalist ASGI/WSGI framework for building mission-critical REST APIs.
+- [OnsenUI] - A rich variety of UI components specially designed for mobile apps.
 - [jQuery] - Fast, small, and feature-rich JavaScript library.
-- [mem_edit](https://mpxd.net/code/jan/mem_edit) - Multi-platform memory editing library written in Python.
+- [mem_edit] - Multi-platform memory editing library written in Python.
 
 ## Installation
 ### Windows
+From Windows, a powershell command can be run to download the installer script.  This script will grab the code from the repository and optionally set up Mem Manip as a service.
+1. Create a directory where Mem Manip should be installed.
+2. Run the powershell command to get the code.
 ```
 powershell -Command "(new-object System.Net.WebClient).DownloadFile('https://github.com/primetime00/memory_hack/raw/master/app/patches/win_install.py','install.py')"
 ```
-Dillinger requires [Node.js](https://nodejs.org/) v10+ to run.
-
-Install the dependencies and devDependencies and start the server.
-
-```sh
-cd dillinger
-npm i
-node app
+3. Once the installation script is downloaded install the code:
 ```
-
-For production environments...
-
-```sh
-npm install --production
-NODE_ENV=production node app
+python install.py
 ```
-
-## Plugins
-
-Dillinger is currently extended with the following plugins.
-Instructions on how to use them in your own application are linked below.
-
-| Plugin | README |
-| ------ | ------ |
-| Dropbox | [plugins/dropbox/README.md][PlDb] |
-| GitHub | [plugins/github/README.md][PlGh] |
-| Google Drive | [plugins/googledrive/README.md][PlGd] |
-| OneDrive | [plugins/onedrive/README.md][PlOd] |
-| Medium | [plugins/medium/README.md][PlMe] |
-| Google Analytics | [plugins/googleanalytics/README.md][PlGa] |
-
-## Development
-
-Want to contribute? Great!
-
-Dillinger uses Gulp + Webpack for fast developing.
-Make a change in your file and instantaneously see your updates!
-
-Open your favorite Terminal and run these commands.
-
-First Tab:
-
-```sh
-node app
+During installation, you will be asked if Mem Manip can be installed as a service.  If Mem Manip is run as a service, it will always be running.  Otherwise, Mem Manip must be manually started.
+> **_NOTE:_**  Service installation for Windows uses [Non-Sucking Service Manager] to make service installation easier.
+4. Run Mem Manip if it was not installed as a service.
 ```
-
-Second Tab:
-
-```sh
-gulp watch
+run.bat
 ```
+5. Test Mem Manip by opening a browser windows and pointing it to [localhost:5000](http://localhost:5000)
 
-(optional) Third:
-
-```sh
-karma test
+#### Uninstall
+To uninstall Mem Manip, navigate to the installation directory and run the installation script again.
 ```
-
-#### Building for source
-
-For production release:
-
-```sh
-gulp build --prod
+python install.py
 ```
+The script should detect the installation and ask if you would like to uninstall Mem Manip.
 
-Generating pre-built zip archives for distribution:
-
-```sh
-gulp build dist --prod
+### Linux
+Like Windows, Linux will download the installation script and install, optionally setting up Mem Manip as a service.
+1. Create a directory where Mem Manip should be installed.
+2. Run the following command to download and install.
 ```
-
-## Docker
-
-Dillinger is very easy to install and deploy in a Docker container.
-
-By default, the Docker will expose port 8080, so change this within the
-Dockerfile if necessary. When ready, simply use the Dockerfile to
-build the image.
-
-```sh
-cd dillinger
-docker build -t <youruser>/dillinger:${package.json.version} .
+python3 <(wget -qO- https://github.com/primetime00/memory_hack/raw/master/app/patches/install.py)
 ```
-
-This will create the dillinger image and pull in the necessary dependencies.
-Be sure to swap out `${package.json.version}` with the actual
-version of Dillinger.
-
-Once done, run the Docker image and map the port to whatever you wish on
-your host. In this example, we simply map port 8000 of the host to
-port 8080 of the Docker (or whatever port was exposed in the Dockerfile):
-
-```sh
-docker run -d -p 8000:8080 --restart=always --cap-add=SYS_ADMIN --name=dillinger <youruser>/dillinger:${package.json.version}
+During installation, you will be asked if Mem Manip can be installed as a service.  If Mem Manip is run as a service, it will always be running.  Otherwise, Mem Manip must be manually started.
+3. Run Mem Manip if it was not installed as a service.
 ```
-
-> Note: `--capt-add=SYS-ADMIN` is required for PDF rendering.
-
-Verify the deployment by navigating to your server address in
-your preferred browser.
-
-```sh
-127.0.0.1:8000
+./run.sh
 ```
+4. Test Mem Manip by opening a browser window and pointing it to [localhost:5000](http://localhost:5000)
+
+#### Uninstall
+To uninstall Mem Manip, navigate to the installation directory and run the installation script again.
+```
+python install.py
+```
+The script should detect the installation and ask if you would like to uninstall Mem Manip.
+### Steam Deck
+Steam Deck installation follows the Linux installation.  However, you must have a password set on the Steam Deck to install Mem Manip. Those instructions can be found [here](https://steamdecktips.com/blog/how-to-set-a-password-for-your-steam-deck-user-in-desktop-mode)
+
+1. Create a directory where Mem Manip should be installed.
+2. Run the following command to download and install.
+```
+python3 <(wget -qO- https://github.com/primetime00/memory_hack/raw/master/app/patches/install.py)
+```
+During installation, you will be asked if Mem Manip can be installed as a service.  If Mem Manip is run as a service, it will always be running.  Otherwise, Mem Manip must be manually started.
+3. Run Mem Manip if it was not installed as a service.
+```
+./run.sh
+```
+4. Test Mem Manip by opening a browser window and pointing it to [localhost:5000](http://localhost:5000)
+
+#### Uninstall
+To uninstall Mem Manip, navigate to the installation directory and run the installation script again.
+```
+python install.py
+```
+The script should detect the installation and ask if you would like to uninstall Mem Manip.
+
+## Usage
+Mem Manip is controlled through your browser.  Ideally, Mem Manip can be accessed through your phone.  To do this, your PC/Stream Deck must have a known IP address or host name.  For example, the Steam Deck has a default host name of `steamdeck`
+
+You would access Mem Manip by opening your phone's browser and navigating to `http://steamdeck:5000`
+
+You would then see the UI for Mem Manip.
+
+Here are instructions for setting up a hostname in [Linux](https://www.tecmint.com/set-hostname-permanently-in-linux/) and [Windows](https://tecadmin.net/change-windows-hostname/) 
 
 ## License
 
 MIT
 
-**Free Software, Hell Yeah!**
+**It's Free**
 
-[//]: # (These are reference links used in the body of this note and get stripped out when the markdown processor does its job. There is no need to format nicely because it shouldn't be seen. Thanks SO - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-syntax)
+## Donate
+Only if you want
 
-   [dill]: <https://github.com/joemccann/dillinger>
-   [git-repo-url]: <https://github.com/joemccann/dillinger.git>
-   [john gruber]: <http://daringfireball.net>
-   [df1]: <http://daringfireball.net/projects/markdown/>
-   [markdown-it]: <https://github.com/markdown-it/markdown-it>
-   [Ace Editor]: <http://ace.ajax.org>
-   [node.js]: <http://nodejs.org>
-   [Twitter Bootstrap]: <http://twitter.github.com/bootstrap/>
+<a href="https://www.buymeacoffee.com/ryankegel" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a>
+
+[//]: #
+
+   [Non-Sucking Service Manager]: <https://nssm.cc/>
+   [mem_edit]: <https://mpxd.net/code/jan/mem_edit>
+   [OnsenUI]: <https://onsen.io/>
+   [Falcon]: <https://github.com/falconry/falcon>
    [jQuery]: <http://jquery.com>
-   [@tjholowaychuk]: <http://twitter.com/tjholowaychuk>
-   [express]: <http://expressjs.com>
-   [AngularJS]: <http://angularjs.org>
-   [Gulp]: <http://gulpjs.com>
-
-   [PlDb]: <https://github.com/joemccann/dillinger/tree/master/plugins/dropbox/README.md>
-   [PlGh]: <https://github.com/joemccann/dillinger/tree/master/plugins/github/README.md>
-   [PlGd]: <https://github.com/joemccann/dillinger/tree/master/plugins/googledrive/README.md>
-   [PlOd]: <https://github.com/joemccann/dillinger/tree/master/plugins/onedrive/README.md>
-   [PlMe]: <https://github.com/joemccann/dillinger/tree/master/plugins/medium/README.md>
-   [PlGa]: <https://github.com/RahulHP/dillinger/blob/master/plugins/googleanalytics/README.md>

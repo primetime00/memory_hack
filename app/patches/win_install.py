@@ -241,5 +241,5 @@ else:
         else:
             print("Service is running.\nYou can test by accessing http://localhost:5000.")
     else:
-        print("Installation complete.  You can manually start Memory Manipulator by running\n'./run.bat'")
+        print("Installation complete.  You can manually start Memory Manipulator by running\n'run.bat'")
 
