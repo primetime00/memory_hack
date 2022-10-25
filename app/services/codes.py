@@ -333,7 +333,7 @@ class CodeList(MemoryHandler):
 
     def read_aob_value(self, aob: AOB, code):
         offset = int(code['Offset'], 16)
-        selected = (code['Selected'] - offset) if 'Selected' in code else -1
+        selected = (code['Selected'] - offset) if 'Selected' in code and code['Selected'] else -1
         if aob.is_found():
             bases = aob.get_bases()
             for i in range(len(bases) - 1, -1, -1):
