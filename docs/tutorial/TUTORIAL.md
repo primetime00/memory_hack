@@ -46,24 +46,24 @@ _Now back to the tutorial_
 8. In Mem Manip, select Search Type `EQUAL TO`, Search Size `4 BYTES` and Value `100` then click `SEARCH`
 9. Mem Manip should process a search and return all addresses with values of 100.
 
-<img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/search_results.jpg" alt="search_process" width="500"/>
+<img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/search_results.jpg" alt="search_results" width="500"/>
 
 10. Next, we have to filter those addresses further so that we can find our code.  To do this we must change our life points in the game.  Do this now.
 11. _Ouch_, I lost some life points.  Now my life points are at 96.
 
-<img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/in_game02.jpg" alt="ingame01" width="700"/>
+<img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/in_game02.jpg" alt="ingame02" width="700"/>
 
 12. Back in Mem Manip, we will modify our value from 100 to 96 (which is our current life points.)  Click `SEARCH` again.
 13. For me, this narrowed my list of possible codes to 2.
 
-<img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/search_round2.jpg" alt="search_process" width="500"/>
+<img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/search_round2.jpg" alt="search_round2" width="500"/>
 
 At this point we can run steps 10-13 again to narrow the list to one result, or we can just lose some life again in the game and monitor our search result list in Mem Manip to see which result reflects the life point change.
 
 I'll do the  later.
 14. I lost some more life.  Now I'm down to 84 life points.  If I look at my result list, I can see on item updated to 87.  This will be the item I want.
 
-<img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/search_next.jpg" alt="search_process" width="500"/>
+<img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/search_next.jpg" alt="search_next" width="500"/>
 
 15. You've successfully found the value you want to modify!
 ## Adding your value to the code list 
@@ -72,7 +72,7 @@ Now that you found the value that you want to modify, we need to place that addr
 1. While still on the Search screen, press the `COPY` button next to the result that we found.  That will copy the address of the value so that we can paste it in other areas of Mem Manip.
 2. Navigate to the Codes section of Mem Manip.
 
-<img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/search_copy.jpg" alt="search_process" width="500"/>
+<img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/search_copy.jpg" alt="search_copy" width="500"/>
 
 3. On this screen we will select the _Terraria_ process like we did in step 5 of our last tutorial.
 4. After selecting the process, you are presented with a few options:
@@ -90,11 +90,11 @@ Finally, there also should be a clipboard floating button on the bottom right.  
 
 5. Click on the clipboard button.
 
-<img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/code-list_paste.jpg" alt="search_process" width="500"/>
+<img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/code-list_paste.jpg" alt="code-list_paste" width="500"/>
 
 This will paste the address that you've previously copied from the Search screen into your codelist.  You should then see the new code applied to your list.
 
-<img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/code-list_item.jpg" alt="search_process" width="500"/>
+<img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/code-list_item.jpg" alt="code-list_item" width="500"/>
 
 Other than the value itself, a code in the code list has a `Code Name` that can be changed, a `Code Menu`, and a `Freeze` toggle.
 
@@ -110,7 +110,7 @@ Toggling this button will continuously write the value specified (freeze the val
 
 Clicking this will open a menu that will allow you to edit the code, make a copy of the code, or delete the code. 
 
-<img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/code-list_menu.jpg" alt="search_process" width="500"/>
+<img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/code-list_menu.jpg" alt="code-list_menu" width="500"/>
 
 ###### Edit
 
@@ -129,11 +129,11 @@ _Lets get back_
 6. Change the value of the code from 84 back to 100.  Pressing return or enter on the keyboard or phone touch screen should change that value in the game back to 100.
 7. Click on the freeze toggle.  The value should not remain at 100.
 
-<img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/code-list_freeze.jpg" alt="search_process" width="500"/>
+<img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/code-list_freeze.jpg" alt="code-list_freeze" width="500"/>
 
 8. Return to _Terraria_ and verify that the life points are back to 100, and that taking damage will not decrease the value.
 
-<img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/in_game03.jpg" alt="search_process" width="500"/>
+<img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/in_game03.jpg" alt="in_game03" width="700"/>
 
 You should now have a valid code for the game!
 
