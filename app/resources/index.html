@@ -76,6 +76,15 @@
         }
         return false;
       },
+      'has_aob': () => {
+        if (Object.keys(document.clipboard.data).length === 0) {
+          return false;
+        }
+        if (document.clipboard.data.hasOwnProperty("aob")) {
+          return true;
+        }
+        return false;
+      },
       'clear': () => {
         document.clipboard.data = {}
         search.clipboard_data_cleared()

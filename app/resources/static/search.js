@@ -30,7 +30,7 @@
                 '<ons-col width="100%" align="center" class="col ons-col-inner address">##address##</ons-col>',
               '</ons-row>',
               '<ons-row>',
-                '<ons-col width="100%" align="center" class="col ons-col-inner"><input type="text" id="result_value_##index##" data-address="##address##" name="search_value" class="text-input text-input--material r-value" value="##value##" onkeydown="search.result_change(this)" autocomplete="off"></ons-col>',
+                '<ons-col width="100%" align="center" class="col ons-col-inner"><input tabIndex="-1" type="text" id="result_value_##index##" data-address="##address##" name="search_value" class="text-input text-input--material r-value" value="##value##" onkeydown="search.result_change(this)" onblur="search.result_change(this)" autocomplete="chrome-off"></ons-col>',
               '</ons-row>',
             '</ons-col>',
             '<ons-col align="center" width="40%" class="col ons-col-inner">',

@@ -67,3 +67,9 @@ wininit.exe
 winlogon.exe
 wlanext.exe
 wmpnetwk.exe
+chrome.exe
+ApplicationFrameHost.exe
+AppVShNotify.exe
+MusNotifyIcon.exe
+SndVol.exe
+Zoom.exe

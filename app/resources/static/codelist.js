@@ -231,7 +231,9 @@
     }
 
     codelist.clipboard_data_copied = function(data) {
-        btn_paste_code[0].show()
+        if (sel_codelist_process.val() !== '_null') {
+            btn_paste_code[0].show()
+        }
     }
 
     codelist.clipboard_data_pasted = function(data) {
@@ -1028,6 +1030,11 @@
         } else {
             div_codelist_block.hide()
             btn_add_code[0].hide()
+        }
+
+
+        if (document.clipboard.has_address() || document.clipboard.has_aob()) {
+            btn_paste_code[0].show()
         }
         component_code_list.empty()
     }

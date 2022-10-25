@@ -159,3 +159,4 @@ sftp-*
 pressure-vessel*
 wine64
 wineserver
+jcef_helper
