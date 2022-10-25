@@ -117,6 +117,9 @@ You would then see the UI for Mem Manip.
 
 Here are instructions for setting up a hostname in [Linux](https://www.tecmint.com/set-hostname-permanently-in-linux/) and [Windows](https://tecadmin.net/change-windows-hostname/) 
 
+## Tutorial
+A basic tutorial on usage can be found [here.](https://github.com/primetime00/memory_hack/blob/master/docs/tutorial/TUTORIAL.md)
+
 ## License
 
 MIT
