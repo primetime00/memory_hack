@@ -14,10 +14,11 @@ from app.helpers import MemoryHandler
 from app.helpers.data_store import DataStore
 from app.helpers.exceptions import ScriptException, ProcessException
 from app.script_common.base_script import BaseScript
+from app.helpers.directory_utils import scripts_directory
 
 
 class Script(MemoryHandler):
-    directory = Path.home().joinpath('mem_manip/user_scripts') if '/root' not in str(Path.home()) else Path('/opt/mem_manip/user_scripts')
+    directory = scripts_directory
 
     def __init__(self):
         super().__init__('scripts')

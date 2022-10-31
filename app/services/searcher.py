@@ -57,7 +57,7 @@ class Search(MemoryHandler):
         self.search_thread: Thread = None
         self.update_thread: Search.UpdateThread = None
         self.search_results: SearchResults = SearchResults()
-        self.current_search_results: SearchResults  = SearchResults()
+        self.current_search_results: SearchResults = SearchResults()
 
 
         self.previous_stats = {'results': [], 'flow': self.FLOW_START, 'round': 0}
@@ -171,6 +171,9 @@ class Search(MemoryHandler):
             resp.media['size'] = self.size
             resp.media['value'] = self.value.get_raw_value()
             resp.media['count'] = len(self.search_results)
+            if self.flow == self.FLOW_RESULTS:
+                self.stop_updater()
+                self.start_updater()
         else:
             if self.type in ['increase', 'decrease', 'unchanged', 'changed', 'changed_by']:
                 self.type = 'equal_to'
@@ -196,6 +199,7 @@ class Search(MemoryHandler):
         self.type = req.media['type']
         self.size = req.media['size']
         self.value = SearchValue(req.media['value'], req.media['size'], req.media['type'])
+        self.search_results.set_type(self.value.get_type())
         resp.media['type'] = self.type
         resp.media['size'] = self.size
         resp.media['value'] = self.value.get_raw_value()
@@ -263,8 +267,9 @@ class Search(MemoryHandler):
 
     def get_updated_addresses(self):
         if not self.update_thread:
-            raise Exception("ah")
-            #return self.search_results
+            res = copy.deepcopy(self.search_results[0:40])
+            Search.UpdateThread.results_to_update(self.search_results.get_type(), res)
+            return res
         return self.update_thread.get_addresses()
 
 
@@ -406,9 +411,6 @@ class Search(MemoryHandler):
         return True
 
     def start_updater(self):
-        #if self.size == 'array':
-        #    rv = (rv * memory_utils.aob_size(self.value.strip(), wildcard=True))
-
         self.update_thread = Search.UpdateThread(self.mem(), self.search_results[0:40], self.search_results.get_type())
         self.update_thread.start()
 
@@ -425,10 +427,23 @@ class Search(MemoryHandler):
             self.stop = Event()
             self.addresses = copy.deepcopy(addrs)
             self.parsed_value = pv(0)
+            self.results_to_update(self.parsed_value, self.addresses)
             self.lock = Lock()
             self.write_list = []
             self.freeze_list = {}
             self.error = ""
+
+        @classmethod
+        def results_to_update(cls, parsed_value, results):
+            if isinstance(parsed_value, ctypes.Array):
+                for i in range(0, len(results)):
+                    v = results[i]
+                    byte_str = ' '.join(memory_utils.bytes_to_aob(v))
+                    results[i]['value'] = byte_str
+            else:
+                for v in results:
+                    v['value'] = v['value'].value
+
 
         def _loop(self):
             try:

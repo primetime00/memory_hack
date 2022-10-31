@@ -2,14 +2,13 @@ import copy
 import ctypes
 import os
 import shutil
-from pathlib import Path
 from typing import List, Union
 
 import multiprocess
 from mem_edit import Process
-from multiprocess.connection import Pipe
 
 from app.helpers.aob_value import AOBValue
+from app.helpers.directory_utils import memory_directory
 from app.helpers.exceptions import SearchException, BreakException
 from app.helpers.operation_control import OperationControl
 from app.helpers.progress import Progress
@@ -21,7 +20,8 @@ ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, cty
 
 
 class SearchUtilities:
-    mem_path = Path(".memory")
+    mem_path = memory_directory
+    max_capture_size = int(25600000 * (4/multiprocess.cpu_count()))
     def __init__(self, mem: Process, value: SearchValue, results: SearchResults, op_control: OperationControl = None, progress:Progress = None):
         self.mem = mem
         self.value = value
@@ -216,49 +216,26 @@ class SearchUtilities:
         self.progress.add_constraint(0, mem_list[-1][1], 1.0)
         self.mem_path.mkdir(exist_ok=True)
         abs_start = mem_list[0][0]
-
         for start, stop in self.mem.list_mapped_regions():
             self.op_control.test()
-            cap_file = self.mem_path.joinpath('capture_{}_{}'.format(start-abs_start, (stop-start)))
+            size = stop-start
+            pos = start
+            iterations = [size]
+            if size > self.max_capture_size:
+                iterations = [self.max_capture_size] * int(size/self.max_capture_size)
+                iterations.append(size - int(size/self.max_capture_size) * self.max_capture_size)
             try:
-                region_buffer = (ctypes.c_byte * (stop - start))()
-                self.mem.read_memory(start, region_buffer)
-                cap_file.write_bytes(bytes(region_buffer))
+                for it in iterations:
+                    cap_file = self.mem_path.joinpath('capture_{}_{}'.format(pos - abs_start, (it)))
+                    with open(cap_file, 'wb') as f:
+                        region_buffer = (ctypes.c_byte * it)()
+                        self.mem.read_memory(pos, region_buffer)
+                        f.write(bytes(region_buffer))
+                        pos += it
                 self.progress.set(stop)
             except OSError:
                 continue
         self.progress.mark()
-
-    def _pool_process(self, data):
-        #mm_interval.append((start, stop, abs_start, connection, cmp_func, self.value, SearchResults.fromValue(self.value)))
-        start = data[0]
-        stop = data[1]
-        abs_start = data[2]
-        conn = data[3]
-        cmp_func = data[4]
-        value: SearchValue = data[5]
-        results: SearchResults = data[6]
-        last = 0
-        try:
-            cap_file = self.mem_path.joinpath('capture_{}_{}'.format(start-abs_start, (stop-start)))
-            read_bytes = cap_file.read_bytes()
-            capture_buffer = (ctypes.c_byte * len(read_bytes))(*read_bytes)
-            region_buffer = (ctypes.c_byte * (stop - start))()
-            self.mem.read_memory(start, region_buffer)
-            size = (stop - start) - (value.get_size() - 1)
-            for i in range(0, size):
-                mem_value = value.get_type().from_buffer(region_buffer, i)
-                cap_value = value.get_type().from_buffer(capture_buffer, i)
-                if cmp_func(mem_value, cap_value, value):
-                    results.add(start+i, value.get_type().from_buffer_copy(region_buffer, i))
-                if i % 8000 == 0 or i == size-1:
-                    conn.send([os.getpid(), i-last])
-                    last = i
-            return results
-        except OSError:
-            conn.send([os.getpid(), stop-start])
-            conn.close()
-            return results
 
     def search_cmp_capture(self, cmp_func) -> SearchResults:
         if not self.mem_path.absolute().exists():
@@ -272,42 +249,90 @@ class SearchUtilities:
             return self._search_cmp_capture_multi(cmp_func)
         return self._search_cmp_capture_single(cmp_func)
 
+    def _pool_process(self, data):
+        #mm_interval.append((file, start, size, abs_start, queue, cmp_func, self.value, SearchResults.fromValue(self.value, name='region{:03}'.format(index))))
+        f_name = data[0]
+        start = data[1]
+        size = data[2]
+        abs_start = data[3]
+        queue: multiprocess.Queue = data[4]
+        cmp_func = data[5]
+        value: SearchValue = data[6]
+        results: SearchResults = data[7]
+        res_list = []
+        last = 0
+        try:
+            cap_file = self.mem_path.joinpath(f_name)
+            read_bytes = cap_file.read_bytes()
+            capture_buffer = (ctypes.c_byte * len(read_bytes))(*read_bytes)
+            region_buffer = (ctypes.c_byte * size)()
+            self.mem.read_memory(abs_start+start, region_buffer)
+            cmp_size = size - (value.get_size() - 1)
+            for i in range(0, cmp_size, value.get_size()):
+                mem_value = value.get_type().from_buffer(region_buffer, i)
+                cap_value = value.get_type().from_buffer(capture_buffer, i)
+                if cmp_func(mem_value, cap_value, value):
+                    res_list.append( (abs_start+start+i, bytearray(mem_value)) )
+                if i % 8000 == 0 or i == size-1:
+                    queue.put([0, os.getpid(), i-last])
+                    last = i
+                if len(res_list) >= 10000 or (i == size-1 and len(res_list) > 0):
+                    queue.put([1, os.getpid(), res_list])
+                    res_list.clear()
+            return os.getpid()
+        except OSError:
+            queue.put([0, os.getpid(), size])
+            if len(res_list) > 0:
+                queue.put([1, os.getpid(), res_list])
+            res_list.clear()
+            return os.getpid()
+
+
     def _search_cmp_capture_multi(self, cmp_func) -> SearchResults:
+        manager = multiprocess.Manager()
+        queue: multiprocess.context.BaseContext.Queue = manager.Queue(maxsize=10000)
         mem_list = list(self.mem.list_mapped_regions())
         abs_start = mem_list[0][0]
         self.progress.add_constraint(0, self.total_size, 1.0)
         mm_interval = []
+        sr_map = {}
         index=1
         recv_bytes = 0
-        connection = Pipe(duplex=False)
-        for start, stop in self.mem.list_mapped_regions():
-            mm_interval.append((start, stop, abs_start, connection[1], cmp_func, self.value, SearchResults.fromValue(self.value, name='region{:03}'.format(index))))
+        s_list = [(x.stem, int(x.stem.split('_')[1]), int(x.stem.split('_')[2])) for x in sorted(list(self.mem_path.glob('capture*')))]
+        for s in s_list:
+            mm_interval.append((s[0], s[1], s[2], abs_start, queue, cmp_func, self.value, 0))
             index += 1
         with multiprocess.get_context("spawn").Pool(processes=multiprocess.cpu_count()-1) as pool:
             try:
                 res = pool.map_async(self._pool_process, mm_interval, chunksize=1)
                 while not res.ready():
-                    if connection[0].poll():
-                        pid, bt = connection[0].recv()
-                        recv_bytes += bt
+                    if not queue.empty():
+                        self.op_control.test()
+                        st, pid, dt = queue.get()
+                        if st == 0:
+                            recv_bytes += dt
+                        else:
+                            for d in dt:
+                                self.results.add(d[0], self.value.get_type().from_buffer(d[1]))
                         continue
                     res.wait(1.0)
                     self.op_control.test()
                     self.progress.set(recv_bytes)
-                for r in res.get():
-                    self.results.extend(r)
-                connection[0].close()
+                res.get()
             except BreakException as e:
-                connection[0].close()
                 pool.terminate()
                 pool.join()
                 raise e
+        for k, v in sr_map.items():
+            self.results.extend(v)
         self.progress.mark()
         return self.results
 
     def _search_cmp_capture_single(self, cmp_func) -> SearchResults:
         mem_list = list(self.mem.list_mapped_regions())
         abs_start = mem_list[0][0]
+        count = 0
+        last = 0
         self.progress.add_constraint(0, self.total_size, 1.0)
         for f in self.mem_path.glob('*'):
             try:
@@ -319,13 +344,19 @@ class SearchUtilities:
                 region_buffer = (ctypes.c_byte * (stop - start))()
                 self.mem.read_memory(start, region_buffer)
                 size = (stop - start) - (self.value.get_size() - 1)
-                for i in range(0, size):
+                cmp_size = size - (self.value.get_size() - 1)
+                for i in range(0, cmp_size, self.value.get_size()):
                     mem_value = self.value.get_type().from_buffer(region_buffer, i)
                     cap_value = self.value.get_type().from_buffer(capture_buffer, i)
+                    count += 1
+                    if count % 4096 == 0:
+                        self.progress.increment(count - last)
+                        last = count
                     if cmp_func(mem_value, cap_value, self.value):
                         self.results.add(start+i, self.value.get_type().from_buffer_copy(region_buffer, i))
             except OSError:
                 continue
+        self.progress.mark()
         return self.results
 
     def search_cmp_addresses(self, results: SearchResults, cmp_func = None) -> SearchResults:

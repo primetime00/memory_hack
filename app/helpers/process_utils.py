@@ -81,7 +81,10 @@ def can_attach(pid):
         return False
     finally:
         if z:
-            z.close()
+            try:
+                z.close()
+            except mem_edit.utils.MemEditError:
+                pass
     return True
 
 def valid_processes(proc_list):

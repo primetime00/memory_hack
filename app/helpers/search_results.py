@@ -3,20 +3,22 @@ from __future__ import annotations
 import ctypes
 import os
 import sys
-from pathlib import Path
 from typing import Union
 
 from app.helpers.aob_value import AOBValue
+from app.helpers.directory_utils import memory_directory
 from app.helpers.search_value import SearchValue
 
 ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, ctypes.Union]
-class SearchResults:
-    directory = Path('.memory')
-    dump_index = 0
-    cap = 400000
-    increments = 100000
+cap = 400000
+increments = 100000
 
-    def __init__(self, name='default', c_type=ctypes.c_int32):
+
+class SearchResults:
+    directory = memory_directory
+    dump_index = 0
+
+    def __init__(self, name='default', c_type=ctypes.c_int32, cap=cap, increments=increments):
         self.total_results = 0
         self.memory_results = []
         self.file_result_names = []
@@ -24,6 +26,8 @@ class SearchResults:
         self.signed = c_type in [ctypes.c_int8, ctypes.c_int16, ctypes.c_int32, ctypes.c_int64]
         self.store_size = ctypes.sizeof(c_type)
         self.store_type = c_type
+        self.cap = cap
+        self.increments = increments
 
         self.iter_index = 0
         self.last_index = 0
@@ -35,6 +39,8 @@ class SearchResults:
 
     def __getitem__(self, subscript):
         if isinstance(subscript, slice):
+            if self.total_results == 0:
+                return []
             return self.get(subscript.start, subscript.stop)
         else:
             return self.get(subscript, subscript+1)[0]
@@ -46,7 +52,7 @@ class SearchResults:
             self.iter_buffer = self.memory_results
             self.last_index = 0
         else:
-            self.iter_buffer = self.get(0, SearchResults.increments)
+            self.iter_buffer = self.get(0, self.increments)
             self.last_index = 0
         return self
 
@@ -55,7 +61,7 @@ class SearchResults:
             raise StopIteration()
         if self.iter_index-self.last_index >= len(self.iter_buffer):
             self.last_index += len(self.iter_buffer)
-            self.iter_buffer = self.get(self.last_index, self.last_index+SearchResults.increments)
+            self.iter_buffer = self.get(self.last_index, self.last_index+self.increments)
         n = self.next()
         self.iter_index += 1
         return n
@@ -71,7 +77,7 @@ class SearchResults:
     def add_r(self, r):
         self.memory_results.append(r)
         self.total_results += 1
-        if len(self.memory_results) >= SearchResults.cap:
+        if len(self.memory_results) >= self.cap:
             self.dump()
             self.memory_results.clear()
 
@@ -179,13 +185,19 @@ class SearchResults:
 
     def copy(self):
         sr = SearchResults(self.name)
+        sr.cap = self.cap
+        sr.increments = self.increments
         sr.total_results = self.total_results
         sr.memory_results = self.memory_results.copy()
         sr.file_result_names = self.file_result_names.copy()
+        sr.store_type = self.store_type
         return sr
 
     def get_type(self):
         return self.store_type
+
+    def set_type(self, _type):
+        self.store_type = _type
 
     def clear(self):
         self.memory_results.clear()
@@ -194,8 +206,8 @@ class SearchResults:
         self.total_results = 0
 
     @classmethod
-    def fromValue(cls, value: SearchValue, name='default'):
-        return SearchResults(name=name, c_type=value.get_type())
+    def fromValue(cls, value: SearchValue, name='default', cap=cap, increments=increments):
+        return SearchResults(name=name, c_type=value.get_type(), cap=cap, increments=increments)
 
     def convert_value(self, value: str):
         tp = self.get_type()

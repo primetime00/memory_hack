@@ -15,12 +15,13 @@ from app.helpers.exceptions import CodelistException
 from app.helpers.memory_utils import get_ctype
 from app.script_common.aob import AOB
 from app.script_common.utilities import ScriptUtilities
+from app.helpers.directory_utils import codes_directory
 
 ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, ctypes.Union]
 
 
 class CodeList(MemoryHandler):
-    directory = Path.home().joinpath('mem_manip/user_codes') if '/root' not in str(Path.home()) else Path('/opt/mem_manip/user_codes')
+    directory = codes_directory
     def __init__(self):
         super().__init__('codelist')
         self.handle_map = {

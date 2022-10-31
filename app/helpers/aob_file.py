@@ -4,6 +4,7 @@ from io import BytesIO
 from pathlib import Path
 
 from app.helpers.exceptions import AOBException
+from app.helpers.directory_utils import aob_directory
 
 
 class AOBFile():
@@ -12,7 +13,7 @@ class AOBFile():
     consecutive_wildcards = 5
     header = ['Process: ', 'Name: ', 'Range: ', 'Offset: ', 'Length: ', 'Valid: ']
 
-    def __init__(self, directory: Path = Path('.aob'), filename=None):
+    def __init__(self, directory: Path = aob_directory, filename=None):
         self.process = ""
         self.directory = directory
         self.name = ""

@@ -17,10 +17,11 @@ from app.helpers.exceptions import AOBException, BreakException
 from app.helpers.memory_handler import MemoryHandler
 from app.helpers.memory_utils import value_to_hex, bytes_to_aobstr
 from app.helpers.progress import Progress
+from app.helpers.directory_utils import aob_directory
 
 
 class AOB(MemoryHandler):
-    directory = Path('.aob')
+    directory = aob_directory
     FLOW_START = 0
     FLOW_SEARCHING = 1
     FLOW_RESULTS = 2
@@ -359,7 +360,7 @@ class AOB(MemoryHandler):
 
         def aob_value_search(self):
             au = AOBUtilities(self.memory, self.operation_control, self.progress)
-            walker = AOBWalk(aob_file=self.aob_file, max_size=50, filter_result_size=-1)
+            walker = AOBWalk(aob_file=self.aob_file, max_size=50, filter_result_size=6)
             if self.current_value:
                 sz_map = {'byte_1': AOBWalk.BYTE, 'byte_2': AOBWalk.BYTE_2, 'byte_4': AOBWalk.BYTE_4}
                 walker.set_result_value_filter(self.current_value, sz_map[self.current_size], self.memory)
