@@ -26,7 +26,7 @@ class Progress:
 
     def get_progress(self):
         self.update()
-        return round(self.current_progress*100)
+        return round(self.current_progress*100, 1)
 
     def update(self):
         if self.current_constraint < 0:

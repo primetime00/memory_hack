@@ -1,5 +1,5 @@
 diff -uN ./__init__.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/__init__.py
---- ./__init__.py	2022-10-03 15:11:25.129656939 -0400
+--- ./__init__.py	2022-10-31 22:21:32.646089287 -0400
 +++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/__init__.py	2022-10-03 15:09:09.665805370 -0400
 @@ -11,7 +11,7 @@
      help(Process)
@@ -24,8 +24,8 @@ diff -uN ./__init__.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10
  else:
      raise MemEditError('Only Linux and Windows are currently supported.')
 diff -uN ./linux.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux.py
---- ./linux.py	2022-10-03 15:11:25.129656939 -0400
-+++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux.py	2022-09-13 10:48:40.633411290 -0400
+--- ./linux.py	2022-10-31 22:21:32.650089275 -0400
++++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux.py	2022-10-31 16:33:53.716653561 -0400
 @@ -58,7 +58,9 @@
  
      def close(self):
@@ -36,19 +36,23 @@ diff -uN ./linux.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/si
          self.pid = None
  
      def write_memory(self, base_address: int, write_buffer: ctypes_buffer_t):
-@@ -111,6 +113,8 @@
+@@ -111,6 +113,12 @@
          regions = []
          with open('/proc/{}/maps'.format(self.pid), 'r') as maps:
              for line in maps:
 +                if "/dev/dri/" in line:
++                    continue
++                if "/dev/shm/" in line:
++                    continue
++                if "Proton" in line:
 +                    continue
                  bounds, privileges = line.split()[0:2]
  
                  if 'r' not in privileges:
 diff -uN ./linux_vm.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux_vm.py
 --- ./linux_vm.py	1969-12-31 19:00:00.000000000 -0500
-+++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux_vm.py	2022-10-03 17:09:09.322194993 -0400
-@@ -0,0 +1,125 @@
++++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux_vm.py	2022-10-31 16:33:53.724653541 -0400
+@@ -0,0 +1,129 @@
 +"""
 +Implementation of Process class for Linux with kernel >= 3.2
 +"""
@@ -163,6 +167,10 @@ diff -uN ./linux_vm.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10
 +            for line in maps:
 +                if "/dev/dri/" in line:
 +                    continue
++                if "/dev/shm/" in line:
++                    continue
++                if "Proton" in line:
++                    continue
 +                bounds, privileges = line.split()[0:2]
 +
 +                if 'r' not in privileges:
@@ -176,7 +184,7 @@ diff -uN ./linux_vm.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10
 +        return regions
 Common subdirectories: ./__pycache__ and /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/__pycache__
 diff -uN ./windows.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/windows.py
---- ./windows.py	2022-10-03 15:11:25.129656939 -0400
+--- ./windows.py	2022-10-31 22:21:32.650089275 -0400
 +++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/windows.py	2022-09-16 16:00:19.662437213 -0400
 @@ -134,6 +134,7 @@
  

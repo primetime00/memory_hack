@@ -21,7 +21,7 @@ ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, cty
 
 class SearchUtilities:
     mem_path = memory_directory
-    max_capture_size = int(25600000 * (4/multiprocess.cpu_count()))
+    max_capture_size = int((25600000/4) * (4/multiprocess.cpu_count()))
     def __init__(self, mem: Process, value: SearchValue, results: SearchResults, op_control: OperationControl = None, progress:Progress = None):
         self.mem = mem
         self.value = value
@@ -250,7 +250,7 @@ class SearchUtilities:
         return self._search_cmp_capture_single(cmp_func)
 
     def _pool_process(self, data):
-        #mm_interval.append((file, start, size, abs_start, queue, cmp_func, self.value, SearchResults.fromValue(self.value, name='region{:03}'.format(index))))
+        #mm_interval.append((file, start, size, abs_start, queue, cmp_func, self.value))
         f_name = data[0]
         start = data[1]
         size = data[2]
@@ -258,9 +258,9 @@ class SearchUtilities:
         queue: multiprocess.Queue = data[4]
         cmp_func = data[5]
         value: SearchValue = data[6]
-        results: SearchResults = data[7]
         res_list = []
         last = 0
+        tp = value.get_type()
         try:
             cap_file = self.mem_path.joinpath(f_name)
             read_bytes = cap_file.read_bytes()
@@ -269,14 +269,14 @@ class SearchUtilities:
             self.mem.read_memory(abs_start+start, region_buffer)
             cmp_size = size - (value.get_size() - 1)
             for i in range(0, cmp_size, value.get_size()):
-                mem_value = value.get_type().from_buffer(region_buffer, i)
-                cap_value = value.get_type().from_buffer(capture_buffer, i)
+                mem_value = tp.from_buffer(region_buffer, i)
+                cap_value = tp.from_buffer(capture_buffer, i)
                 if cmp_func(mem_value, cap_value, value):
                     res_list.append( (abs_start+start+i, bytearray(mem_value)) )
-                if i % 8000 == 0 or i == size-1:
+                if i % 18000 == 0 or i == size-1:
                     queue.put([0, os.getpid(), i-last])
                     last = i
-                if len(res_list) >= 10000 or (i == size-1 and len(res_list) > 0):
+                if len(res_list) >= 100000 or (i == size-1 and len(res_list) > 0):
                     queue.put([1, os.getpid(), res_list])
                     res_list.clear()
             return os.getpid()
@@ -286,7 +286,6 @@ class SearchUtilities:
                 queue.put([1, os.getpid(), res_list])
             res_list.clear()
             return os.getpid()
-
 
     def _search_cmp_capture_multi(self, cmp_func) -> SearchResults:
         manager = multiprocess.Manager()
@@ -298,19 +297,31 @@ class SearchUtilities:
         sr_map = {}
         index=1
         recv_bytes = 0
+
+        import time
+        start_time = time.time()
+        samples = 0
+
         s_list = [(x.stem, int(x.stem.split('_')[1]), int(x.stem.split('_')[2])) for x in sorted(list(self.mem_path.glob('capture*')))]
         for s in s_list:
-            mm_interval.append((s[0], s[1], s[2], abs_start, queue, cmp_func, self.value, 0))
+            mm_interval.append((s[0], s[1], s[2], abs_start, queue, cmp_func, self.value))
             index += 1
-        with multiprocess.get_context("spawn").Pool(processes=multiprocess.cpu_count()-1) as pool:
+        with multiprocess.get_context("spawn").Pool(processes=max(1, multiprocess.cpu_count()-1)) as pool:
             try:
-                res = pool.map_async(self._pool_process, mm_interval, chunksize=1)
+                res = pool.map_async(self._pool_process, mm_interval)
                 while not res.ready():
+                    now = time.time()
+                    if (now - start_time) >= 5:
+                        samples += 1
+                        print("MBps = {}".format(recv_bytes / 1000000 / samples))
+                        start_time = now
+
                     if not queue.empty():
                         self.op_control.test()
                         st, pid, dt = queue.get()
                         if st == 0:
                             recv_bytes += dt
+                            self.progress.set(recv_bytes)
                         else:
                             for d in dt:
                                 self.results.add(d[0], self.value.get_type().from_buffer(d[1]))
