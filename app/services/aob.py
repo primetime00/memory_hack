@@ -53,7 +53,7 @@ class AOB(MemoryHandler):
         self.current_value_size = None
 
         if not AOB.directory.exists():
-            os.mkdir(AOB.directory)
+            os.makedirs(AOB.directory, exist_ok=True)
 
         self.reset()
         #self.delete_memory()
@@ -276,7 +276,7 @@ class AOB(MemoryHandler):
             if self.current_range % 2 != 0:
                 self.current_range += 1
             if not AOB.directory.exists():
-                os.mkdir(AOB.directory)
+                os.makedirs(AOB.directory, exist_ok=True)
 
             self.aob_file: AOBFile = AOBFile(directory=AOB.directory, filename=self.current_name+'.aob')
             self.progress = Progress()
