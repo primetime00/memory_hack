@@ -9,7 +9,7 @@ from app.helpers.data_store import DataStore
 from app.helpers.directory_utils import scripts_memory_directory
 from app.helpers.process.base_address import get_process_map
 from app.script_common import BaseScript
-from app.script_ui import BaseUI, Button, Select, Input
+from app.script_ui import BaseUI, Button, Select, Input, Text
 from app.search.searcher_multi import SearcherMulti
 
 
@@ -30,11 +30,12 @@ class Test(BaseScript):
         self.add_ui_element(Input("ADDRESS", "Address", on_changed=self.ctrl_changed, change_on_focus=False, validator=self.address_validator))
         self.add_ui_element(Button("SEARCH", "Search", on_pressed=self.ctrl_pressed))
         self.add_ui_element(Button("STOP", "Stop", on_pressed=self.ctrl_pressed))
+        self.add_ui_element(Text("RESULTS", "Results"))
 
         self.refresh_pid(self.get_ui_control("PROCS"))
         self.populate_files()
 
-        [self.get_ui_control(ctrl_name).hide() for ctrl_name in ['ADDRESS', 'FILES', 'SEARCH', 'STOP']]
+        [self.get_ui_control(ctrl_name).hide() for ctrl_name in ['ADDRESS', 'FILES', 'SEARCH', 'STOP', 'RESULTS']]
 
 
     def refresh_pid(self, ele: BaseUI):
@@ -83,10 +84,10 @@ class Test(BaseScript):
         if queue:
             while not queue.empty():
                 dt = queue.get()
-                if dt == "SUCCESS":
-                    self.search_complete()
+                if dt['status'] == "SUCCESS":
+                    self.search_complete(dt)
                 elif dt == "BREAK":
-                    self.search_break()
+                    self.search_break(dt)
 
     def stop_search(self):
         searcher: SearcherMulti = self.get_data('SEARCHER')
@@ -100,11 +101,14 @@ class Test(BaseScript):
         [self.get_ui_control(ctrl_name).enable() for ctrl_name in ['PROCS', 'ADDRESS', 'FILES']]
 
 
-    def search_complete(self):
+    def search_complete(self, status):
         print("search complete")
+        print('FOUND {} valid pointers'.format(len(status['pointers'])))
         self.get_ui_control("STOP").hide()
         self.get_ui_control("SEARCH").show()
         [self.get_ui_control(ctrl_name).enable() for ctrl_name in ['PROCS', 'ADDRESS', 'FILES']]
+        self.get_ui_control("RESULTS").show()
+        self.get_ui_control("RESULTS").set_text(self.generate_pointer_text(status['pointers']))
 
 
     def prepare_search(self):
@@ -116,6 +120,7 @@ class Test(BaseScript):
         [self.get_ui_control(ctrl_name).disable() for ctrl_name in ['PROCS', 'ADDRESS', 'FILES']]
 
         self.get_ui_control("SEARCH").hide()
+        self.get_ui_control("RESULTS").hide()
         self.get_ui_control("STOP").show()
 
         search_thread = Thread(target=self.search, args=(address, file, self.get_data("QUEUE")))
@@ -156,9 +161,27 @@ class Test(BaseScript):
             except Exception:
                 continue
 
-        print('FOUND {} valid pointers'.format(len(valid_pointers)))
         #with path.open(mode='wt') as f:
         #    json.dump(valid_pointers, f, indent=4)
 
+        queue.put({'status': 'SUCCESS', 'pointers': valid_pointers})
 
-        queue.put("SUCCESS")
+    def generate_pointer_text(self, pointers):
+        data = "<ons-row><strong>Valid results: {}</strong></ons-row>".format(len(pointers))
+        for p in pointers:
+            data += "<ons-row>"
+
+            pt = p['path'].split('/')[-1]
+            data += "<ons-row>{}:{}+{:X}</ons-row>".format(pt, p['node'], p['base_offset'])
+            data += "<ons-row>"
+            for offset in p['offsets']:
+                data += str(offset) + ', '
+            data = data[0:-3]
+            data += "</ons-row>"
+            data += "<ons-row>"
+            copy_data = "{{'path': '{}', 'node': {}, 'base_offset': {}, 'offsets': {}}}".format(p['path'], p['node'], p['base_offset'], p['offsets'])
+            data += '<ons-button modifier="quiet" name="copy_button" onclick="document.clipboard.copy({})">Copy</ons-button></ons-col>'.format(copy_data)
+            data += "</ons-row>"
+
+            data += "</ons-row>"
+        return data
