@@ -3,11 +3,10 @@ from __future__ import annotations
 import ctypes
 import os
 import sys
+import time
 from typing import Union
 
-from app.helpers.aob_value import AOBValue
 from app.helpers.directory_utils import memory_directory
-from app.helpers.search_value import SearchValue
 
 ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, ctypes.Union]
 cap = 400000
@@ -18,21 +17,18 @@ class SearchResults:
     directory = memory_directory
     dump_index = 0
 
-    def __init__(self, name='default', c_type=ctypes.c_int32, cap=cap, increments=increments):
+    def __init__(self, name='default', store_size=4, cap=cap, increments=increments):
         self.total_results = 0
         self.memory_results = []
         self.file_result_names = []
         self.name = name
-        self.signed = c_type in [ctypes.c_int8, ctypes.c_int16, ctypes.c_int32, ctypes.c_int64]
-        self.store_size = ctypes.sizeof(c_type)
-        self.store_type = c_type
+        self.store_size = store_size
         self.cap = cap
         self.increments = increments
 
         self.iter_index = 0
         self.last_index = 0
         self.iter_buffer = []
-
 
     def __len__(self):
         return self.total_results
@@ -85,13 +81,14 @@ class SearchResults:
         self.total_results += (sr.total_results - len(sr.memory_results))
         for r in sr.memory_results:
             self.add_r(r)
+        self.memory_results.sort(key=lambda x: x['address'], reverse=True)
         self.file_result_names.extend(sr.file_result_names)
 
     def dump(self):
         self.directory.mkdir(exist_ok=True)
         if SearchResults.dump_index+1 > 0xFFFF:
             SearchResults.dump_index = 0
-        pt = self.directory.joinpath('results_{}_{:04}_{}_{}.res'.format(self.name, self.dump_index, self.store_size, len(self.memory_results)))
+        pt = self.directory.joinpath('results_{}_{:04}_{}_{}_{:04}.res'.format(self.name, self.dump_index, self.store_size, len(self.memory_results), int(time.time()*1000) % 9999))
         SearchResults.dump_index += 1
         with open(pt, 'wb') as f:
             for r in self.memory_results:
@@ -99,8 +96,6 @@ class SearchResults:
                 b2 = bytes(r['value'])
                 f.write(b1+b2)
         self.file_result_names.append(str(pt.absolute()))
-
-
 
     def get(self, start, end):
         res = []
@@ -137,7 +132,8 @@ class SearchResults:
             return self.memory_results[start-total_files_size:end-total_files_size]
 
         for f in self.file_result_names:
-            file_result_count = int(f[f.rindex('_') + 1:f.rindex('.')])
+            parts = f.split("_")
+            file_result_count = int(parts[-2])
             size_count += file_result_count
             if size_count < start:
                 continue
@@ -178,7 +174,7 @@ class SearchResults:
                 if not buf:
                     break
                 addr = int.from_bytes(bytes(buf), byteorder=sys.byteorder)
-                value = self.store_type(int.from_bytes(bytes(f.read(self.store_size)), byteorder=sys.byteorder))
+                value = bytes(f.read(self.store_size))
                 index += 1
                 res.append({'address': addr, 'value': value})
         return res
@@ -190,37 +186,38 @@ class SearchResults:
         sr.total_results = self.total_results
         sr.memory_results = self.memory_results.copy()
         sr.file_result_names = self.file_result_names.copy()
-        sr.store_type = self.store_type
+        sr.store_size = self.store_size
         return sr
 
-    def get_type(self):
-        return self.store_type
+    @staticmethod
+    def from_result(result: SearchResults, store_size=None):
+        sr = SearchResults(result.name)
+        sr.cap = result.cap
+        sr.increments = result.increments
+        if not store_size:
+            sr.store_size = result.store_size
+        else:
+            sr.store_size = store_size
+        return sr
 
-    def set_type(self, _type):
-        self.store_type = _type
+
+    def set_name(self, name):
+        self.name = name
 
     def clear(self):
         self.memory_results.clear()
         for f in self.file_result_names:
             os.unlink(f)
         self.total_results = 0
+        self.iter_index = 0
+        self.last_index = 0
+        self.iter_buffer = []
 
-    @classmethod
-    def fromValue(cls, value: SearchValue, name='default', cap=cap, increments=increments):
-        return SearchResults(name=name, c_type=value.get_type(), cap=cap, increments=increments)
 
-    def convert_value(self, value: str):
-        tp = self.get_type()
-        if type(ctypes.Array) == type(tp):
-            aob = AOBValue(value)
-            return tp(*bytes(aob.aob_item['aob_bytes']))
-        elif tp == ctypes.c_float:
-            return tp(float(value))
-        else:
-            if value.lower().startswith("0x"):
-                return tp(int(value,16))
-            return tp(int(value))
-
+    @staticmethod
+    def clear_all_results():
+        for res in SearchResults.directory.glob("*.res"):
+            res.unlink(missing_ok=True)
 
 
 

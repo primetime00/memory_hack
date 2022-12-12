@@ -4,12 +4,42 @@ from typing import List, Union
 from mem_edit import Process
 
 from app.script_common.aob import AOB
+from app.search.searcher import Searcher
+from app.search.value import Value
 
 ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, ctypes.Union]
 
 class ScriptUtilities:
-    def __init__(self):
-        pass
+    def __init__(self, searcher: Searcher):
+        self.searcher: Searcher = searcher
+
+    def search_aob(self, aob: AOB):
+        self.searcher.set_search_size('array')
+        self.searcher.set_results("script", Value.create(aob.get_aob_string(), 'array'))
+        self.searcher.search_memory_value(aob.get_aob_string())
+        if len(self.searcher.results) == 0:
+            return []
+        return [x['address'] for x in self.searcher.results[0:40]]
+
+    def compare_aob(self, aob: AOB):
+        size = aob.aob.aob_item['size']
+        values = aob.aob.aob_item['aob_bytes']
+        bases = []
+        for base in aob.get_bases():
+            found = True
+            try:
+                buf = self.searcher.memory.read_memory(base, (ctypes.c_ubyte * size)())
+                for i in range(0, len(buf)):
+                    if values[i] > 255:
+                        continue
+                    if values[i] != buf[i]:
+                        found = False
+                        break
+                if found:
+                    bases.append(base)
+            except OSError:
+                continue
+        return bases
 
     def _filter(self, haystack, lcl_offset, glb_offset, args):
         aob: AOB = args
@@ -66,7 +96,7 @@ class ScriptUtilities:
     def search_aob_all_memory(self, mem: Process, aob: AOB) -> List:
         return self.search_all_memory(mem, aob, filter_func=self._filter if aob.has_wildcards() else None, filter_args=aob)
 
-    def compare_aob(self, mem:Process, addr:int, aob:AOB):
+    def compare_aob2(self, mem:Process, addr:int, aob:AOB):
         res = True
         size = aob.aob.aob_item['size']
         values = aob.aob.aob_item['aob_bytes']

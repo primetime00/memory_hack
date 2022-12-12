@@ -1,18 +1,22 @@
 from app.script_ui._base import BaseUI
 
 class Button(BaseUI):
-    pressed = False
 
-    def ui_data(self):
-        return '<ons-button id="{}" class="script_control" onclick="script.script_interact_button(event)">Go</ons-button>{}'.format(self.id, self.title)
+    def __init__(self, name: str, title: str , on_pressed: callable = None, enable_checker:callable = None, children=None):
+        super().__init__(name, title, enable_checker, children)
+        self.on_pressed = on_pressed
+
+    def ui_data(self, _id):
+        return '<span><ons-button id="{}" class="script_control" onclick="script.script_interact_button(event)">Go</ons-button>{}</span>'.format(_id, self.title)
+
+    def set_on_pressed(self, func: callable):
+        self.on_pressed = func
+
 
     def handle_interaction(self, data):
-        self.pressed = True
+        if self.on_pressed:
+            self.add_instruction(self.on_pressed)
 
-    def process(self):
-        if self.pressed:
-            self.pressed = False
-            self.int_callback()
 
 
 

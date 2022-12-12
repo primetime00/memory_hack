@@ -41,6 +41,18 @@
         post_interact(id, {})
     }
 
+    script.script_interact_select = function(event) {
+        var id = event.currentTarget.id
+        post_interact(id, {"value": event.currentTarget.value})
+    }
+
+    script.script_interact_multi_select = function(event) {
+        var id = event.currentTarget.id
+        var root = $(event.currentTarget)
+        post_interact(id, {"value": root.val()})
+    }
+
+
     script.script_interact_toggle = function(event) {
         var target = event.target
         post_interact(event.target.id, {"checked": target.checked})
@@ -76,18 +88,18 @@
         if (result.hasOwnProperty('scripts')) {
             populate_scripts(result.scripts)
         }
-        if (result.hasOwnProperty('controls')) {
-            update_controls(result.controls)
-        }
         switch (status) {
             case 'SCRIPT_STATUS': break;
             case 'SCRIPT_LOADED': on_script_loaded(result.current); break;
             case 'SCRIPT_NOT_READY': on_script_not_ready(result.current); break;
             case 'SCRIPT_IS_READY': on_script_ready(result.current); break;
             case 'SCRIPT_UNLOADED': on_script_ui_get(""); break;
-            case 'SCRIPT_UI_GET': on_script_ui_get(result.ui); break;
+            case 'SCRIPT_UI_GET':  on_script_ui_get(result.ui); break;
             case 'SCRIPT_ERROR': on_script_error(result.error); break;
             default: break;
+        }
+        if (has(result, 'controls')) {
+            update_controls(result.controls)
         }
         if (result.hasOwnProperty('repeat')) {
             if (!requested_ui) { //our script is running, but no UI is showing
@@ -128,13 +140,33 @@
     }
 
     function update_controls(controls) {
-        $.each(controls.enabled , function (index, value) {
-            $("#"+value).removeAttr('disabled')
+        $.each(controls , function (id, instructions) {
+            $.each(instructions , function (index, instruction) {
+                switch (instruction.op) {
+                    case "add_attribute":
+                        $("#"+id).attr(instruction.data.attr, instruction.data.value)
+                        break;
+                    case "remove_attribute":
+                        $("#"+id).removeAttr(instruction.data.attr)
+                        break;
+                    case "prop":
+                        $("#"+id).prop(instruction.data.name, instruction.data.value)
+                        break;
+                    case "value":
+                        $("#"+id).val(instruction.data.value)
+                        break;
+                    case "script":
+                        Function('"use strict"; '+ instruction.data.script)()
+                        break;
+                    case "inner-html":
+                        $("#"+id).empty()
+                        $("#"+id).append(instruction.data.html)
+                        break;
+                    default:
+                        break;
+                }
+            });
         });
-        $.each(controls.disabled , function (index, value) {
-            $("#"+value).attr('disabled', 'disabled')
-        });
-
     }
 
     function check_script_status() {
@@ -148,7 +180,7 @@
             data: JSON.stringify({ "type": "SCRIPT_INTERACT", "id": id, "data": data }),
             dataType: "json",
             contentType: "application/json; charset=utf-8",
-            success: on_script_interacted
+            success: (res) => {$("#"+id).removeAttr('disabled');  on_script_interacted(res);}
             });
     }
 
@@ -179,6 +211,24 @@
             populate_scripts(result.scripts)
         }
     };
+
+    function has(target, path) {
+        if (typeof target != 'object' || target == null) {
+            return false;
+        }
+        var parts = path.split('.');
+
+        while(parts.length) {
+            var branch = parts.shift();
+            if (!(branch in target)) {
+                return false;
+            }
+
+            target = target[branch];
+        }
+        return true;
+    }
+
 
 
 

@@ -12,6 +12,7 @@ class AOBWalk:
     BYTE = 1
     BYTE_2 = 2
     BYTE_4 = 4
+    BYTE_8 = 8
     ARRAY = 8
     NONE = 0
     def __init__(self, aob_file: AOBFile = None, max_size=35, filter_result_size=-1, filter_result_value=(NONE, 0, None)):

@@ -1,6 +1,5 @@
 import app.helpers.memory_utils as mem_utils
 import app.helpers.process_utils as ps_utils
-import app.helpers.search_utils
 from app.helpers.aob_file import AOBFile
 from app.helpers.aob_value import AOBValue
 from app.helpers.aob_walk import AOBWalk

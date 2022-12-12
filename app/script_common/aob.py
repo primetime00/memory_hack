@@ -1,4 +1,8 @@
+from threading import Lock
+
 from app.helpers.aob_value import AOBValue
+
+
 class AOB:
     def __init__(self, name, aob_str):
         self.name = name
@@ -6,6 +10,7 @@ class AOB:
         self.aob_string = aob_str
         self.bases = []
         self._last_found = -1
+        self.base_lock = Lock()
 
     def get_aob_string(self):
         return self.aob.aob_item['aob_string']
@@ -32,6 +37,12 @@ class AOB:
 
     def has_wildcards(self):
         return self.aob.has_wildcards()
+
+    def lock(self):
+        self.base_lock.acquire()
+
+    def unlock(self):
+        self.base_lock.release()
 
 
 

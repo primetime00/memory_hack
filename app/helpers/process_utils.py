@@ -1,8 +1,9 @@
-import mem_edit
 import os
 import platform
-import psutil
 import zlib
+
+import mem_edit
+import psutil
 
 inv = ['root', 'kernoops', 'systemd-resolve', 'systemd-timesync', 'avahi', 'rtkit', 'colord', 'messagebus', 'syslog']
 app = ['Isolated Web', 'WebExtensions', 'xdg-', 'Web Content', 'Socket Process', 'bwrap', 'Privileged Cont']
@@ -95,9 +96,12 @@ def valid_processes(proc_list):
     return None, -1
 
 
+cmd_exceptions = ['multiprocessing', 'mem_manip', 'pydevconsole']
 def is_pid_valid(pid):
     try:
-        psutil.Process(pid)
+        pc = psutil.Process(pid)
+        if any(ce in " ".join(pc.cmdline()) for ce in cmd_exceptions):
+            return False
     except psutil.NoSuchProcess:
         return False
     except psutil.AccessDenied:

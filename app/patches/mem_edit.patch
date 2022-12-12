@@ -1,5 +1,17 @@
+diff -uN ./abstract.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/abstract.py
+--- ./abstract.py	2022-12-12 11:37:41.563079344 -0500
++++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/abstract.py	2022-12-08 14:39:42.748914980 -0500
+@@ -176,7 +176,7 @@
+         pass
+ 
+     @abstractmethod
+-    def list_mapped_regions(self, writeable_only=True) -> List[Tuple[int, int]]:
++    def list_mapped_regions(self, writeable_only=True, include_paths = []) -> List[Tuple[int, int]]:
+         """
+         Return a list of `(start_address, stop_address)` for the regions of the address space
+           accessible to (readable and possibly writable by) the process.
 diff -uN ./__init__.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/__init__.py
---- ./__init__.py	2022-10-31 22:21:32.646089287 -0400
+--- ./__init__.py	2022-12-12 11:37:41.563079344 -0500
 +++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/__init__.py	2022-10-03 15:09:09.665805370 -0400
 @@ -11,7 +11,7 @@
      help(Process)
@@ -24,34 +36,60 @@ diff -uN ./__init__.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10
  else:
      raise MemEditError('Only Linux and Windows are currently supported.')
 diff -uN ./linux.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux.py
---- ./linux.py	2022-10-31 22:21:32.650089275 -0400
-+++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux.py	2022-10-31 16:33:53.716653561 -0400
-@@ -58,7 +58,9 @@
+--- ./linux.py	2022-12-12 11:37:41.563079344 -0500
++++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux.py	2022-12-09 17:00:40.637150208 -0500
+@@ -10,6 +10,7 @@
+ import ctypes
+ import ctypes.util
+ import logging
++import re
+ 
+ from .abstract import Process as AbstractProcess
+ from .utils import ctypes_buffer_t, MemEditError
+@@ -58,7 +59,12 @@
  
      def close(self):
          os.kill(self.pid, signal.SIGSTOP)
-+        os.waitpid(self.pid, 0)
++        try:
++            os.waitpid(self.pid, 0)
++        except ChildProcessError:
++            pass
          ptrace(ptrace_commands['PTRACE_DETACH'], self.pid, 0, 0)
 +        os.kill(self.pid, signal.SIGCONT)
          self.pid = None
  
      def write_memory(self, base_address: int, write_buffer: ctypes_buffer_t):
-@@ -111,6 +113,12 @@
+@@ -107,11 +113,25 @@
+         logger.info('Found no process with name {}'.format(target_name))
+         return None
+ 
+-    def list_mapped_regions(self, writeable_only: bool = True) -> List[Tuple[int, int]]:
++    def list_mapped_regions(self, writeable_only: bool = True, include_paths = []) -> List[Tuple[int, int]]:
          regions = []
          with open('/proc/{}/maps'.format(self.pid), 'r') as maps:
              for line in maps:
+-                bounds, privileges = line.split()[0:2]
 +                if "/dev/dri/" in line:
 +                    continue
 +                if "/dev/shm/" in line:
 +                    continue
 +                if "Proton" in line:
 +                    continue
-                 bounds, privileges = line.split()[0:2]
++
++                whole = line.split()
++                if len(whole) < 6:
++                    whole.append('')
++                if include_paths:
++                    if not any(re.match(x, whole[5]) is not None for x in include_paths) and not any(re.match(re.escape(x), whole[5]) is not None for x in include_paths):
++                        continue
++
++                bounds, privileges = whole[0:2]
  
                  if 'r' not in privileges:
+                     continue
 diff -uN ./linux_vm.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux_vm.py
 --- ./linux_vm.py	1969-12-31 19:00:00.000000000 -0500
-+++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux_vm.py	2022-10-31 16:33:53.724653541 -0400
++++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/linux_vm.py	2022-12-08 14:39:42.740914985 -0500
 @@ -0,0 +1,129 @@
 +"""
 +Implementation of Process class for Linux with kernel >= 3.2
@@ -161,7 +199,7 @@ diff -uN ./linux_vm.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10
 +        logger.info('Found no process with name {}'.format(target_name))
 +        return None
 +
-+    def list_mapped_regions(self, writeable_only: bool = True) -> List[Tuple[int, int]]:
++    def list_mapped_regions(self, writeable_only: bool = True, include_paths = []) -> List[Tuple[int, int]]:
 +        regions = []
 +        with open('/proc/{}/maps'.format(self.pid), 'r') as maps:
 +            for line in maps:
@@ -184,8 +222,8 @@ diff -uN ./linux_vm.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10
 +        return regions
 Common subdirectories: ./__pycache__ and /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/__pycache__
 diff -uN ./windows.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/windows.py
---- ./windows.py	2022-10-31 22:21:32.650089275 -0400
-+++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/windows.py	2022-09-16 16:00:19.662437213 -0400
+--- ./windows.py	2022-12-12 11:37:41.567079330 -0500
++++ /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/site-packages/mem_edit/windows.py	2022-12-08 15:05:34.239310497 -0500
 @@ -134,6 +134,7 @@
  
  class Process(AbstractProcess):
@@ -207,6 +245,15 @@ diff -uN ./windows.py /home/ryan/PycharmProjects/mem_remote/venv/lib/python3.10/
  
      def write_memory(self, base_address: int, write_buffer: ctypes_buffer_t):
          try:
+@@ -244,7 +247,7 @@
+         logger.info('Found no process with name {}'.format(target_name))
+         return None
+ 
+-    def list_mapped_regions(self, writeable_only: bool = True) -> List[Tuple[int, int]]:
++    def list_mapped_regions(self, writeable_only: bool = True, include_paths = []) -> List[Tuple[int, int]]:
+         sys_info = SYSTEM_INFO()
+         sys_info_ptr = ctypes.byref(sys_info)
+         ctypes.windll.kernel32.GetSystemInfo(sys_info_ptr)
 @@ -279,7 +282,7 @@
          page_ptr = start
          while page_ptr < stop:

@@ -3,10 +3,10 @@ import falcon
 from app.helpers.data_store import DataStore
 from app.helpers.process_utils import get_process_names
 from app.services.aob import AOB
+from app.services.codes import CodeList
 from app.services.process import Process
 from app.services.script import Script
 from app.services.searcher import Search
-from app.services.codes import CodeList
 
 
 def initialize():

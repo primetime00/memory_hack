@@ -78,10 +78,15 @@
     }
 
     search.on_search_clicked = function() {
+        var size = sel_search_size.val()
+        var type = sel_search_type.val()
+        if (type === 'unknown_near') {
+            size = 'address'
+        }
         $.send('/search',
         {   "command": "SEARCH_START",
-            "size": sel_search_size.val(),
-            "type": sel_search_type.val(),
+            "size": size,
+            "type": type,
             "value": inp_search_value.val(),
          }
         , on_search_status);
@@ -741,6 +746,7 @@
                 }
                 break
             case flow_map["FLOW_INITIALIZE_UNKNOWN"]:
+                $("#value_header").text("Value")
                 if (_type == 'changed_by') {
                     inp_search_value.removeAttr('disabled')
                     row_search_value.show()

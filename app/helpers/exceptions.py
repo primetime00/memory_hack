@@ -20,3 +20,12 @@ class ProcessException(MemManipException):
 class BreakException(MemManipException):
     def __init__(self):
         super().__init__("Operation Break", True)
+
+class ValueException(MemManipException):
+    pass
+
+class BufferException(MemManipException):
+    pass
+
+class OperationException(MemManipException):
+    pass

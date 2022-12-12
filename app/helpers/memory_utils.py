@@ -1,5 +1,4 @@
 import ctypes
-import struct
 
 import psutil
 
@@ -71,6 +70,8 @@ def get_ctype(value: str, size: str):
         return ctypes.c_int16 if int(value) < 32768 else ctypes.c_uint16
     elif size == 'byte_4':
         return ctypes.c_int32 if int(value) < 2147483648 else ctypes.c_uint32
+    elif size == 'byte_8':
+        return ctypes.c_int64 if int(value) < 9223372036854775808 else ctypes.c_uint64
     elif size == 'float':
         return ctypes.c_float
     return ctypes.c_ubyte
@@ -82,6 +83,8 @@ def get_ctype_from_size(size: str):
         return (ctypes.c_byte*2)()
     elif size == 'byte_4':
         return (ctypes.c_byte*4)()
+    elif size == 'byte_8':
+        return (ctypes.c_byte*8)()
     elif size == 'float':
         return (ctypes.c_byte*4)()
     return (ctypes.c_byte*1)()
@@ -91,6 +94,8 @@ def get_ctype_from_buffer(buffer: ctypes.Array, size: str, signed: bool):
         return ctypes.c_int16.from_buffer(buffer) if signed else ctypes.c_uint16.from_buffer(buffer)
     elif size == 'byte_4':
         return ctypes.c_int32.from_buffer(buffer) if signed else ctypes.c_uint32.from_buffer(buffer)
+    elif size == 'byte_8':
+        return ctypes.c_int64.from_buffer(buffer) if signed else ctypes.c_uint64.from_buffer(buffer)
     elif size == 'float':
         return ctypes.c_float.from_buffer(buffer)
     else:
@@ -101,6 +106,8 @@ def get_ctype_from_int_value(value:int, size:str, signed: bool):
         return ctypes.c_int16(value) if signed else ctypes.c_uint16(value)
     elif size == 'byte_4':
         return ctypes.c_int32(value) if signed else ctypes.c_uint32(value)
+    elif size == 'byte_8':
+        return ctypes.c_int64(value) if signed else ctypes.c_uint64(value)
     else:
         return ctypes.c_int8(value) if signed else ctypes.c_uint8(value)
 
@@ -113,6 +120,8 @@ def limit(value, size:str):
         return min(value, 65535)
     elif size == 'byte_4':
         return min(value, 4294967295)
+    elif size == 'byte_8':
+        return min(value, 18446744073709551616)
     else:
         return value
 
@@ -129,6 +138,8 @@ typeToCType = {
     ('byte_2', False):  ctypes.c_uint16,
     ('byte_4', True):   ctypes.c_int32,
     ('byte_4', False):  ctypes.c_uint32,
+    ('byte_8', True):   ctypes.c_int64,
+    ('byte_8', False):  ctypes.c_uint64,
     ('float', True):    ctypes.c_float,
     ('float', False):   ctypes.c_float,
     ('array', True):    ctypes.c_ubyte,

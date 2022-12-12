@@ -2,7 +2,6 @@ import copy
 import ctypes
 import json
 import os
-from pathlib import Path
 from threading import Thread, Lock, Event
 from typing import Union
 
@@ -11,11 +10,11 @@ from falcon.app_helpers import MEDIA_JSON
 
 from app.helpers import DynamicHTML, MemoryHandler
 from app.helpers import memory_utils
+from app.helpers.directory_utils import codes_directory
 from app.helpers.exceptions import CodelistException
 from app.helpers.memory_utils import get_ctype
 from app.script_common.aob import AOB
 from app.script_common.utilities import ScriptUtilities
-from app.helpers.directory_utils import codes_directory
 
 ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, ctypes.Union]
 
@@ -51,7 +50,7 @@ class CodeList(MemoryHandler):
         self.aob_map = {}
         self.result_list = []
         self.freeze_map = {}
-        self.utilities = ScriptUtilities()
+        self.utilities = ScriptUtilities(None)
 
         if not self.directory.exists():
             self.directory.mkdir(parents=True, exist_ok=True)
@@ -412,6 +411,10 @@ class CodeList(MemoryHandler):
                 if value > 0x7FFFFFFF:
                     code['Signed'] = False
                 value = max(-0x7FFFFFFF, min(0xFFFFFFFF, value))
+            elif code['Type'] == 'byte_8':
+                if value > 0x7FFFFFFFFFFFFFFF:
+                    code['Signed'] = False
+                value = max(-0x7FFFFFFFFFFFFFFF, min(0xFFFFFFFFFFFFFFFF, value))
         else:
             if value < 0:
                 code['Signed'] = True

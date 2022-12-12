@@ -3,17 +3,17 @@ from app.script_ui.input import Input
 
 class InputButton(Button):
 
-    def __init__(self, title, interact_callback, enable_checker=None, default_value="1000", validation_checker=None):
-        super().__init__(title, interact_callback, enable_checker, Input(validation_checker, default_value))
+    def __init__(self, name: str, title: str, on_pressed: callable = None, on_text_changed=None, enable_checker: callable = None, children=None, default_text="", validator=None):
+        self.inp = Input(name+"_INPUT", title, on_changed=on_text_changed, enable_checker=enable_checker, validator=validator, change_on_focus=False, default_text=default_text)
+        if children:
+            children.append(self.inp)
+        else:
+            children = [self.inp]
+        super().__init__(name, "", on_pressed, enable_checker, children)
 
-    def get_value(self):
-        return self.input_handler.get_value()
+    def get_input_control(self):
+        return self.inp
 
-    def is_valid(self):
-        return self.input_handler.has_validated_value()
-
-    def get_valid_value(self):
-        return self.input_handler.get_validated_value()
 
 
 

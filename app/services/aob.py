@@ -12,12 +12,12 @@ from app.helpers.aob_file import AOBFile
 from app.helpers.aob_utils import AOBUtilities
 from app.helpers.aob_walk import AOBWalk
 from app.helpers.data_store import DataStore
+from app.helpers.directory_utils import aob_directory
 from app.helpers.dyn_html import DynamicHTML
 from app.helpers.exceptions import AOBException, BreakException
 from app.helpers.memory_handler import MemoryHandler
 from app.helpers.memory_utils import value_to_hex, bytes_to_aobstr
 from app.helpers.progress import Progress
-from app.helpers.directory_utils import aob_directory
 
 
 class AOB(MemoryHandler):
@@ -56,7 +56,7 @@ class AOB(MemoryHandler):
             os.mkdir(AOB.directory)
 
         self.reset()
-        self.delete_memory()
+        #self.delete_memory()
 
     def kill(self):
         if self.aob_work_thread and self.aob_work_thread.is_alive():
@@ -362,7 +362,7 @@ class AOB(MemoryHandler):
             au = AOBUtilities(self.memory, self.operation_control, self.progress)
             walker = AOBWalk(aob_file=self.aob_file, max_size=50, filter_result_size=6)
             if self.current_value:
-                sz_map = {'byte_1': AOBWalk.BYTE, 'byte_2': AOBWalk.BYTE_2, 'byte_4': AOBWalk.BYTE_4}
+                sz_map = {'byte_1': AOBWalk.BYTE, 'byte_2': AOBWalk.BYTE_2, 'byte_4': AOBWalk.BYTE_4, 'byte_8': AOBWalk.BYTE_8}
                 walker.set_result_value_filter(self.current_value, sz_map[self.current_size], self.memory)
             self.progress.add_constraint(0, au.get_total_memory_size()[0], 1.0)
             walker.search(self.memory, progress=self.progress)

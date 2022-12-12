@@ -3,8 +3,8 @@ import re
 from io import BytesIO
 from pathlib import Path
 
-from app.helpers.exceptions import AOBException
 from app.helpers.directory_utils import aob_directory
+from app.helpers.exceptions import AOBException
 
 
 class AOBFile():

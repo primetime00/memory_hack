@@ -2,19 +2,19 @@ import importlib.util
 import inspect
 import logging
 import shutil
+import threading
 import traceback
 from pathlib import Path
 from threading import Thread, Event
 
 import falcon.app_helpers
-import mem_edit
 from falcon import Request, Response
 
 from app.helpers import MemoryHandler
 from app.helpers.data_store import DataStore
-from app.helpers.exceptions import ScriptException, ProcessException
-from app.script_common.base_script import BaseScript
 from app.helpers.directory_utils import scripts_directory
+from app.helpers.exceptions import ScriptException, ProcessException, BreakException
+from app.script_common.base_script import BaseScript
 
 
 class Script(MemoryHandler):
@@ -31,18 +31,21 @@ class Script(MemoryHandler):
         self.mod_name = ""
         if not self.directory.exists():
             self.directory.mkdir(parents=True, exist_ok=True)
-            for f in Path('./scripts').glob('*.py'):
-                shutil.copy(f, self.directory.joinpath(f.name))
+        for f in Path('./scripts').glob('*.py'):
+            shutil.copy(f, self.directory.joinpath(f.name))
 
     def kill(self):
         self.release()
     def release(self):
+        if self.script_thread == threading.current_thread():
+            return
         if self.script_thread and self.script_thread.is_alive():
             self.script_thread.stop()
             self.script_thread.join()
         if self.search_thread and self.search_thread.is_alive():
             self.search_thread.stop()
             self.search_thread.join()
+
 
     def process_error(self, msg: str):
         self.error = msg
@@ -137,36 +140,53 @@ class Script(MemoryHandler):
         if not self.current_script_obj:
             logging.error("Requested UI for {}, but no script running.")
             raise ScriptException('Requested UI from script that is not running')
-        html = self.current_script_obj.get_ui()
-        resp.media['ui'] = html
+        resp.media['ui'] = self.current_script_obj.get_ui()
+        resp.media['controls'] = self.current_script_obj.get_ui_status()
 
+
+
+    def set_app(self, app_name: str):
+        try:
+            proc_service = DataStore().get_service('process')
+            proc_service.request_process('scripts', app_name)
+            if app_name == '_null':
+                app_name = ""
+            self.current_script_obj.set_process(app_name)
+            if app_name:
+                if not self.has_mem():
+                    raise ScriptException('Could not find requested process for this script.')
+                self.current_script_obj.set_memory(self.mem())
+            else:
+                self.current_script_obj.set_memory(None)
+        except ProcessException:
+            raise ScriptException("Could not find app")
 
 
     def handle_load_script(self, req: Request, resp: Response):
         resp.media = {'scripts': self.get_script_list()}
         name = req.media['name']
         load = req.media['unload'] == 'false'
-        self.release()
         if load:
             self.unload_script()
             self.current_script_obj = self.load_script(name)
         else:
             self.unload_script()
         if self.current_script_obj:
-            proc_service = DataStore().get_service('process')
-            for req_proc in self.current_script_obj.get_app():
-                try:
-                    proc_service.request_process('scripts', req_proc)
-                    self.current_script_obj.set_process(req_proc)
-                    break
-                except ProcessException:
-                    continue
-            if not self.has_mem():
-                raise ScriptException('Could not find requested process for this script.')
-            self.current_script_obj.set_memory(self.mem())
+            if self.current_script_obj.get_app():
+                proc_service = DataStore().get_service('process')
+                for req_proc in self.current_script_obj.get_app():
+                    try:
+                        proc_service.request_process('scripts', req_proc)
+                        self.current_script_obj.set_process(req_proc)
+                        break
+                    except ProcessException:
+                        continue
+                if not self.has_mem():
+                    raise ScriptException('Could not find requested process for this script.')
+                self.current_script_obj.set_memory(self.mem())
             self.wait_event = Event()
-            self.script_thread = Script.ScriptThread(self.current_script_obj, self.current_script, self.mem(), self.wait_event)
-            self.search_thread = Script.SearchThread(self.current_script_obj, self.current_script, self.mem(), self.wait_event)
+            self.script_thread = Script.ScriptThread(self.current_script_obj, self.current_script, self.wait_event)
+            self.search_thread = Script.SearchThread(self.current_script_obj, self.current_script, self.wait_event)
             self.search_thread.start()
             self.script_thread.start()
         resp.media['status'] = 'SCRIPT_LOADED' if load else 'SCRIPT_UNLOADED'
@@ -198,6 +218,13 @@ class Script(MemoryHandler):
     def unload_script(self):
         if self.current_script_obj:
             self.current_script_obj.on_unload()
+
+        proc_service = DataStore().get_service('process')
+        try:
+            proc_service.request_process('scripts', "_null")
+        except Exception as e:
+            print(e)
+
         self.release()
         self.current_script_obj = None
         self.current_script = ""
@@ -242,14 +269,14 @@ class Script(MemoryHandler):
 
 
     class ScriptThread(Thread):
-        def __init__(self, script: BaseScript, filename, memory: mem_edit.Process, wait_event: Event):
+        def __init__(self, script: BaseScript, filename, wait_event: Event):
             super().__init__(target=self.loop)
             self.running = False
             self.wait_event = wait_event
             self.script: BaseScript = script
             self.filename = filename
             self.error = ""
-            self.memory = memory
+            #self.memory = memory
 
         def get_name(self):
             return self.filename
@@ -272,14 +299,15 @@ class Script(MemoryHandler):
                 self.error = Script.parse_error(self.filename, traceback.format_exc(limit=-1))
 
     class SearchThread(Thread):
-        def __init__(self, script: BaseScript, filename, memory: mem_edit.Process, wait_event: Event):
+        def __init__(self, script: BaseScript, filename, wait_event: Event):
             super().__init__(target=self.loop)
             self.running = False
             self.wait_event = wait_event
             self.script: BaseScript = script
             self.filename = filename
             self.error = ""
-            self.memory = memory
+            self.search_interval = 8
+            self.counter = 0
 
         def stop(self):
             self.running = False
@@ -288,9 +316,16 @@ class Script(MemoryHandler):
         def loop(self):
             try:
                 self.running = True
+                self.script._search()
                 while self.running:
-                    self.script.search()
+                    self.script.check_aobs()
                     self.wait_event.wait(1)
+                    self.counter += 1
+                    if self.counter % self.search_interval == 0:
+                        self.script._search()
+                        self.counter = 0
+            except BreakException:
+                return
             except IOError as io_error:
                 logging.error(str(io_error))
                 self.error = 'Could not open process {}. Is it opened in scanners?'.format(self.script.get_app())

@@ -129,7 +129,6 @@ class Process(Service):
             except mem_edit.MemEditError:
                 pass
 
-
     def open_process(self, p: str, service: str):
         p_data = None
         try:
