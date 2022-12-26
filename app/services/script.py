@@ -1,6 +1,7 @@
 import importlib.util
 import inspect
 import logging
+import platform
 import shutil
 import threading
 import traceback
@@ -55,7 +56,17 @@ class Script(MemoryHandler):
         pass
 
     def get_script_list(self):
-        return [x.stem for x in Script.directory.glob('*.py') if not x.stem.startswith('__')]
+        script_list = []
+        system = platform.system()
+        for s in Script.directory.glob('*.py'):
+            if s.stem.startswith('__'):
+                continue
+            if s.stem.lower().endswith('_lin') and system == 'Windows':
+                continue
+            if s.stem.lower().endswith('_win') and system == 'Linux':
+                continue
+            script_list.append(s.stem)
+        return script_list
 
     def html_main(self):
         with open('resources/script.html', 'rt') as ac:
@@ -98,10 +109,11 @@ class Script(MemoryHandler):
                 self.search_thread = None
                 raise ScriptException(self.error, from_thread=False)
             if self.script_thread.error:
+                err = self.script_thread.error
                 self.release()
                 self.script_thread = None
                 self.search_thread = None
-                raise ScriptException(self.script_thread.error, from_thread=True)
+                raise ScriptException(err, from_thread=True)
             if self.script_thread.is_alive():
                 resp.media['controls'] = self.current_script_obj.get_ui_status()
                 resp.media['repeat'] = 1000

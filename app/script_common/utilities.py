@@ -5,7 +5,6 @@ from mem_edit import Process
 
 from app.script_common.aob import AOB
 from app.search.searcher import Searcher
-from app.search.value import Value
 
 ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, ctypes.Union]
 
@@ -15,7 +14,6 @@ class ScriptUtilities:
 
     def search_aob(self, aob: AOB):
         self.searcher.set_search_size('array')
-        self.searcher.set_results("script", Value.create(aob.get_aob_string(), 'array'))
         self.searcher.search_memory_value(aob.get_aob_string())
         if len(self.searcher.results) == 0:
             return []

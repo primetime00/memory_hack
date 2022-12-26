@@ -11,8 +11,10 @@ from falcon.app_helpers import MEDIA_JSON
 from app.helpers import DynamicHTML, MemoryHandler, Progress
 from app.helpers import memory_utils
 from app.helpers.exceptions import SearchException, BreakException
-from app.search.operations import GreaterThan, LessThan, GreaterThanFloat, LessThanFloat, IncreaseOperation, DecreaseOperation, \
-    IncreaseOperationFloat, DecreaseOperationFloat, ChangedOperation, UnchangedOperation, ChangedOperationFloat, UnchangedOperationFloat, ChangedByOperation, ChangedByOperationFloat
+from app.search.operations import GreaterThan, LessThan, GreaterThanFloat, LessThanFloat, IncreaseOperation, \
+    DecreaseOperation, \
+    IncreaseOperationFloat, DecreaseOperationFloat, ChangedOperation, UnchangedOperation, ChangedOperationFloat, \
+    UnchangedOperationFloat, ChangedByOperation, ChangedByOperationFloat
 from app.search.searcher_multi import SearcherMulti
 # from app.search.searcher import Searcher as SearcherMulti
 from app.search.value import Value
@@ -62,7 +64,6 @@ class Search(MemoryHandler):
         self.previous_stats = {'results': [], 'flow': self.FLOW_START, 'round': 0}
         self.round = 0
         self.progress = Progress()
-        self.delete_memory()
 
     def kill(self):
         if self.search_thread and self.search_thread.is_alive():
@@ -72,7 +73,6 @@ class Search(MemoryHandler):
 
 
     def release(self):
-        self.delete_memory()
         self.reset()
 
     def process_error(self, msg: str):
@@ -91,15 +91,14 @@ class Search(MemoryHandler):
             self.searcher.cancel()
             self.search_thread.join()
         self.stop_updater()
+        self.searcher.reset()
         self.round = 0
-        self.searcher = None
         self.type = ""
         self.size = ""
         self.value = None
         self.search_thread: Thread = None
         self.update_thread: Search.UpdateThread = None
         self.previous_stats = {'results': [], 'flow': self.FLOW_START, 'round': 0}
-        self.progress = Progress()
         self.flow = self.FLOW_START
 
 
@@ -135,18 +134,18 @@ class Search(MemoryHandler):
         if self.flow == self.FLOW_SEARCHING: #we are stopping
             self.searcher.cancel()
             self.search_thread.join()
-            self.searcher.results = self.previous_stats['results'].copy() if self.previous_stats['results'] else None
-            self.round = self.previous_stats['round']
-            self.flow = self.previous_stats['flow']
-            resp.media['results'] = self.get_updated_addresses()
-            resp.media['round'] = self.round
-            resp.media['type'] = self.type
-            resp.media['size'] = self.size
-            resp.media['value'] = str(self.value.get())
-            resp.media['count'] = len(self.searcher.results) if self.searcher.results else 0
-            if self.flow == self.FLOW_RESULTS:
-                self.stop_updater()
-                self.start_updater()
+            if not self.searcher.get_cancel(): #was cancellation successful:
+                self.round = self.previous_stats['round']
+                self.flow = self.previous_stats['flow']
+                resp.media['results'] = self.get_updated_addresses()
+                resp.media['round'] = self.round
+                resp.media['type'] = self.type
+                resp.media['size'] = self.size
+                resp.media['value'] = str(self.value.get())
+                resp.media['count'] = len(self.searcher.results)
+                if self.flow == self.FLOW_RESULTS:
+                    self.stop_updater()
+                    self.start_updater()
         else:
             if self.type in ['increase', 'decrease', 'unchanged', 'changed', 'changed_by']:
                 self.type = 'equal_to'
@@ -161,7 +160,6 @@ class Search(MemoryHandler):
             resp.media['size'] = self.size
             resp.media['value'] = ""
             resp.media['count'] = 0
-            self.delete_memory()
             self.reset()
 
     def handle_search(self, req: Request, resp: Response):
@@ -182,14 +180,15 @@ class Search(MemoryHandler):
             raise SearchException("Search type {} is not valid".format(req.media['type']))
         if not self.searcher:
             self.searcher = SearcherMulti(self.mem(), self.progress)
+            self.searcher.reset()
         search_op = self.search_map[req.media['type']]
         self.search_thread = Thread(target=self._search, args=[search_op])
         self.previous_stats['flow'] = self.flow
         self.previous_stats['round'] = self.round
-        self.previous_stats['results'] = self.searcher.results.copy() if self.searcher.results else None
+        self.previous_stats['results'] = None
         self.flow = self.FLOW_SEARCHING
         resp.media['progress'] = 0
-        resp.media['repeat'] = 1000
+        resp.media['repeat'] = 400
         resp.media['round'] = 0
         resp.media['results'] = []
         resp.media['count'] = 0
@@ -242,11 +241,8 @@ class Search(MemoryHandler):
 
     def get_updated_addresses(self):
         if not self.update_thread:
-            if self.searcher.results:
-                res = copy.deepcopy(self.searcher.results[0:40])
-                Search.UpdateThread.results_to_update(self.searcher.results.get_ctype(), res)
-            else:
-                return None
+            res = self.searcher.get_results(limit=40)
+            Search.UpdateThread.results_to_update(self.size, res)
             return res
         return self.update_thread.get_addresses()
 
@@ -266,7 +262,6 @@ class Search(MemoryHandler):
 
     def _search(self, searcher):
         self.stop_updater()
-        self.progress.reset()
         try:
             searcher(copy.deepcopy(self.value))
         except BreakException:
@@ -300,7 +295,6 @@ class Search(MemoryHandler):
         if self.searcher.has_results():
             self.searcher.search_continue_value(str(value.get()))
         else:
-            self.searcher.set_results("EQUAL", value)
             self.searcher.search_memory_value(str(value.get()))
 
     def _greater_search(self, value: Value):
@@ -312,7 +306,6 @@ class Search(MemoryHandler):
         if self.searcher.has_results():
             self.searcher.search_continue_operation(op)
         else:
-            self.searcher.set_results("GREATER", value)
             self.searcher.search_memory_operation(op)
 
     def _lesser_search(self, value: Value):
@@ -324,7 +317,6 @@ class Search(MemoryHandler):
         if self.searcher.has_results():
             self.searcher.search_continue_operation(op)
         else:
-            self.searcher.set_results("GREATER", value)
             self.searcher.search_memory_operation(op)
 
     def _unknown_search(self, value: Value):
@@ -344,7 +336,6 @@ class Search(MemoryHandler):
         if self.searcher.has_results() or self.searcher.has_captures():
             self.searcher.search_continue_operation(op)
         else:
-            self.searcher.set_results("INCREASE", value)
             self.searcher.search_memory_operation(op)
 
     def _decrease_search(self, value: Value):
@@ -356,7 +347,6 @@ class Search(MemoryHandler):
         if self.searcher.has_results() or self.searcher.has_captures():
             self.searcher.search_continue_operation(op)
         else:
-            self.searcher.set_results("DECREASE", value)
             self.searcher.search_memory_operation(op)
 
     def _changed_search(self, value: Value):
@@ -407,7 +397,7 @@ class Search(MemoryHandler):
         return False
 
     def start_updater(self):
-        self.update_thread = Search.UpdateThread(self.mem(), self.searcher.results[0:40], copy.deepcopy(self.value))
+        self.update_thread = Search.UpdateThread(self.mem(), self.searcher.get_results(40), copy.deepcopy(self.value))
         self.update_thread.start()
 
     def stop_updater(self):
@@ -423,22 +413,22 @@ class Search(MemoryHandler):
             self.stop = Event()
             self.addresses = copy.deepcopy(addrs)
             self.parsed_value = pv
-            self.results_to_update(self.parsed_value, self.addresses)
+            self.results_to_update(pv.get_store_type(), self.addresses)
             self.lock = Lock()
             self.write_list = []
             self.freeze_list = {}
             self.error = ""
 
         @classmethod
-        def results_to_update(cls, parsed_value, results):
-            if isinstance(parsed_value, ctypes.Array):
+        def results_to_update(cls, size, results):
+            if size == 'array':
                 for i in range(0, len(results)):
                     v = results[i]
                     byte_str = ' '.join(memory_utils.bytes_to_aob(v))
                     results[i]['value'] = byte_str
             else:
                 for v in results:
-                    v['value'] = Value.create(str(parsed_value.get_printable()), parsed_value.get_store_type()).from_bytes(v['value'])
+                    v['value'] = memory_utils.bytes_to_printable_value(v['value'], size)
 
 
         def _loop(self):
@@ -494,9 +484,5 @@ class Search(MemoryHandler):
             elif freeze and address not in self.freeze_list:
                 self.freeze_list[address] = value
             self.lock.release()
-
-    @staticmethod
-    def delete_memory():
-        SearcherMulti.clear_captures_and_results()
 
 

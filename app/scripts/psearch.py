@@ -1,5 +1,6 @@
 import ctypes
 import json
+import platform
 import re
 from pathlib import Path
 from queue import Queue
@@ -7,7 +8,7 @@ from threading import Thread
 
 from app.helpers.data_store import DataStore
 from app.helpers.directory_utils import scripts_memory_directory
-from app.helpers.process.base_address import get_process_map
+from app.helpers.process import get_process_map
 from app.script_common import BaseScript
 from app.script_ui import BaseUI, Button, Select, Input, Text
 from app.search.searcher_multi import SearcherMulti
@@ -16,7 +17,7 @@ from app.search.searcher_multi import SearcherMulti
 class Test(BaseScript):
 
     def on_load(self):
-        pass
+        self.put_data("SYSTEM", platform.system())
 
     def get_name(self):
         return "Pointer Search"
@@ -34,6 +35,7 @@ class Test(BaseScript):
 
         self.refresh_pid(self.get_ui_control("PROCS"))
         self.populate_files()
+
 
         [self.get_ui_control(ctrl_name).hide() for ctrl_name in ['ADDRESS', 'FILES', 'SEARCH', 'STOP', 'RESULTS']]
 
@@ -139,7 +141,7 @@ class Test(BaseScript):
 
         data = orig_data.copy()
 
-        pm = get_process_map(self.get_memory().pid)
+        pm = get_process_map(self.get_memory())
         pointers = []
         for item in data:
             new_address = self._find_address(item, pm)
@@ -171,7 +173,7 @@ class Test(BaseScript):
         for p in pointers:
             data += "<ons-row>"
 
-            pt = p['path'].split('/')[-1]
+            pt = p['path'].split('/')[-1] if self.is_linux() else p['path'].split('\\')[-1]
             data += "<ons-row>{}:{}+{:X}</ons-row>".format(pt, p['node'], p['base_offset'])
             data += "<ons-row>"
             for offset in p['offsets']:
@@ -185,3 +187,6 @@ class Test(BaseScript):
 
             data += "</ons-row>"
         return data
+
+    def is_linux(self):
+        return self.get_data("SYSTEM") == 'Linux'

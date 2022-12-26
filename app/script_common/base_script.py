@@ -4,6 +4,7 @@ from typing import Union
 import mem_edit
 
 from app.helpers.directory_utils import scripts_memory_directory
+from app.helpers.search_results import SearchResults
 from app.script_common.aob import AOB
 from app.script_common.utilities import ScriptUtilities
 from app.script_ui._base import BaseUI
@@ -36,7 +37,7 @@ class BaseScript:
     def set_memory(self, mem: mem_edit.Process):
         self.memory = mem
         if mem:
-            self.utilities = ScriptUtilities(Searcher(mem, None, True, scripts_memory_directory))
+            self.utilities = ScriptUtilities(Searcher(mem, None, True, scripts_memory_directory, results=SearchResults(name='script_results', db_path=scripts_memory_directory.joinpath('scripts.db'))))
             self.set_include_paths(self.include_paths)
         else:
             self.utilities = None

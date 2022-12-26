@@ -10,14 +10,12 @@ import psutil
 from app.helpers.data_store import DataStore
 from app.helpers.directory_utils import scripts_memory_directory
 from app.helpers.exceptions import BreakException
-from app.helpers.process.base_address import get_address_base, get_process_map
+from app.helpers.process.base_address_lin import get_process_map
 from app.helpers.timer import PollTimer
 from app.script_common import BaseScript
 from app.script_ui import BaseUI, Button, Select, Input, MultiSelect, Text
 from app.search.operations import Between
 from app.search.searcher_multi import SearcherMulti
-# from app.search.searcher import Searcher as SearcherMulti
-from app.search.value import Value
 
 
 class Test(BaseScript):
@@ -162,7 +160,7 @@ class Test(BaseScript):
         searcher.cancel()
 
     def search_break(self):
-        self.put_data('SEARCHER', SearcherMulti(self.get_memory(), directory=scripts_memory_directory, write_only=True))
+        self.get_data('SEARCHER').reset()
         print("search cancelled")
         self.get_ui_control("STOP").enable()
         self.get_ui_control("STOP").hide()
@@ -198,12 +196,28 @@ class Test(BaseScript):
         search_thread = Thread(target=self.search, args=(address, offset, levels, regions, self.get_data("QUEUE")))
         search_thread.start()
 
+    def generate_base_map(self, regions):
+        if '_all' in regions:
+            pm = get_process_map(self.memory)
+        else:
+            pm = get_process_map(self.memory, include_paths=regions)
+
+        self.put_data("PROCESS_MAP", pm)
+
+    def get_base(self, address):
+        pm = self.get_data("PROCESS_MAP")
+        for item in pm:
+            if item['start'] <= address <= item['stop']:
+                return item
+        return None
+
+
     def search(self, address, offset, levels, regions, queue):
         searcher: SearcherMulti = self.get_data('SEARCHER')
-        searcher.set_results(value=Value.create("0", "byte_8"))
         searcher.set_search_size("byte_8")
         if '_all' not in regions:
             searcher.set_include_paths(regions)
+        self.generate_base_map(regions)
         broke, results = self.perform_search(address, offset, levels)
         with Path(scripts_memory_directory.joinpath('{}.ptr'.format(self.get_data('APP_NAME')))).open("wt") as f:
             json.dump(results, f, indent=4)
@@ -218,11 +232,11 @@ class Test(BaseScript):
     def is_valid_address(self, address: int, valid_bounds: list):
         return any(x[0] <= address <= x[1] for x in valid_bounds)
 
-
     def perform_search(self, address, offset, levels):
         s: SearcherMulti = self.get_data('SEARCHER')
         poll_timer = PollTimer(10)
-        proc_map = list(get_process_map(self.memory.pid, writeable_only=True))
+        proc_map = list(get_process_map(self.memory, writeable_only=True, include_paths=s.get_include_paths()))
+        print("Searching {} MB".format(sum([x['size'] for x in proc_map]) / 1000000))
         node_bounds = [(x['start'], x['stop']) for x in proc_map if x['inode'] != '0']
         valid_bounds = [(x['start'], x['stop']) for x in proc_map]
         result_counter = 0
@@ -241,20 +255,16 @@ class Test(BaseScript):
             for i in range(0, levels):
                 print("Searching level {}".format(i))
                 if not first_level:
-
                     stime = time.time()
                     s.search_memory_operation(Between((address - offset, address)))
                     total_search_time += time.time() - stime
                     number_of_searches += 1
-
-
-
                     if len(s.results) == 0:
                         zero_counter += 1
-
-                    result_indexes = self.generate_result_order(s.results)
+                    all_results = [{'address': x[0], 'value': x[1]} for x in s.results.get_results().fetchall()]
+                    result_indexes = self.generate_result_order(all_results)
                     for index in result_indexes:
-                        r = s.results[index]
+                        r = all_results[index]
                         if r['address'] not in address_set:
                             if not self.is_valid_address(r['address'], valid_bounds):
                                 print('{} is not valid!'.format(hex(r['address']).upper()))
@@ -279,17 +289,16 @@ class Test(BaseScript):
                         break
                     for p in lvl_map[i - 1]:
                         nx = []
-
                         stime = time.time()
                         s.search_memory_operation(Between((p['address'] - offset, p['address'])))
                         total_search_time += time.time() - stime
                         number_of_searches += 1
-
                         if len(s.results) == 0:
                             zero_counter += 1
-                        result_indexes = self.generate_result_order(s.results)
+                        all_results = [{'address': x[0], 'value': x[1]} for x in s.results.get_results().fetchall()]
+                        result_indexes = self.generate_result_order(all_results)
                         for index in result_indexes:
-                            r = s.results[index]
+                            r = all_results[index]
                             if r['address'] not in address_set and not self.is_valid_address(r['address'], valid_bounds):
                                 print('{} is not valid!'.format(hex(r['address']).upper()))
                                 invalid_counter += 1
@@ -328,7 +337,7 @@ class Test(BaseScript):
                     r['offsets'].append(pointer['offset'])
                     holder.append(r)
             else:
-                base = get_address_base(self.get_memory().pid, pointer['address'])
+                base = self.get_base(pointer['address'])
                 pathname = base['pathname'] if base['pathname'] != "" else "anon"
                 node = base['map_index']
                 base_offset = pointer['address'] - base['start']

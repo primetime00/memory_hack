@@ -44,6 +44,9 @@ class Value:
     def get_ctype(self):
         return ctypes.c_byte
 
+    def cast(self, obj):
+        return None
+
     def read_memory(self, memory: mem_edit.Process, address: int):
         return None
 
@@ -130,6 +133,9 @@ class FloatValue(Value):
 
     def get_ctype(self):
         return ctypes.c_byte
+
+    def cast(self, obj):
+        return ctypes.cast(obj, ctypes.POINTER(ctypes.c_float))
 
     def get_store_type(self):
         return "float"
@@ -231,6 +237,19 @@ class IntValue(Value):
 
     def get_ctype(self):
         return ctypes.c_byte if self.signed else ctypes.c_ubyte
+
+    def cast(self, obj):
+        if self.store_size == 1:
+            return ctypes.cast(obj, ctypes.POINTER(ctypes.c_int8)) if self.signed else ctypes.cast(obj, ctypes.POINTER(ctypes.c_uint8))
+        if self.store_size == 2:
+            return ctypes.cast(obj, ctypes.POINTER(ctypes.c_int16)) if self.signed else ctypes.cast(obj, ctypes.POINTER(ctypes.c_uint16))
+        if self.store_size == 4:
+            return ctypes.cast(obj, ctypes.POINTER(ctypes.c_int32)) if self.signed else ctypes.cast(obj, ctypes.POINTER(ctypes.c_uint32))
+        if self.store_size == 8:
+            return ctypes.cast(obj, ctypes.POINTER(ctypes.c_int64)) if self.signed else ctypes.cast(obj, ctypes.POINTER(ctypes.c_uint64))
+        return None
+
+
 
     def read_memory(self, memory: mem_edit.Process, address: int):
         read = memory.read_memory(address, (ctypes.c_byte * self.store_size)())

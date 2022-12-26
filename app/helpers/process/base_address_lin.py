@@ -1,11 +1,8 @@
-import re
-
 import psutil
 
 
 def get_process_map(pid, writeable_only=True, include_paths=[]):
     regions = []
-    prev_pathname = "_"
     with open('/proc/{}/maps'.format(pid), 'r') as maps:
         path_map = {}
         for line in maps:
@@ -20,9 +17,8 @@ def get_process_map(pid, writeable_only=True, include_paths=[]):
             if len(items) < 6:
                 items.append('')
             if include_paths:
-                if not any(re.match(x, items[5]) is not None for x in include_paths):
+                if items[5] not in include_paths:
                     continue
-
             item_map = {
                 'bounds': items[0],
                 'privileges': items[1],

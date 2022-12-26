@@ -30,6 +30,23 @@ def bytes_to_aob(bts: ctypes.Array):
 def bytes_to_aobstr(bts: ctypes.Array):
     return " ".join(bytes_to_aob(bts))
 
+def bytes_to_printable_value(bts: bytes, size: str, signed: bool=True):
+    if size == 'byte_1':
+        ct =  ctypes.c_int8 if signed else ctypes.c_uint8
+    elif size == 'byte_2':
+        ct = ctypes.c_int16 if signed else ctypes.c_uint16
+    elif size == 'byte_4':
+        ct = ctypes.c_int32 if signed else ctypes.c_uint32
+    elif size == 'byte_8':
+        ct =  ctypes.c_int64 if signed else ctypes.c_uint64
+    elif size == 'float':
+        ct = ctypes.c_float
+    else:
+        ct = ctypes.c_ubyte
+    buf = (ct*1)()
+    ctypes.memmove(ctypes.pointer(buf), bts, len(bts))
+    return str(buf[0])
+
 
 
 def aob_size(aob:str, wildcard=False):
