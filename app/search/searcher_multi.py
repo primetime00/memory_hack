@@ -2,6 +2,7 @@ import ctypes
 import multiprocessing
 import platform
 import traceback
+import os
 from typing import Union
 
 from mem_edit import Process
@@ -9,7 +10,6 @@ from mem_edit import Process
 from app.helpers.aob_value import AOBValue
 from app.helpers.directory_utils import memory_directory
 from app.helpers.exceptions import SearchException, BreakException
-from app.helpers.filelog import *
 from app.helpers.progress import Progress
 from app.helpers.search_results import SearchResults
 from app.search.buffer import SearchBuffer
@@ -253,9 +253,6 @@ class SearcherMulti(Searcher):
         self.results.commit()
 
     def _search_memory_value_thread(self, args):
-        f = create_log_file(Path("C:\\tmp"), "wt")
-        write_log(f, "HERE")
-        close_log_file(f)
         regions = args['region']
         sv = Value.create(args['value']['string'], args['value']['size'])
         _id = args['id']

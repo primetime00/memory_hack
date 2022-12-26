@@ -53,7 +53,7 @@ class Test(BaseScript):
     def find_regions(self):
         region_list = []
         region_set = []
-        pm = get_process_map(self.memory.pid, writeable_only=True)
+        pm = get_process_map(self.memory, writeable_only=True)
         for p in pm:
             if 'r' not in p['privileges']:
                 continue

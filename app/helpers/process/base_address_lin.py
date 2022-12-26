@@ -1,9 +1,10 @@
 import psutil
+import mem_edit
 
 
-def get_process_map(pid, writeable_only=True, include_paths=[]):
+def get_process_map(process: mem_edit.Process, writeable_only=True, include_paths=[]):
     regions = []
-    with open('/proc/{}/maps'.format(pid), 'r') as maps:
+    with open('/proc/{}/maps'.format(process.pid), 'r') as maps:
         path_map = {}
         for line in maps:
             if "/dev/dri/" in line:
@@ -47,17 +48,17 @@ def get_process_map(pid, writeable_only=True, include_paths=[]):
             regions.append(item_map)
     return regions
 
-def get_base_address(pid):
-    pm = sorted(get_process_map(pid, writeable_only=False), key=lambda x: x['start'])
-    proc = psutil.Process(pid)
+def get_base_address(process: mem_edit.Process):
+    pm = sorted(get_process_map(process, writeable_only=False), key=lambda x: x['start'])
+    proc = psutil.Process(process.pid)
     exe = proc.exe()
     for p in pm:
         if p['pathname'] == exe:
             return p['start']
     return -1
 
-def get_address_base(pid, address):
-    pm = sorted(get_process_map(pid, writeable_only=False), key=lambda x: x['start'])
+def get_address_base(process: mem_edit.Process, address):
+    pm = sorted(get_process_map(process, writeable_only=False), key=lambda x: x['start'])
     for p in pm:
         if p['start'] <= address <= p['stop']:
             return p
