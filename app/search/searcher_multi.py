@@ -148,7 +148,7 @@ class SearcherMulti(Searcher):
         process_args = []
         for cap in captures:
             process_args.append((cap,))
-
+        self.results.close()
         with multiprocessing.Pool(processes=max(1, multiprocessing.cpu_count() - 1)) as pool:
             try:
                 for res in pool.imap_unordered(self._capture_memory_thread, process_args, chunksize=100):
@@ -159,8 +159,10 @@ class SearcherMulti(Searcher):
             except BreakException:
                 pool.terminate()
                 pool.join()
+                self.results.open()
                 self.on_search_cancel(self.SEARCH_TYPE_CAPTURE)
                 raise
+        self.results.open()
         self.on_search_end(self.SEARCH_TYPE_CAPTURE)
 
     def _search_continue_capture_operation_thread(self, args):
@@ -248,7 +250,6 @@ class SearcherMulti(Searcher):
             except BreakException:
                 pool.terminate()
                 pool.join()
-                self.on_search_cancel(self.SEARCH_TYPE_COMPARE_CAPTURE)
                 raise
         self.results.commit()
 
