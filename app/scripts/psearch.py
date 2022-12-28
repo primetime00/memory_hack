@@ -14,7 +14,7 @@ from app.script_ui import BaseUI, Button, Select, Input, Text
 from app.search.searcher_multi import SearcherMulti
 
 
-class Test(BaseScript):
+class PointerValidator(BaseScript):
 
     def on_load(self):
         self.put_data("SYSTEM", platform.system())

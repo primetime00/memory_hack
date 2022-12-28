@@ -19,7 +19,7 @@ from app.search.operations import Between
 from app.search.searcher_multi import SearcherMulti
 
 
-class Test(BaseScript):
+class PointerScanner(BaseScript):
 
     def on_load(self):
         pass
@@ -34,7 +34,7 @@ class Test(BaseScript):
         self.add_ui_element(Select("PROCS", "Process", values=[('none', "None")], on_changed=self.ctrl_changed,
                                    children=[Button("REFRESH", "Refresh", on_pressed=self.refresh_pid)]))
         self.add_ui_element(Input("ADDRESS", "Address", on_changed=self.ctrl_changed, change_on_focus=False,
-                                  validator=self.address_validator, default_text="56004F2C05C6"))
+                                  validator=self.address_validator, default_text="", children=[Button("PASTE", "Paste", on_pressed=self.ctrl_pressed)]))
         self.add_ui_element(Input("OFFSET", "Offset", on_changed=self.ctrl_changed, change_on_focus=False,
                                   validator=self.offset_validator, default_text="4096"))
         self.add_ui_element(
@@ -49,7 +49,7 @@ class Test(BaseScript):
         self.refresh_pid(self.get_ui_control("PROCS"))
 
         [self.get_ui_control(ctrl_name).hide() for ctrl_name in
-         ['ADDRESS', 'OFFSET', 'LEVELS', 'REGIONS', 'SEARCH', 'STOP', 'STATUS']]
+         ['ADDRESS', 'OFFSET', 'LEVELS', 'REGIONS', 'SEARCH', 'STOP', 'STATUS', 'PASTE']]
 
     def refresh_pid(self, ele: BaseUI):
         procs = [(x, x) for x in DataStore().get_service('process').get_process_list()]
@@ -127,7 +127,7 @@ class Test(BaseScript):
             else:
                 self.put_data('SEARCHER', None)
                 [self.get_ui_control(ctrl_name).hide() for ctrl_name in
-                 ['ADDRESS', 'OFFSET', 'LEVELS', 'REGIONS', 'SEARCH', 'STOP', 'STATUS']]
+                 ['ADDRESS', 'OFFSET', 'LEVELS', 'REGIONS', 'SEARCH', 'STOP', 'STATUS', 'PASTE']]
         elif ele.get_name() == 'REGIONS':
             self.check_for_start()
 
@@ -144,6 +144,8 @@ class Test(BaseScript):
             self.prepare_search()
         elif ele.get_name() == 'STOP':
             self.stop_search()
+        elif ele.get_name() == 'PASTE':
+            self.get_ui_control("ADDRESS").set_text("{:X}".format(int(self.get_data("CLIPBOARD"))))
 
     def address_validator(self, txt: str):
         if re.match(r'^[0-9A-F]{0,16}$', txt.upper().strip()):
@@ -156,6 +158,14 @@ class Test(BaseScript):
             return 0 <= v <= 0xFFFF
         except:
             return False
+
+    def on_clipboard_copy(self, data):
+        if 'address' in data:
+            self.get_ui_control("PASTE").show()
+            self.put_data("CLIPBOARD", data['address'])
+
+    def on_clipboard_clear(self):
+        self.get_ui_control("PASTE").hide()
 
     def frame(self):
         queue: Queue = self.get_data("QUEUE")

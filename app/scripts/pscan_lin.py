@@ -18,7 +18,7 @@ from app.search.operations import Between
 from app.search.searcher_multi import SearcherMulti
 
 
-class Test(BaseScript):
+class PointerScanner(BaseScript):
 
     def on_load(self):
         pass
