@@ -58,6 +58,16 @@
         post_interact(event.target.id, {"checked": target.checked})
     }
 
+    script.clipboard_data_copied = function(data) {
+        post_interact("__copy", data)
+    }
+
+    script.clipboard_data_cleared = function() {
+        post_interact("__copy_clear", {})
+    }
+
+
+
     script.script_upload_file_changed = function(file) {
         var fname = file.name
         var ext = fname.slice((fname.lastIndexOf(".") - 1 >>> 0) + 2)

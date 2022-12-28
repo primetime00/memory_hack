@@ -2,6 +2,7 @@ import copy
 import ctypes
 import json
 import os
+import re
 from threading import Thread, Lock, Event
 from typing import Union
 
@@ -51,6 +52,8 @@ class CodeList(MemoryHandler):
         self.result_list = []
         self.freeze_map = {}
         self.utilities = ScriptUtilities(None)
+        self.process_map = None
+        self.base_lookup_map = {}
 
         if not self.directory.exists():
             self.directory.mkdir(parents=True, exist_ok=True)
@@ -101,6 +104,8 @@ class CodeList(MemoryHandler):
                         res['Addresses'] = result['Addresses']
                     if 'Selected' in result:
                         res['Selected'] = result['Selected']
+                    if 'Resolved' in result:
+                        res['Resolved'] = str(result['Resolved'])
                     resp.media['results'].append(res)
 
     def handle_write(self, req: Request, resp: Response):
@@ -121,6 +126,11 @@ class CodeList(MemoryHandler):
             with self.update_lock:
                 code['Value'] = str(b.value)
                 self.mem().write_memory(code['Address'], b)
+        elif code['Source'] == 'pointer':
+            with self.update_lock:
+                if 'Resolved' in code and code['Resolved'] > 0:
+                    code['Value'] = str(b.value)
+                    self.mem().write_memory(code['Resolved'], b)
         else:
             if code['AOB'] not in self.aob_map:
                 raise CodelistException('Could not write AOB value because it cannot be found')
@@ -185,7 +195,17 @@ class CodeList(MemoryHandler):
                     cd['Freeze'] = False
                 if tp == 'address':
                     cd['Source'] = 'address'
-                    cd['Address'] = int(req.media['address'], 16)
+                    cd['Address'] = req.media['address']
+                    if 'AOB' in cd:
+                        del cd['AOB']
+                    if 'Offset' in cd:
+                        del cd['Offset']
+                    if 'Offsets' in cd:
+                        del cd['Offsets']
+                elif tp == 'pointer':
+                    cd['Source'] = 'pointer'
+                    cd['Address'] = req.media['address']
+                    cd['Offsets'] = req.media['offsets']
                     if 'AOB' in cd:
                         del cd['AOB']
                     if 'Offset' in cd:
@@ -196,6 +216,8 @@ class CodeList(MemoryHandler):
                     cd['Offset'] = req.media['offset'].upper()
                     if 'Address' in cd:
                         del cd['Address']
+                    if 'Offsets' in cd:
+                        del cd['Offsets']
             else:
                 index = len(self.code_data)+1
                 if tp == 'address':
@@ -205,7 +227,17 @@ class CodeList(MemoryHandler):
                         "Signed": False,
                         "Freeze": False,
                         "Source": "address",
-                        "Address": int(req.media['address'], 16)
+                        "Address": req.media['address']
+                    })
+                elif tp == 'pointer':
+                    self.code_data.append({
+                        "Name": "Code #{}".format(index),
+                        "Type": "byte_4",
+                        "Signed": False,
+                        "Freeze": False,
+                        "Source": "pointer",
+                        "Address": req.media['address'],
+                        "Offsets": req.media['offsets'].upper()
                     })
                 else:
                     self.code_data.append({
@@ -239,6 +271,8 @@ class CodeList(MemoryHandler):
             for item in write_data:
                 if 'Value' in item:
                     del item['Value']
+                if 'Resolved' in item:
+                    del item['Resolved']
             pt = self.directory.joinpath(file+'.codes')
             with open(pt, 'wt') as f:
                 json.dump(write_data, f, indent=4)
@@ -364,6 +398,8 @@ class CodeList(MemoryHandler):
                 for code in self.code_data:
                     if code['Source'] == 'address':
                         addr = code['Address']
+                        if ':' in addr:
+                            addr = self._convert_base(addr)
                         try:
                             read = self.get_read(code, addr)
                         except (ProcessLookupError, PermissionError):
@@ -372,6 +408,24 @@ class CodeList(MemoryHandler):
                         except OSError:
                             read = None
                         self.result_list.append({'Value': read})
+                    elif code['Source'] == 'pointer':
+                        addr = code['Address']
+                        if ':' in addr:
+                            addr = self._convert_base(addr)
+                        offsets = [int(x.strip(), 16) for x in code['Offsets'].split(',')]
+                        buf = ctypes.c_uint64()
+                        try:
+                            for offset in offsets:
+                                self.mem().read_memory(addr, buf)
+                                addr = buf.value+offset
+                            read = self.get_read(code, addr)
+                        except (ProcessLookupError, PermissionError):
+                            self.update_event.set()
+                            read = None
+                        except OSError:
+                            read = None
+                        code['Resolved'] = addr if addr > 0xffff else 0
+                        self.result_list.append({'Value': read, 'Resolved': addr})
                     else:
                         aob_str = code['AOB']
                         if aob_str not in self.aob_map:
@@ -462,6 +516,9 @@ class CodeList(MemoryHandler):
         address_list = []
         if code['Source'] == 'address':
             address_list.append(code['Address'])
+        if code['Source'] == 'pointer':
+            if 'Resolved' in code and code['Resolved'] > 0:
+                address_list.append(code['Resolved'])
         else:
             if code['AOB'] not in self.aob_map:
                 raise CodelistException('Cannot find AOB in map for freeze')
@@ -485,3 +542,23 @@ class CodeList(MemoryHandler):
         if self.freeze_thread and self.freeze_thread.is_alive():
             self.freeze_event.set()
             self.freeze_thread.join()
+
+    def _convert_base(self, addr):
+        if addr in self.base_lookup_map:
+            return self.base_lookup_map[addr]
+
+        base_data = re.split(':|\+', addr)
+        base_lk = base_data[0] + ':' + base_data[1]
+        if base_lk in self.base_lookup_map:
+            self.base_lookup_map[addr] = self.base_lookup_map[base_lk] + int(base_data[2], 16)
+            return self.base_lookup_map[addr]
+
+        if self.process_map is None:
+            from app.helpers.process import get_process_map
+            self.process_map = get_process_map(self.mem(), writeable_only=False)
+        match = [x for x in self.process_map if x['pathname'].endswith(base_data[0]) and x['map_index'] == int(base_data[1])]
+        if len(match) == 0:
+            raise CodelistException("Could not find base of {}".format(addr))
+        self.base_lookup_map[base_lk] = match[0]['start']
+        self.base_lookup_map[addr] = match[0]['start']+int(base_data[2], 16)
+        return self.base_lookup_map[addr]

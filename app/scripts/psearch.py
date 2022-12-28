@@ -28,7 +28,7 @@ class Test(BaseScript):
     def build_ui(self):
         self.add_ui_element(Select("PROCS", "Process", values=[('none', "None")], on_changed=self.ctrl_changed, children=[Button("REFRESH", "Refresh", on_pressed=self.refresh_pid)]))
         self.add_ui_element(Select("FILES", "Pointer File", values=[('none', "None")], on_changed=self.ctrl_changed))
-        self.add_ui_element(Input("ADDRESS", "Address", on_changed=self.ctrl_changed, change_on_focus=False, validator=self.address_validator))
+        self.add_ui_element(Input("ADDRESS", "Address", on_changed=self.ctrl_changed, change_on_focus=False, validator=self.address_validator, children=[Button("PASTE", "Paste", on_pressed=self.ctrl_pressed)]))
         self.add_ui_element(Button("SEARCH", "Search", on_pressed=self.ctrl_pressed))
         self.add_ui_element(Button("STOP", "Stop", on_pressed=self.ctrl_pressed))
         self.add_ui_element(Text("RESULTS", "Results"))
@@ -37,7 +37,7 @@ class Test(BaseScript):
         self.populate_files()
 
 
-        [self.get_ui_control(ctrl_name).hide() for ctrl_name in ['ADDRESS', 'FILES', 'SEARCH', 'STOP', 'RESULTS']]
+        [self.get_ui_control(ctrl_name).hide() for ctrl_name in ['ADDRESS', 'FILES', 'SEARCH', 'STOP', 'RESULTS', 'PASTE']]
 
 
     def refresh_pid(self, ele: BaseUI):
@@ -51,6 +51,14 @@ class Test(BaseScript):
             f_list.append((str(f.name), str(f.name)))
         self.get_ui_control("FILES").set_values(f_list)
 
+    def on_clipboard_copy(self, data):
+        if 'address' in data:
+            self.get_ui_control("PASTE").show()
+            self.put_data("CLIPBOARD", data['address'])
+
+    def on_clipboard_clear(self):
+        self.get_ui_control("PASTE").hide()
+
     def ctrl_changed(self, ele: BaseUI, value):
         if ele.get_name() == 'ADDRESS' or ele.get_name() == 'OFFSET' or ele.get_name() == 'LEVELS':
             self.check_for_start()
@@ -62,7 +70,7 @@ class Test(BaseScript):
             if value != '_null':
                 [self.get_ui_control(ctrl_name).show() for ctrl_name in ['ADDRESS', 'FILES']]
             else:
-                [self.get_ui_control(ctrl_name).hide() for ctrl_name in ['ADDRESS', 'FILES', 'SEARCH', 'STOP']]
+                [self.get_ui_control(ctrl_name).hide() for ctrl_name in ['ADDRESS', 'FILES', 'SEARCH', 'STOP', 'PASTE']]
 
     def check_for_start(self):
         if len(self.get_ui_control("ADDRESS").get_text()) > 4 and self.get_ui_control("FILES").get_selection() != '_null':
@@ -75,6 +83,9 @@ class Test(BaseScript):
             self.prepare_search()
         elif ele.get_name() == 'STOP':
             self.stop_search()
+        elif ele.get_name() == 'PASTE':
+            self.get_ui_control("ADDRESS").set_text("{:X}".format(int(self.get_data("CLIPBOARD"))))
+
 
     def address_validator(self, txt: str):
         if re.match(r'^[0-9A-F]{0,16}$', txt.upper().strip()):
@@ -177,11 +188,12 @@ class Test(BaseScript):
             data += "<ons-row>{}:{}+{:X}</ons-row>".format(pt, p['node'], p['base_offset'])
             data += "<ons-row>"
             for offset in p['offsets']:
-                data += str(offset) + ', '
-            data = data[0:-3]
+                data += '{:X}, '.format(offset)
+            data = data[0:-2]
             data += "</ons-row>"
             data += "<ons-row>"
-            copy_data = "{{'path': '{}', 'node': {}, 'base_offset': {}, 'offsets': {}}}".format(p['path'], p['node'], p['base_offset'], p['offsets'])
+            base_address = '{}:{}+{:X}'.format(pt, p['node'], p['base_offset'])
+            copy_data = "{{'base_address': '{}', 'offsets': '{}'}}".format(base_address, ", ".join("{:X}".format(x) for x in p['offsets']))
             data += '<ons-button modifier="quiet" name="copy_button" onclick="document.clipboard.copy({})">Copy</ons-button></ons-col>'.format(copy_data)
             data += "</ons-row>"
 

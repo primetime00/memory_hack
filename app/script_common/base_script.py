@@ -96,8 +96,21 @@ class BaseScript:
         return 1
 
     def handle_interaction(self, id, data):
+        if id == '__copy':
+            self.on_clipboard_copy(data)
+            return
+        if id =='__copy_clear':
+            self.on_clipboard_clear()
+            return
         item = self.list_ui.get_id(id)
         item.base_handle_interaction(data)
+
+    def on_clipboard_copy(self, data):
+        pass
+
+    def on_clipboard_clear(self):
+        pass
+
 
     def _on_aob_lost(self, aob: AOB):
         self.on_aob_lost(aob)

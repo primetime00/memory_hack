@@ -136,7 +136,18 @@
                 var source = code_data[code_index]['Source']
                 var dt = {'title': 'Edit Code', 'index': code_index}
                 if (source === 'address') {
-                    dt['address'] = code_data[code_index]['Address'].toString(16).toUpperCase()
+                    if (code_data[code_index]['Address'].toString().indexOf(':') >= 0) {
+                        dt['address'] = code_data[code_index]['Address'].toString()
+                    } else {
+                        dt['address'] = code_data[code_index]['Address'].toString(16).toUpperCase()
+                    }
+                } else if (source === 'pointer') {
+                    if (code_data[code_index]['Address'].toString().indexOf(':') >= 0) {
+                        dt['pointer'] = code_data[code_index]['Address'].toString()
+                    } else {
+                        dt['pointer'] = code_data[code_index]['Address'].toString(16).toUpperCase()
+                    }
+                    dt['offsets'] = code_data[code_index]['Offsets']
                 } else {
                     dt['aob'] = code_data[code_index]['AOB']
                     dt['offset'] = code_data[code_index]['Offset']
@@ -237,11 +248,24 @@
     }
 
     codelist.clipboard_data_pasted = function(data) {
-        var cmd = { 'command': "CODELIST_ADD_CODE", 'type': has(data, 'address') ? 'address' : 'aob',
-                              'address': has(data, 'address') ? parseInt(data.address).toString(16) : 0,
+        var type = ''
+        var address = ''
+        if (has(data, 'offsets')) { //this will be a pointer
+            type = 'pointer'
+            address = has(data, 'address') ? parseInt(data.address).toString(16) : data.base_address
+        } else if (has(data, 'aob')) { //must be an aob
+            type = 'aob'
+            address = 0
+        } else { //an address
+            type = 'address'
+            address = has(data, 'address') ? parseInt(data.address).toString(16) : data.base_address
+        }
+        var cmd = { 'command': "CODELIST_ADD_CODE", 'type': type,
+                              'address': address,
                               'aob': has(data, 'aob') ? data.aob : 0,
-                              'offset': has(data, 'offset') ? data.offset : 0 }
-
+                              'offset': has(data, 'offset') ? data.offset : 0,
+                              'offsets': has(data, 'offsets') ? data.offsets : 0
+                              }
         $.send('/codelist', cmd, on_codelist_status);
     }
 
@@ -449,6 +473,9 @@
             t.children.push(component_row_value.create(index))
             if (data.Source == 'address') {
                 t.children.push(component_row_address.create(index))
+            } else if (data.Source == 'pointer') {
+                t.children.push(component_row_address.create(index))
+                t.children.push(component_row_offsets.create(index))
             } else {
                 t.children.push(component_row_aob.create(index))
                 t.children.push(component_row_offset.create(index))
@@ -685,7 +712,11 @@
         'index': -1,
         'setup': (result, _this) => {
             if (has(result, 'Address')) {
-                _this.obj.val(result.Address.toString(16).toUpperCase())
+                if (result.Address.indexOf(':') >= 0) {
+                    _this.obj.val(result.Address.toString())
+                }  else {
+                    _this.obj.val(result.Address.toString(16).toUpperCase())
+                }
             }
         },
         'update': (_this) => {console.log('code name update')},
@@ -910,6 +941,89 @@
         }
     }
 
+    var component_row_offsets = {
+        'id': 'row_offsets_',
+        'obj': undefined,
+        'index': -1,
+        'setup': (result, _this) => {
+            _this.children.forEach((item, index) => {
+                item.setup(result, item)
+            })
+        },
+        'update': (_this) => {console.log('code name update')},
+        'template': `<ons-row id="##id##">
+                        <ons-row>
+                            <ons-col align="center" width="20%" class="col ons-col-inner">
+                                Offsets:
+                            </ons-col>
+                            <ons-col align="center" width="45%" class="col ons-col-inner" name="pointer_offsets">
+                            </ons-col>
+                        </ons-row>
+                        <ons-row>
+                            <ons-col align="center" width="20%" class="col ons-col-inner">
+                                Resolved:
+                            </ons-col>
+                            <ons-col align="center" width="45%" class="col ons-col-inner" name="pointer_address">
+                            </ons-col>
+                        </ons-row>
+                    </ons-row>`,
+        'create': index => {
+            var t = {...component_row_offsets};
+            t.id = component_row_offsets.id+index
+            t.index = index
+            t.template = component_row_offsets.template.replaceAll("##index##", index).replaceAll('##id##', t.id)
+            t.obj = $(ons.createElement(t.template))
+            var cc_offsets = component_code_offsets.create(index)
+            var cc_offsets_address = component_code_offsets_address.create(index)
+            t.obj.find('ons-col[name="pointer_offsets"]').append(cc_offsets.obj)
+            t.obj.find('ons-col[name="pointer_address"]').append(cc_offsets_address.obj)
+            t.children = [cc_offsets, cc_offsets_address]
+            return t;
+        },
+        'children': []
+    }
+    var component_code_offsets = {
+        'id': 'code_component_offsets_',
+        'obj': undefined,
+        'index': -1,
+        'setup': (result, _this) => {
+            if (has(result, 'Offsets')) {
+                _this.obj.val(result.Offsets)
+            }
+        },
+        'update': (_this) => {console.log('code name update')},
+        'template': '<input tabIndex="-1" type="text" id="##id##" name="code_address" class="text-input text-input--material text-full" oninput="codelist.offset_value_changed(this)" readonly>',
+        'create': index => {
+            var t = {...component_code_offsets};
+            t.id = component_code_offsets.id+index
+            t.index = index
+            t.template = component_code_offsets.template.replaceAll("##index##", index).replaceAll('##id##', t.id)
+            t.obj = $(ons.createElement(t.template))
+            return t;
+        }
+    }
+    var component_code_offsets_address = {
+        'id': 'code_component_offsets_address_',
+        'obj': undefined,
+        'index': -1,
+        'setup': (result, _this) => {
+            if (has(result, 'Resolved')) {
+                _this.obj.val(parseInt(result.Resolved).toString(16).toUpperCase())
+            }
+        },
+        'update': (_this) => {console.log('code name update')},
+        'template': '<input tabIndex="-1" type="text" id="##id##" name="code_address" class="text-input text-input--material text-full" oninput="codelist.offset_value_changed(this)" readonly>',
+        'create': index => {
+            var t = {...component_code_offsets_address};
+            t.id = component_code_offsets_address.id+index
+            t.index = index
+            t.template = component_code_offsets_address.template.replaceAll("##index##", index).replaceAll('##id##', t.id)
+            t.obj = $(ons.createElement(t.template))
+            return t;
+        }
+    }
+
+
     var component_code_dialog = {
         'id': 'add_code_dialog',
         'obj': undefined,
@@ -932,12 +1046,14 @@
             $("#add_code_address").val('')
             $("#add_code_aob").val('')
             $("#add_code_offset").val('')
+            $("#add_code_offsets").val('')
             if (has(data, 'address')) {
                 $("#add_code_type").val('address')
                 $("#add_code_address").val(data.address)
                 $("#add_code_address").parents("ons-row").show()
                 $("#add_code_aob").parents("ons-row").hide()
                 $("#add_code_offset").parents("ons-row").hide()
+                $("#add_code_offsets").parents("ons-row").hide()
             } else if (has(data, 'aob')) {
                 $("#add_code_type").val('aob')
                 $("#add_code_aob").val(data.aob)
@@ -945,10 +1061,20 @@
                 $("#add_code_address").parents("ons-row").hide()
                 $("#add_code_aob").parents("ons-row").show()
                 $("#add_code_offset").parents("ons-row").show()
+                $("#add_code_offsets").parents("ons-row").hide()
+            } else if (has(data, 'pointer')) {
+                $("#add_code_type").val('pointer')
+                $("#add_code_address").val(data.pointer)
+                $("#add_code_offsets").val(data.offsets)
+                $("#add_code_address").parents("ons-row").show()
+                $("#add_code_offsets").parents("ons-row").show()
+                $("#add_code_aob").parents("ons-row").hide()
+                $("#add_code_offset").parents("ons-row").hide()
             } else {
                 $("#add_code_type").val('address')
                 $("#add_code_aob").parents("ons-row").hide()
                 $("#add_code_offset").parents("ons-row").hide()
+                $("#add_code_offsets").parents("ons-row").hide()
                 $("#add_code_address").parents("ons-row").show()
             }
             component_code_dialog.validate()
@@ -971,10 +1097,17 @@
                 $("#add_code_aob").parents("ons-row").hide()
                 $("#add_code_offset").parents("ons-row").hide()
                 $("#add_code_address").parents("ons-row").show()
-            } else {
+                $("#add_code_offsets").parents("ons-row").hide()
+            } else if ($("#add_code_type").val() === 'aob') {
                 $("#add_code_address").parents("ons-row").hide()
                 $("#add_code_aob").parents("ons-row").show()
                 $("#add_code_offset").parents("ons-row").show()
+                $("#add_code_offsets").parents("ons-row").hide()
+            } else if ($("#add_code_type").val() === 'pointer') {
+                $("#add_code_address").parents("ons-row").show()
+                $("#add_code_aob").parents("ons-row").hide()
+                $("#add_code_offset").parents("ons-row").hide()
+                $("#add_code_offsets").parents("ons-row").show()
             }
             component_code_dialog.validate()
         },
@@ -982,7 +1115,16 @@
         'validate': () => {
             if ($("#add_code_type").val() === 'address') {
                 var addr = $("#add_code_address").val()
-                if (/^[0-9A-F]{5,16}$/i.test(addr)) {
+                if ((/^(?!.{256,})(?!(aux|clock\$|con|nul|prn|com[1-9]|lpt[1-9])(?:$|\.))[^ ][ \.\w-$()+=[\];#@~,&amp;']+[^\. ]:\d+\+[0-9a-f]+$/i.test(addr)) || /^[0-9A-F]{5,16}$/i.test(addr)) {
+                    $("#add_code_button").removeAttr('disabled')
+                } else {
+                    $("#add_code_button").attr('disabled', 'disabled')
+                }
+            }
+            else if ($("#add_code_type").val() === 'pointer') {
+                var addr = $("#add_code_address").val()
+                var offsets = $("#add_code_offsets").val()
+                if (/^\d+(, ?\d+)*$/i.test(offsets) && ((/^(?!.{256,})(?!(aux|clock\$|con|nul|prn|com[1-9]|lpt[1-9])(?:$|\.))[^ ][ \.\w-$()+=[\];#@~,&amp;']+[^\. ]:\d+\+[0-9a-f]+$/i.test(addr)) || /^[0-9A-F]{5,16}$/i.test(addr))) {
                     $("#add_code_button").removeAttr('disabled')
                 } else {
                     $("#add_code_button").attr('disabled', 'disabled')
@@ -1003,7 +1145,7 @@
         'on_add': () => {
             var cmd = { 'command': "CODELIST_ADD_CODE", 'type': $("#add_code_type").val(),
                                   'address': $("#add_code_address").val(), 'aob': $("#add_code_aob").val(),
-                                  'offset': $("#add_code_offset").val() }
+                                  'offset': $("#add_code_offset").val(), 'offsets': $("#add_code_offsets").val()}
             if (component_code_dialog.index >= 0) {
                 cmd['index'] = component_code_dialog.index
             }
