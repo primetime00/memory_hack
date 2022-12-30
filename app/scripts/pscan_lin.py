@@ -271,13 +271,13 @@ class PointerScanner(BaseScript):
                     number_of_searches += 1
                     if len(s.results) == 0:
                         zero_counter += 1
-                    all_results = [{'address': x[0], 'value': x[1]} for x in s.results.get_results().fetchall()]
+                    with s.results.db() as conn:
+                        all_results = [{'address': x[0], 'value': x[1]} for x in s.results.get_results(conn).fetchall()]
                     result_indexes = self.generate_result_order(all_results)
                     for index in result_indexes:
                         r = all_results[index]
                         if r['address'] not in address_set:
                             if not self.is_valid_address(r['address'], valid_bounds):
-                                print('{} is not valid!'.format(hex(r['address']).upper()))
                                 invalid_counter += 1
                                 continue
                             if r['address'] % 4 != 0:
@@ -305,29 +305,27 @@ class PointerScanner(BaseScript):
                         number_of_searches += 1
                         if len(s.results) == 0:
                             zero_counter += 1
-                        all_results = [{'address': x[0], 'value': x[1]} for x in s.results.get_results().fetchall()]
+                        with s.results.db() as conn:
+                            all_results = [{'address': x[0], 'value': x[1]} for x in s.results.get_results(conn).fetchall()]
                         result_indexes = self.generate_result_order(all_results)
                         for index in result_indexes:
                             r = all_results[index]
-                            if r['address'] not in address_set and not self.is_valid_address(r['address'], valid_bounds):
-                                print('{} is not valid!'.format(hex(r['address']).upper()))
-                                invalid_counter += 1
-                                continue
-                            if r['address'] % 4 != 0:
-                                continue
                             static_address = self.is_static_address(r['address'], node_bounds)
-                            if static_address or r['address'] not in address_set:
-                                item = {'address': r['address'], 'offset': p['address'] - int.from_bytes(r['value'], byteorder="little", signed=False), 'children': []}
-                                result_counter += 1
-                                if static_address:
-                                    static_counter += 1
-                                nx.append(item)
-                                address_set.add(r['address'])
-                                if i not in lvl_map:
-                                    lvl_map[i] = []
-                                lvl_map[i].append(item)
-                            elif r['address'] in address_set:
-                                reuse_counter += 1
+                            valid = (r['address'] % 4 == 0) and (static_address or (r['address'] not in address_set and self.is_valid_address(r['address'], valid_bounds)))
+                            if not valid:
+                                invalid_counter += 1
+                                if r['address'] in address_set:
+                                    reuse_counter += 1
+                                continue
+                            item = {'address': r['address'], 'offset': p['address'] - int.from_bytes(r['value'], byteorder="little", signed=False), 'children': []}
+                            result_counter += 1
+                            if static_address:
+                                static_counter += 1
+                            nx.append(item)
+                            address_set.add(r['address'])
+                            if i not in lvl_map:
+                                lvl_map[i] = []
+                            lvl_map[i].append(item)
                         if poll_timer.has_elapsed():
                             self.get_ui_control("STATUS").set_text('Search level {}<br>Found {} possible pointers.<br>{} potential static pointers.'.format(i, result_counter, static_counter))
                             print("Found {} result and {} static {} invalid {} reused {} zero searches".format(result_counter, static_counter, invalid_counter, reuse_counter, zero_counter))

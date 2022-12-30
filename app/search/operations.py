@@ -115,12 +115,12 @@ class ChangedByOperation(MemoryOperation):
 
 class ChangedByOperationFloat(ChangedByOperation):
     def operation(self, *current_and_previous_read):
-        return 0 <= (current_and_previous_read[0] - current_and_previous_read[1]) - self.delta <= 0.001
+        return -0.001 <= (current_and_previous_read[0] - current_and_previous_read[1]) - self.delta <= 0.001
 
 
     def run(self, buf_current_ptr, buf_previous_ptr, adjusted_length: int, result_callback: callable, result_list: list):
         for i in range(0, adjusted_length):
-            if 0 <= (buf_current_ptr[i] - buf_previous_ptr[i]) - self.delta <= 0.001:
+            if -0.001 <= (buf_current_ptr[i] - buf_previous_ptr[i]) - self.delta <= 0.001:
                 result_callback(result_list, i, buf_current_ptr[i])
 
 

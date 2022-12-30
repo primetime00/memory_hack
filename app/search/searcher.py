@@ -36,7 +36,7 @@ class Searcher:
         self.memory = memory
         self.write_only = write_only
         self.include_paths = []
-        self.total_size, self.mem_start, self.mem_end = self.get_total_memory_size()
+        self.total_size, self.mem_start, self.mem_end, self.mem_average = self.get_total_memory_size()
         self.progress:Progress = progress
         self.search_size = None
         self.signed = True
@@ -46,7 +46,6 @@ class Searcher:
         self.cancel_event = None
         self.max_capture_size = 25600000
         self.mem_path = directory
-        self.tmp_table = '_tmp_results'
         self.last_search_type = Searcher.SEARCH_RETURN_NONE
         self.result_progress_threshold = 1000
         self.result_write_threshold = 10000
@@ -77,17 +76,20 @@ class Searcher:
                 self.progress.reset()
                 self.progress.add_constraint(0, self.total_size, 1.0)
             self.results.delete_database()
-            self.results.create_result_table()
+            with self.results.db() as conn:
+                self.results.create_result_table(conn)
         elif search_type == self.SEARCH_TYPE_VALUE or search_type == self.SEARCH_TYPE_OPERATION:
             self.results.delete_database()
-            self.results.create_result_table()
+            with self.results.db() as conn:
+                self.results.create_result_table(conn)
             if self.progress:
                 self.progress.add_constraint(0, self.total_size, 1.0)
         elif search_type == self.SEARCH_TYPE_CONTINUE:
             if self.progress:
                 self.progress.reset()
                 self.progress.add_constraint(0, len(self.results), 1.0)
-                self.results.increment_result_table()
+            with self.results.db() as conn:
+                self.results.increment_result_table(conn)
 
     def on_search_end(self, search_type: int):
         if search_type == self.SEARCH_TYPE_CAPTURE:
@@ -95,18 +97,14 @@ class Searcher:
         elif search_type == self.SEARCH_TYPE_COMPARE_CAPTURE:
             self.clear_captures()
             self.last_search_type = Searcher.SEARCH_RETURN_RESULT
-            self.results.commit()
         elif search_type == self.SEARCH_TYPE_VALUE or search_type == self.SEARCH_TYPE_OPERATION:
             self.last_search_type = Searcher.SEARCH_RETURN_RESULT
-            self.results.commit()
         elif search_type == self.SEARCH_TYPE_CONTINUE:
-            self.results.commit()
+            pass
         if self.progress:
             self.progress.mark()
 
     def on_search_cancel(self, search_type: int):
-        if not self.results.is_open():
-            self.results.open()
         if search_type == self.SEARCH_TYPE_CAPTURE:
             self.clear_captures()
         elif search_type == self.SEARCH_TYPE_COMPARE_CAPTURE:
@@ -116,7 +114,8 @@ class Searcher:
         elif search_type == self.SEARCH_TYPE_OPERATION:
             pass
         elif search_type == self.SEARCH_TYPE_CONTINUE:
-            self.results.revert_result_table()
+            with self.results.db() as conn:
+                self.results.revert_result_table(conn)
         if self.progress:
             self.progress.mark()
 
@@ -124,7 +123,7 @@ class Searcher:
 
     def set_include_paths(self, paths: list):
         self.include_paths = paths
-        self.total_size, self.mem_start, self.mem_end = self.get_total_memory_size()
+        self.total_size, self.mem_start, self.mem_end, self.mem_average = self.get_total_memory_size()
 
     def get_include_paths(self):
         return self.include_paths
@@ -148,10 +147,11 @@ class Searcher:
         _end = ls[-1][1]
         for start, stop in self.get_regions():
             total += (stop-start)
-        return total, _start, _end
+        average = int(total / len(ls))
+        return total, _start, _end, average
 
     def prepare_memory_search(self):
-        self.total_size, self.mem_start, self.mem_end = self.get_total_memory_size()
+        self.total_size, self.mem_start, self.mem_end, self.mem_average = self.get_total_memory_size()
 
     def clear_captures(self):
         if not self.mem_path.absolute().exists():
@@ -238,9 +238,9 @@ class Searcher:
         sv = Value.create(value, self.search_size)
         self.signed = sv.is_signed() if isinstance(sv, IntValue) else False
         _batch_results = []
-        try:
+        with self.results.db() as conn:
             def result_callback(results: list):
-                self.results.add_results(results)
+                self.results.add_results(conn, results)
             for start, stop in self.get_regions():
                 try:
                     self.check_cancel()
@@ -259,15 +259,13 @@ class Searcher:
                         i_start += size
                 except OSError:
                     continue
-        except BreakException:
-            self.on_search_cancel(self.SEARCH_TYPE_VALUE)
-            raise
-        if len(_batch_results) > 0:
-            result_callback(_batch_results)
-        self.results.commit()
-        self.results.create_address_index()
-        self.results.commit()
-        self.on_search_end(self.SEARCH_TYPE_VALUE)
+                except BreakException:
+                    self.on_search_cancel(self.SEARCH_TYPE_VALUE)
+                    raise
+            if len(_batch_results) > 0:
+                result_callback(_batch_results)
+            self.results.create_address_index(conn)
+            self.on_search_end(self.SEARCH_TYPE_VALUE)
 
     def search_memory_operation(self, operation, args=None):
         if self.results is None:
@@ -275,38 +273,37 @@ class Searcher:
         self.on_search_start(self.SEARCH_TYPE_OPERATION)
         sv = Value.create("0", self.search_size)
         _batch_results = []
-        def result_callback(results: list):
-            self.results.add_results(results)
+        with self.results.db() as conn:
+            def result_callback(results: list):
+                self.results.add_results(conn, results)
 
-        regions = self.get_regions()
+            regions = self.get_regions()
 
-        for start, stop in regions:
-            try:
-                self.check_cancel()
-                i_start = start
-                while True:
-                    size = min(stop - i_start, self.max_capture_size)
-                    if size <= 0:
-                        break
-                    region_buffer = (sv.get_ctype() * size)()
-                    self.memory.read_memory(i_start, region_buffer)
-                    search_buffer = SearchBuffer.create(region_buffer, i_start, sv, result_callback, _batch_results, self.result_write_threshold)
-                    sz = search_buffer.find_by_operation(operation, args)
-                    if self.progress:
-                        self.progress.increment(sz)
+            for start, stop in regions:
+                try:
                     self.check_cancel()
-                    i_start += size
-            except OSError:
-                pass
-            except BreakException:
-                self.on_search_cancel(self.SEARCH_TYPE_OPERATION)
-                raise
-        if len(_batch_results) > 0:
-            result_callback(_batch_results)
-        self.results.commit()
-        self.results.create_address_index()
-        self.results.commit()
-        self.on_search_end(self.SEARCH_TYPE_OPERATION)
+                    i_start = start
+                    while True:
+                        size = min(stop - i_start, self.max_capture_size)
+                        if size <= 0:
+                            break
+                        region_buffer = (sv.get_ctype() * size)()
+                        self.memory.read_memory(i_start, region_buffer)
+                        search_buffer = SearchBuffer.create(region_buffer, i_start, sv, result_callback, _batch_results, self.result_write_threshold)
+                        sz = search_buffer.find_by_operation(operation, args)
+                        if self.progress:
+                            self.progress.increment(sz)
+                        self.check_cancel()
+                        i_start += size
+                except OSError:
+                    pass
+                except BreakException:
+                    self.on_search_cancel(self.SEARCH_TYPE_OPERATION)
+                    raise
+            if len(_batch_results) > 0:
+                result_callback(_batch_results)
+            self.results.create_address_index(conn)
+            self.on_search_end(self.SEARCH_TYPE_OPERATION)
 
 
     def _search_continue_value_results(self, sv: Value):
@@ -342,24 +339,25 @@ class Searcher:
                 sv.set_signed(self.signed)
         _update_list = []
         read_counter = 0
-        for (addr, data) in self.results.get_results(table_name=self.results.table_stack[-2]):
-            try:
-                prev = sv.from_bytes(data)
-                read = sv.read_bytes_from_memory(self.memory, addr)
-                if operation.operation(sv.from_bytes(read), prev):
-                    _update_list.append((addr, read))
-                if len(_update_list) >= self.result_write_threshold:
-                    self.results.add_results(_update_list)
-                    _update_list.clear()
-                read_counter += 1
-                if read_counter % self.result_progress_threshold == 0:
-                    if self.progress:
-                        self.progress.increment(self.result_progress_threshold)
-                    self.check_cancel()
-            except OSError:
-                pass
-        if len(_update_list) > 0:
-            self.results.add_results(_update_list)
+        with self.results.db() as conn:
+            for (addr, data) in self.results.get_results(conn, table_name=self.results.table_stack[-2]):
+                try:
+                    prev = sv.from_bytes(data)
+                    read = sv.read_bytes_from_memory(self.memory, addr)
+                    if operation.operation(sv.from_bytes(read), prev):
+                        _update_list.append((addr, read))
+                    if len(_update_list) >= self.result_write_threshold:
+                        self.results.add_results(conn, _update_list)
+                        _update_list.clear()
+                    read_counter += 1
+                    if read_counter % self.result_progress_threshold == 0:
+                        if self.progress:
+                            self.progress.increment(self.result_progress_threshold)
+                        self.check_cancel()
+                except OSError:
+                    pass
+            if len(_update_list) > 0:
+                self.results.add_results(conn, _update_list)
 
     def _search_continue_capture_operation(self, operation: MemoryOperation, store_size=4):
         if self.search_size == 'array':
@@ -369,39 +367,39 @@ class Searcher:
             if isinstance(sv, IntValue):
                 sv.set_signed(self.signed)
         _batch_results = []
-        def result_callback(results: list):
-            self.results.add_results(results)
-        for f in self.capture_files:
-            parts = f.stem.split('_')
-            start = int(parts[1], 16)
-            stop = int(parts[2], 16)
-            cap_file = f
-            try:
-                self.check_cancel()
-                read_bytes = cap_file.read_bytes()
-                capture_buffer = (sv.get_ctype() * len(read_bytes))()
-                ctypes.memmove(ctypes.pointer(capture_buffer), read_bytes, len(read_bytes))
-                region_buffer = (sv.get_ctype() * (stop - start))()
-                self.memory.read_memory(start, region_buffer)
-                search_buffer = SearchBuffer.create(region_buffer, start, sv, result_callback, _batch_results, self.result_write_threshold)
-                compare_buffer = SearchBuffer.create(capture_buffer, start, sv, result_callback, result_write_threshold=self.result_write_threshold)
-                count = search_buffer.compare_by_operation(compare_buffer, operation)
-                if self.progress:
-                    self.progress.increment(count)
-            except OSError:
-                if self.progress:
-                    self.progress.increment(stop-start)
-                continue
-        if len(_batch_results) > 0:
-            result_callback(_batch_results)
-        self.results.commit()
-        self.results.create_address_index()
-        self.results.commit()
+        with self.results.db() as conn:
+            def result_callback(results: list):
+                self.results.add_results(conn, results)
+            for f in self.capture_files:
+                parts = f.stem.split('_')
+                start = int(parts[1], 16)
+                stop = int(parts[2], 16)
+                cap_file = f
+                try:
+                    self.check_cancel()
+                    read_bytes = cap_file.read_bytes()
+                    capture_buffer = (sv.get_ctype() * len(read_bytes))()
+                    ctypes.memmove(ctypes.pointer(capture_buffer), read_bytes, len(read_bytes))
+                    region_buffer = (sv.get_ctype() * (stop - start))()
+                    self.memory.read_memory(start, region_buffer)
+                    search_buffer = SearchBuffer.create(region_buffer, start, sv, result_callback, _batch_results, self.result_write_threshold)
+                    compare_buffer = SearchBuffer.create(capture_buffer, start, sv, result_callback, result_write_threshold=self.result_write_threshold)
+                    count = search_buffer.compare_by_operation(compare_buffer, operation)
+                    if self.progress:
+                        self.progress.increment(count)
+                except OSError:
+                    if self.progress:
+                        self.progress.increment(stop-start)
+                    continue
+            if len(_batch_results) > 0:
+                result_callback(_batch_results)
+            self.results.create_address_index(conn)
 
     def search_continue_operation(self, operation: Operation):
         if self.last_search_type == Searcher.SEARCH_RETURN_RESULT: #we will do a continuation of a result search
             self.on_search_start(self.SEARCH_TYPE_CONTINUE)
-            store_size = self.results.get_store_size()
+            with self.results.db() as conn:
+                store_size = self.results.get_store_size(conn)
             try:
                 self._search_continue_operation_result(operation, store_size=store_size)
             except BreakException:
@@ -445,12 +443,14 @@ class Searcher:
             res.unlink(missing_ok=True)
         self.capture_files.clear()
         if self.results is not None:
-            self.results.clear_results()
+            with self.results.db() as conn:
+                self.results.clear_results(conn)
 
     def get_results(self, limit=-1):
-        if not self.results:
+        if self.results is None:
             return []
-        return [{'address': x[0], 'value': x[1]} for x in self.results.get_results(_count=limit)]
+        with self.results.db() as conn:
+            return [{'address': x[0], 'value': x[1]} for x in self.results.get_results(conn, _count=limit)]
 
     def reset(self):
         if self.progress:

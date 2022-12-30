@@ -1,6 +1,7 @@
 import ctypes
 import multiprocessing
 import platform
+import sqlite3
 import traceback
 import os
 from typing import Union
@@ -148,7 +149,6 @@ class SearcherMulti(Searcher):
         process_args = []
         for cap in captures:
             process_args.append((cap,))
-        self.results.close()
         with multiprocessing.Pool(processes=max(1, multiprocessing.cpu_count() - 1)) as pool:
             try:
                 for res in pool.imap_unordered(self._capture_memory_thread, process_args, chunksize=100):
@@ -159,10 +159,8 @@ class SearcherMulti(Searcher):
             except BreakException:
                 pool.terminate()
                 pool.join()
-                self.results.open()
                 self.on_search_cancel(self.SEARCH_TYPE_CAPTURE)
                 raise
-        self.results.open()
         self.on_search_end(self.SEARCH_TYPE_CAPTURE)
 
     def _search_continue_capture_operation_thread(self, args):
@@ -206,7 +204,7 @@ class SearcherMulti(Searcher):
 
         process_args = []
         _id = 0
-        max_size = self.max_capture_size
+        max_size = int(self.total_size / (multiprocessing.cpu_count()-1))+4096 #self.max_capture_size
         current_size = max_size
         files = []
 
@@ -234,24 +232,21 @@ class SearcherMulti(Searcher):
         if len(files) > 0:
             process_args.append({'files': files, 'value': {'string': sv.raw_value, 'size': self.search_size}, 'operation': operation, 'id': _id})
 
-        self.results.close()
-        with multiprocessing.Pool(processes=max(1, multiprocessing.cpu_count() - 1)) as pool:
-            try:
-                for res in pool.imap_unordered(self._search_continue_capture_operation_thread, process_args):
-                    self.check_cancel()
-                    if self.progress:
-                        self.progress.increment(res['count'])
-                    if 'error' in res:
-                        logger.error("{} - {}".format(res['id'], res['error']))
-                    else:
-                        if not self.results.is_open():
-                            self.results.open()
-                        self.results.add_results(res['results'])
-            except BreakException:
-                pool.terminate()
-                pool.join()
-                raise
-        self.results.commit()
+        with self.results.db() as conn:
+            with multiprocessing.Pool(processes=max(1, multiprocessing.cpu_count() - 1)) as pool:
+                try:
+                    for res in pool.imap_unordered(self._search_continue_capture_operation_thread, process_args):
+                        self.check_cancel()
+                        if self.progress:
+                            self.progress.increment(res['count'])
+                        if 'error' in res:
+                            logger.error("{} - {}".format(res['id'], res['error']))
+                        else:
+                            self.results.add_results(conn, res['results'])
+                except BreakException:
+                    pool.terminate()
+                    pool.join()
+                    raise
 
     def _search_memory_value_thread(self, args):
         regions = args['region']
@@ -286,29 +281,27 @@ class SearcherMulti(Searcher):
         self.signed = sv.is_signed() if isinstance(sv, IntValue) else False
 
         process_args = []
-        mem_map = self._create_uniform_rounds(sv)
-        self.results.close()
+        mem_map = self._create_uniform_rounds(sv, max_size=self.mem_average)
         for i in range(0, len(mem_map)):
             process_args.append({'region': mem_map[i], 'value': {'string': value, 'size': self.search_size}, 'id': i})
-        with multiprocessing.Pool(processes=max(1, multiprocessing.cpu_count() - 1)) as pool:
-            try:
-                for res in pool.imap_unordered(self._search_memory_value_thread, process_args):
-                    self.check_cancel()
-                    if self.progress:
-                        self.progress.increment(res['count'])
-                    if 'error' in res:
-                        logger.error("{} - {}".format(res['id'], res['error']))
-                    else:
-                        if not self.results.is_open():
-                            self.results.open()
-                        self.results.add_results(res['results'])
-            except BreakException:
-                pool.terminate()
-                pool.join()
-                self.on_search_cancel(self.SEARCH_TYPE_VALUE)
-                raise
-        self.results.commit()
-        self.on_search_end(self.SEARCH_TYPE_VALUE)
+        with self.results.db() as conn:
+            with multiprocessing.Pool(processes=max(1, multiprocessing.cpu_count() - 1)) as pool:
+                try:
+                    for res in pool.imap_unordered(self._search_memory_value_thread, process_args):
+                        self.check_cancel()
+                        if self.progress:
+                            self.progress.increment(res['count'])
+                        if 'error' in res:
+                            logger.error("{} - {}".format(res['id'], res['error']))
+                        else:
+                            self.results.add_results(conn, res['results'])
+                except BreakException:
+                    pool.terminate()
+                    pool.join()
+                    self.on_search_cancel(self.SEARCH_TYPE_VALUE)
+                    raise
+            self.results.create_address_index(conn)
+            self.on_search_end(self.SEARCH_TYPE_VALUE)
 
     def _search_memory_operation_thread(self, args):
         regions = args['region']
@@ -342,36 +335,35 @@ class SearcherMulti(Searcher):
         self.on_search_start(self.SEARCH_TYPE_OPERATION)
         sv = Value.create("0", self.search_size)
         process_args = []
-        mem_map = self._create_uniform_rounds(sv)
-        self.results.close()
+        mem_map = self._create_uniform_rounds(sv, max_size=self.mem_average)
 
         for i in range(0, len(mem_map)):
             process_args.append({'region': mem_map[i], 'value': {'string': "0", "size": self.search_size}, 'operation': operation, 'id': i})
 
-        with multiprocessing.Pool(processes=max(1, multiprocessing.cpu_count() - 1)) as pool:
-            try:
-                for res in pool.imap_unordered(self._search_memory_operation_thread, process_args):
-                    self.check_cancel()
-                    if self.progress:
-                        self.progress.increment(res['count'])
-                    if 'error' in res:
-                        logger.error("{} - {}".format(res['id'], res['error']))
-                    else:
-                        if not self.results.is_open():
-                            self.results.open()
-                        self.results.add_results(res['results'])
-            except BreakException:
-                pool.terminate()
-                pool.join()
-                self.on_search_cancel(self.SEARCH_TYPE_OPERATION)
-                raise
-        self.results.commit()
-        self.on_search_end(self.SEARCH_TYPE_OPERATION)
+        with self.results.db() as conn:
+            with multiprocessing.Pool(processes=max(1, multiprocessing.cpu_count() - 1)) as pool:
+                try:
+                    for res in pool.imap_unordered(self._search_memory_operation_thread, process_args):
+                        self.check_cancel()
+                        if self.progress:
+                            self.progress.increment(res['count'])
+                        if 'error' in res:
+                            logger.error("{} - {}".format(res['id'], res['error']))
+                        else:
+                            self.results.add_results(conn, res['results'])
+                except BreakException:
+                    pool.terminate()
+                    pool.join()
+                    self.on_search_cancel(self.SEARCH_TYPE_OPERATION)
+                    raise
+            self.results.create_address_index(conn)
+            self.on_search_end(self.SEARCH_TYPE_OPERATION)
 
     def _search_continue_value_results(self, sv: Value):
-        if len(self.results) < 300:
-            super()._search_continue_value_results(sv)
-            return
+        with self.results.db() as conn:
+            if self.results.get_number_of_results(conn, -2) < 300:
+                super()._search_continue_value_results(sv)
+                return
 
         if sv.get_store_type() == 'array':
             op = EqualArray(AOBValue(sv.get_printable()).aob_item['aob_bytes'])
@@ -415,7 +407,9 @@ class SearcherMulti(Searcher):
             return {'id': args['id'], 'results': results, 'count': 0, 'error': traceback.format_exc()}
 
     def _search_continue_operation_result(self, operation: Operation, store_size=4):
-        if len(self.results) < 300:
+        with self.results.db() as conn:
+            result_count = self.results.get_number_of_results(conn, -2)
+        if result_count < 300:
             super()._search_continue_operation_result(operation)
             return
 
@@ -426,37 +420,34 @@ class SearcherMulti(Searcher):
             if isinstance(sv, IntValue):
                 sv.set_signed(self.signed)
 
-        result_count = len(self.results)
         segments = min(10000, int(result_count / (multiprocessing.cpu_count()-1)))
         regions = int(result_count / segments)
 
         process_args = []
 
-        results_cursor = self.results.get_results_unordered()
-        for i in range(0, regions):
-            if i == regions-1:
-                results = results_cursor.fetchall()
-            else:
-                results = results_cursor.fetchmany(segments)
-            process_args.append({'results': results, 'size': len(results), 'value': {"string": sv.raw_value, "size": self.search_size}, 'operation': operation, 'id': i})
+        with self.results.db() as conn:
+            results_cursor = self.results.get_results_unordered(conn, -2)
+            for i in range(0, regions):
+                if i == regions-1:
+                    results = results_cursor.fetchall()
+                else:
+                    results = results_cursor.fetchmany(segments)
+                process_args.append({'results': results, 'size': len(results), 'value': {"string": sv.raw_value, "size": self.search_size}, 'operation': operation, 'id': i})
+            with multiprocessing.Pool(processes=max(1, multiprocessing.cpu_count() - 1)) as pool:
+                try:
+                    for res in pool.imap_unordered(self._search_continue_operation_results_thread, process_args):
+                        self.check_cancel()
+                        if self.progress:
+                            self.progress.increment(res['count'])
+                        if 'error' in res:
+                            logger.error("{} - {}".format(res['id'], res['error']))
+                        else:
+                            self.results.add_results(conn, res['results'])
+                except BreakException:
+                    pool.terminate()
+                    pool.join()
+                    raise
 
-        self.results.close()
-        with multiprocessing.Pool(processes=max(1, multiprocessing.cpu_count() - 1)) as pool:
-            try:
-                for res in pool.imap_unordered(self._search_continue_operation_results_thread, process_args):
-                    self.check_cancel()
-                    if self.progress:
-                        self.progress.increment(res['count'])
-                    if 'error' in res:
-                        logger.error("{} - {}".format(res['id'], res['error']))
-                    else:
-                        if not self.results.is_open():
-                            self.results.open()
-                        self.results.add_results(res['results'], self.tmp_table)
-            except BreakException:
-                pool.terminate()
-                pool.join()
-                raise
 
 
 
