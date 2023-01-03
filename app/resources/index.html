@@ -25,6 +25,18 @@
     });
   };
 
+  jQuery.fn.insertAt = function(index, element) {
+    var lastIndex = this.children().length;
+    if (index < 0) {
+      index = Math.max(0, lastIndex + 1 + index);
+    }
+    this.append(element);
+    if (index < lastIndex) {
+      this.children().eq(index).before(this.children().last());
+    }
+    return this;
+  }
+
   var load_count = 0;
   $(document).on('prechange', function(event) {
     $('ons-toolbar .center').innerHTML = event.originalEvent.tabItem.getAttribute('label');
@@ -142,6 +154,12 @@ input.r-value {
 .page__content {
   background-color: #f6f6f6;
   padding: 8px;
+}
+
+.checkbox--grid {
+  display: grid;
+  align-content: center;
+  justify-content: center;
 }
 
 .codeblock {

@@ -16,7 +16,7 @@ from app.search.operations import GreaterThan, LessThan, GreaterThanFloat, LessT
     IncreaseOperationFloat, DecreaseOperationFloat, ChangedOperation, UnchangedOperation, ChangedOperationFloat, \
     UnchangedOperationFloat, ChangedByOperation, ChangedByOperationFloat
 from app.search.searcher_multi import SearcherMulti
-# from app.search.searcher import Searcher as SearcherMulti
+from app.search.searcher import Searcher
 from app.search.value import Value
 
 ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, ctypes.Union]
@@ -220,12 +220,19 @@ class Search(MemoryHandler):
             tp = memory_utils.typeToCType[(self.size, False)]
             if self.size == 'array':
                 tp = (tp * memory_utils.aob_size(self.value.get_printable(), wildcard=True))
-            val = self.memory.handle.read_memory(addr, tp())
+            val = self.mem().read_memory(addr, tp())
             freeze = req.media['freeze'] == 'true'
+            self.update_thread.freeze(addr, val, freeze)
         except Exception:
             traceback.print_exc()
             raise SearchException("Address or value is not valid for write.")
-        self.update_thread.freeze(addr, val, freeze)
+        finally:
+            resp.media['round'] = self.round
+            resp.media['results'] = self.get_updated_addresses()
+            resp.media['count'] = len(self.searcher.results)
+            resp.media['type'] = self.type
+            resp.media['size'] = self.size
+            resp.media['value'] = str(self.value.get())
 
     def handle_result_update(self, req: Request, resp: Response):
         if not self.update_thread or not self.update_thread.is_alive():
@@ -397,7 +404,8 @@ class Search(MemoryHandler):
         return False
 
     def start_updater(self):
-        self.update_thread = Search.UpdateThread(self.mem(), self.searcher.get_results(40), copy.deepcopy(self.value))
+        self.stop_updater()
+        self.update_thread = Search.UpdateThread(self.mem(), self.searcher.get_results(40), copy.deepcopy(self.value), self.searcher)
         self.update_thread.start()
 
     def stop_updater(self):
@@ -407,16 +415,16 @@ class Search(MemoryHandler):
         self.update_thread = None
 
     class UpdateThread(Thread):
-        def __init__(self, mem, addrs, pv: Value):
+        def __init__(self, mem, addrs, pv: Value, s: Searcher):
             super().__init__(target=self.process)
             self.memory = mem
             self.stop = Event()
             self.addresses = copy.deepcopy(addrs)
-            self.parsed_value = pv
+            self.parsed_value = Value.copy(pv, _signed=s.signed)
             self.results_to_update(pv.get_store_type(), self.addresses)
             self.lock = Lock()
             self.write_list = []
-            self.freeze_list = {}
+            self.freeze_map = {}
             self.error = ""
 
         @classmethod
@@ -440,13 +448,10 @@ class Search(MemoryHandler):
                             val: Value = item[1]
                             val.write_bytes_to_memory(self.memory, item[0])
                         self.write_list.clear()
-                    if len(self.freeze_list) > 0:
-                        for addr, value in self.freeze_list.items():
+                    if len(self.freeze_map) > 0:
+                        for addr, value in self.freeze_map.items():
                             self.memory.write_memory(addr, value)
                     for i in range(0, len(self.addresses)):
-                        if self.stop.is_set():
-                            self.lock.release()
-                            return
                         addr = self.addresses[i]
                         self.parsed_value.read_memory(self.memory, addr['address'])
                         self.addresses[i]['value'] = self.parsed_value.get_printable()
@@ -455,6 +460,7 @@ class Search(MemoryHandler):
             except Exception as e:
                 self.error = str(e)
             finally:
+                self.freeze_map.clear()
                 if self.lock.locked():
                     self.lock.release()
 
@@ -479,10 +485,10 @@ class Search(MemoryHandler):
 
         def freeze(self, address, value, freeze):
             self.lock.acquire()
-            if not freeze and address in self.freeze_list:
-                del self.freeze_list[address]
-            elif freeze and address not in self.freeze_list:
-                self.freeze_list[address] = value
+            if not freeze and address in self.freeze_map:
+                del self.freeze_map[address]
+            elif freeze and address not in self.freeze_map:
+                self.freeze_map[address] = value
             self.lock.release()
 
 

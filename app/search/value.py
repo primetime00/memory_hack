@@ -1,3 +1,4 @@
+import copy
 import ctypes
 import math
 import struct
@@ -60,20 +61,20 @@ class Value:
         return -1
 
     @staticmethod
-    def create(_value:str, _size:str):
+    def create(_value:str, _size:str, _signed=None):
         valid_sizes = ['byte_1', 'byte_2', 'byte_4', 'byte_8', 'array', 'float', 'address', 'offset']
         _size = _size.strip()
         _value = _value.strip()
         if _size not in valid_sizes:
             raise ValueException("{} is not a valid size".format(_size))
         if _size == 'byte_1':
-            return IntValue(_value, store_size=1)
+            return IntValue(_value, store_size=1, _signed=_signed)
         if _size == 'byte_2':
-            return IntValue(_value, store_size=2)
+            return IntValue(_value, store_size=2, _signed=_signed)
         if _size == 'byte_4':
-            return IntValue(_value, store_size=4)
+            return IntValue(_value, store_size=4, _signed=_signed)
         if _size == 'byte_8':
-            return IntValue(_value, store_size=8)
+            return IntValue(_value, store_size=8, _signed=_signed)
         if _size == 'float':
             return FloatValue(_value)
         if _size == 'address':
@@ -98,6 +99,13 @@ class Value:
         except ValueError:
             return False
         return True
+
+    def copy(self, _signed=None):
+        if isinstance(self, IntValue) and _signed is not None:
+            return IntValue(str(self.get()), self.store_size, _signed)
+        return copy.deepcopy(self)
+
+
 
 
 class FloatValue(Value):
@@ -175,7 +183,7 @@ class FloatValue(Value):
             return -1
 
 class IntValue(Value):
-    def __init__(self, value: str, store_size):
+    def __init__(self, value: str, store_size, _signed = None):
         super().__init__(value, store_size=store_size)
         try:
             if not Value.is_int(self.raw_value) and Value.is_float(self.raw_value):
@@ -183,16 +191,16 @@ class IntValue(Value):
             self.value = int(self.raw_value)
             if store_size == 1:
                 self.bytes = bytes(ctypes.c_int8(self.value))
-                self.signed = self.value < (2 << 6)
+                self.signed = self.value < (2 << 6) if _signed is None else _signed
             elif store_size == 2:
                 self.bytes = bytes(ctypes.c_int16(self.value))
-                self.signed = self.value < (2 << 14)
+                self.signed = self.value < (2 << 14) if _signed is None else _signed
             elif store_size == 4:
                 self.bytes = bytes(ctypes.c_int32(self.value))
-                self.signed = self.value < (2 << 30)
+                self.signed = self.value < (2 << 30) if _signed is None else _signed
             elif store_size == 8:
                 self.bytes = bytes(ctypes.c_int64(self.value))
-                self.signed = self.value < (2 << 62)
+                self.signed = self.value < (2 << 62) if _signed is None else _signed
             else:
                 raise ValueException("{} is not a valid store size".format(self.store_size))
         except ValueError:

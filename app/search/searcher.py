@@ -72,6 +72,7 @@ class Searcher:
             if self.progress:
                 self.progress.add_constraint(0, self.total_size, 1.0)
         elif search_type == self.SEARCH_TYPE_COMPARE_CAPTURE:
+            self.signed = False
             if self.progress:
                 self.progress.reset()
                 self.progress.add_constraint(0, self.total_size, 1.0)
@@ -158,6 +159,7 @@ class Searcher:
             self.mem_path.mkdir(exist_ok=True)
         for f in self.mem_path.glob("*.cap"):
             os.unlink(f)
+        self.capture_files.clear()
 
     def has_results(self):
         try:

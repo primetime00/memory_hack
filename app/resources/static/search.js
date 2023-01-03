@@ -25,7 +25,7 @@
 
     var li_template = (['<ons-list-item class="result-row">',
           '<ons-row>',
-            '<ons-col align="center" width="50%" class="col ons-col-inner">',
+            '<ons-col align="center" width="65%" class="col ons-col-inner">',
               '<ons-row>',
                 '<ons-col width="100%" align="center" class="col ons-col-inner address">##address##</ons-col>',
               '</ons-row>',
@@ -33,7 +33,10 @@
                 '<ons-col width="100%" align="center" class="col ons-col-inner"><input tabIndex="-1" type="text" id="result_value_##index##" data-address="##address##" name="search_value" class="text-input text-input--material r-value" value="##value##" onkeydown="search.result_change(this)" onblur="search.result_change(this)" autocomplete="chrome-off"></ons-col>',
               '</ons-row>',
             '</ons-col>',
-            '<ons-col align="center" width="40%" class="col ons-col-inner">',
+            '<ons-col align="center" width="7%" class="col ons-col-inner">',
+                '<label class="checkbox checkbox--material"><input tabIndex="-1" id="search_freeze_##index##" type="checkbox" class="checkbox__input checkbox--material__input freeze" data-address="##address##" onchange="search.result_freeze(this, ##index##)"> <div class="checkbox__checkmark checkbox--material__checkmark"></div>',
+            '</ons-col>',
+            '<ons-col align="center" width="18%" class="col ons-col-inner">',
                 '<ons-col align="center" width="98px" class="col ons-col-inner"><ons-button modifier="quiet" name="add_button" data-address="##address##" onclick="search.copy_result(##index##, this)">Copy</ons-button></ons-col>',
             '</ons-col>',
           '</ons-row>',
@@ -73,8 +76,17 @@
         }
     }
 
-    search.result_freeze = function(ele) {
+    search.result_freeze = function(ele, index) {
         $.send('/search', {'command': 'SEARCH_FREEZE', 'address': ele.dataset.address, 'freeze': ele.checked}, on_search_status)
+    }
+
+    search.on_return_pressed = function(ele) {
+        if (!btn_search_button.prop('disabled')) {
+            if(event.key === 'Enter' || event.key === 'Return' || event.keyCode == 13) {
+                search.on_search_clicked()
+                ele.blur()
+            }
+        }
     }
 
     search.on_search_clicked = function() {
@@ -97,6 +109,7 @@
     search.on_reset_clicked = function() {
         btn_reset_button.attr('disabled', 'disabled')
         btn_search_button.attr('disabled', 'disabled')
+        $("input.freeze").prop( "checked", false );
         $.send('/search', { "command": "SEARCH_RESET" }, on_search_status);
     };
 
@@ -155,7 +168,7 @@
     };
 
     search.copy_result = function(index, element) {
-        document.clipboard.copy({'address': current_search_results[index].address, 'value': current_search_results[index].value})
+        document.clipboard.copy({'address': current_search_results[index].address.toString(16), 'value': {'Actual': current_search_results[index].value, 'Display': current_search_results[index].value.toString()}})
     }
 
     search.clipboard_data_copied = function(data) {
@@ -164,25 +177,31 @@
         }
     }
     search.clipboard_data_pasted = function(data) {
+        console.log('data', data)
         if (sel_search_type.val() === 'unknown_near') {
+            if (has(data, 'resolved')) {
+                inp_search_value.val(data.resolved)
+                update()
+                return
+            }
             if (has(data, 'address')) {
-                inp_search_value.val(data.address.toString(16).toUpperCase())
+                inp_search_value.val(data.address)
                 update()
                 return
             }
         }
-        if (sel_search_type.val() === 'array') {
+        if (sel_search_size.val() === 'array') {
             if (has(data, 'aob')) {
                 inp_search_value.val(data.aob)
             } else {
                 sel_search_size.val('byte_4')
                 update()
-                inp_search_value.val(data.value)
+                inp_search_value.val(data.value.Display)
             }
             update()
         } else {
             if (has(data, 'value')) {
-                inp_search_value.val(data.value)
+                inp_search_value.val(data.value.Display)
             } else {
                 sel_search_size.val('array')
                 update()
@@ -879,8 +898,6 @@
             }
         }
     }
-
-
 
     function populate_results(results, is_array) {
         current_search_results = results

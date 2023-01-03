@@ -10,6 +10,7 @@
     var code_list;
     var code_data;
     var aob_resolve_map = {}
+    var pointer_resolve_map = {}
     var value_map = {}
     var repeater = undefined
 
@@ -121,9 +122,9 @@
             items = $(popover).find('ons-list-item')
             for (i=0; i<items.length; i++) {
                 var item = items[i]
-                if (item.getAttribute("name") === 'copy_clipboard' && document.clipboard.has_address() && aob_resolve_map.hasOwnProperty(index) && aob_resolve_map[index].length > 0) {
-                    $(item).removeClass('hidden')
-                }
+                //if (item.getAttribute("name") === 'copy_clipboard' && document.clipboard.has_address() && aob_resolve_map.hasOwnProperty(index) && aob_resolve_map[index].length > 0) {
+                //    $(item).removeClass('hidden')
+                //}
                 $(item).bind('click', {list_id: item.getAttribute("name"), code_index: index}, (event) => {codelist.option_clicked(event.data.list_id, event.data.code_index); popover.hide()})
             }
             popover.show("#"+ele.id);
@@ -158,7 +159,10 @@
                 var source = code_data[code_index]['Source']
                 var dt = {'title': 'Copy Code'}
                 if (source === 'address') {
-                    dt['address'] = code_data[code_index]['Address'].toString(16).toUpperCase()
+                    dt['address'] = code_data[code_index]['Address']
+                } else if (source === 'pointer') {
+                    dt['pointer'] = code_data[code_index]['Address']
+                    dt['offsets'] = code_data[code_index]['Offsets']
                 } else {
                     dt['aob'] = code_data[code_index]['AOB']
                     dt['offset'] = code_data[code_index]['Offset']
@@ -172,7 +176,6 @@
                 var new_address = document.clipboard.data.address
                 var offset = parseInt(code_data[code_index].Offset, 16)
                 var selected = code_data[code_index].Selected
-                //var resolved = aob_resolve_map[code_index][0] - offset
                 var resolved = selected - offset
                 var new_offset = new_address - resolved
                 var cmd = { 'command': "CODELIST_ADD_CODE", 'type': 'aob',
@@ -241,6 +244,32 @@
         }
     }
 
+    codelist.copy_code = function(index, element) {
+        var source = code_data[index]['Source']
+        var data;
+        if (source === 'address') {
+            data = {'address': code_data[index]['Address'], 'value': value_map[index]}
+        } else if (source === 'pointer') {
+            data = {'address': code_data[index]['Address'], 'value': value_map[index], 'offsets': code_data[index]['Offsets']}
+            if (has(pointer_resolve_map, index.toString())) {
+                data['resolved'] = pointer_resolve_map[index]
+            }
+        } else {
+            var selected = has(code_data[index], 'Selected') && code_data[index].Selected >=0 ? code_data[index].Selected : -1
+            if (selected >= 0) {
+                data = {'address': aob_resolve_map[index][selected], 'value': value_map[index], 'aob': code_data[index]['AOB'], 'offset': code_data[index]['Offset']}
+            } else {
+                if (aob_resolve_map[index].length > 0) {
+                    data = {'address': aob_resolve_map[index][0], 'value': value_map[index], 'aob': code_data[index]['AOB'], 'offset': code_data[index]['Offset']}
+                } else {
+                    data = {'aob': code_data[index]['AOB'], 'offset': code_data[index]['Offset']}
+                }
+            }
+        }
+        document.clipboard.copy(data)
+    }
+
+
     codelist.clipboard_data_copied = function(data) {
         if (sel_codelist_process.val() !== '_null') {
             btn_paste_code[0].show()
@@ -252,13 +281,13 @@
         var address = ''
         if (has(data, 'offsets')) { //this will be a pointer
             type = 'pointer'
-            address = has(data, 'address') ? parseInt(data.address).toString(16) : data.base_address
+            address = has(data, 'address') ? data.address : data.base_address
         } else if (has(data, 'aob')) { //must be an aob
             type = 'aob'
             address = 0
         } else { //an address
             type = 'address'
-            address = has(data, 'address') ? parseInt(data.address).toString(16) : data.base_address
+            address = has(data, 'address') ? data.address : data.base_address
         }
         var cmd = { 'command': "CODELIST_ADD_CODE", 'type': type,
                               'address': address,
@@ -286,7 +315,7 @@
             component_code_list.empty()
             if (result.file_data === null) {
                 code_list = undefined
-                code_data = []
+                code_data = {}
             } else {
                 code_list = component_code_list
                 code_list.setup(result, code_list)
@@ -390,7 +419,7 @@
         'setup': (result, _this) => {
             if (has(result, 'file_data')) {
                 _this.children = []
-                result.file_data.forEach((item, index) => {
+                $.each(result.file_data, ( index, item ) => {
                     var head = component_code_header.create(index, result.file_data[index])
                     var comp = component_code.create(index, result.file_data[index])
                     _this.children.push([head, comp])
@@ -402,16 +431,55 @@
             }
             if (has(result, 'results')) {
                 aob_resolve_map = {}
+                pointer_resolve_map = {}
                 value_map = {}
-                result.results.forEach((res, index) => {
-                    if (index < _this.children.length) {
-                        _this.children[index][0].setup(res, _this.children[index][0])
-                        _this.children[index][1].setup(res, _this.children[index][1])
-                    }
+                $.each(result.results, ( id, res ) => {
+                    var index = _this.children.findIndex((item) => {return item[0].id == component_code_header.id+id})
+                    _this.children[index][0].setup(res, _this.children[index][0])
+                    _this.children[index][1].setup(res, _this.children[index][1])
                 });
             }
+            else if (has(result, 'remove_index')) {
+                var id = result.remove_index
+                var index = _this.children.findIndex((item) => {return item[0].id == component_code_header.id+id})
+                _this.children[index][0].obj.remove()
+                _this.children[index][1].obj.remove()
+                _this.children.splice(index, 1)
+            }
+            else if (has(result, 'new_code')) {
+                var code = result.new_code
+                var head = component_code_header.create(result.index, code)
+                var comp = component_code.create(result.index, code)
+                _this.children.push([head, comp])
+                _this.obj.append(head.obj)
+                _this.obj.append(comp.obj)
+                code_data[result.index] = code
+                head.setup(code, head)
+                comp.setup(code, comp)
+                apply_events(head)
+                apply_events(comp)
+            }
+            else if (has(result, 'edit_code')) {
+                var code = result.edit_code
+                var id = result.index
+                var index = _this.children.findIndex((item) => {return item[0].id == component_code_header.id+id})
+                var pos = _this.obj.children().index(_this.children[index][0].obj)
+                _this.children[index][0].obj.remove()
+                _this.children[index][1].obj.remove()
+                _this.children.splice(index, 1)
+                var head = component_code_header.create(result.index, code)
+                var comp = component_code.create(result.index, code)
+                _this.children.push([head, comp])
+                _this.obj.insertAt(pos, head.obj)
+                _this.obj.insertAt(pos+1, comp.obj)
+                code_data[result.index] = code
+                apply_events(head)
+                apply_events(comp)
+                head.setup(code, head)
+                comp.setup(code, comp)
+            }
         },
-        'update': (_this) => {console.log('i update')},
+        'update': (_this) => {},
         'template': '<ons-list id="code_list">##code_components##</ons-list>',
         'empty': () => {
             $('#code_list').empty()
@@ -431,7 +499,7 @@
                 item.setup(result, item)
             })
         },
-        'update': (_this) => {console.log('code item update')},
+        'update': (_this) => {},
         'template': '<ons-list-header id="##id##" style="background-color:#ddd;"></ons-list-header>',
         'create': (index, data) => {
             var t = {...component_code_header};
@@ -460,7 +528,7 @@
                 item.setup(result, item)
             })
         },
-        'update': (_this) => {console.log('code item update')},
+        'update': (_this) => {},
         'template': '<ons-list-item id="##id##" modifier="longdivider"></ons-list-item>',
         'create': (index, data) => {
             var t = {...component_code};
@@ -497,14 +565,14 @@
                 item.setup(result, item)
             })
         },
-        'update': (_this) => {console.log('code name update')},
+        'update': (_this) => {},
         'template': `<ons-row id="##id##" style="margin-bottom:10px; margin-top:0px;">
                         <ons-col align="center" width="75%" class="col ons-col-inner">
                         </ons-col>
                         <ons-col align="center" width="10%" class="col ons-col-inner">
                         </ons-col>
                     </ons-row>`,
-        'create': index => {
+        'create': (index) => {
             var t = {...component_row_name};
             t.id = component_row_name.id+index
             t.index = index
@@ -528,7 +596,7 @@
                 _this.obj.val(result.Name)
             }
         },
-        'update': (_this) => {console.log('code name update')},
+        'update': (_this) => {},
         'template': '<input tabIndex="-1" type="text" id="##id##" name="code_address" class="text-input text-input--material text-full" onkeydown="codelist.code_name_changed(false, this, ##index##)" onblur="codelist.code_name_changed(true, this, ##index##)" value="Name" autocomplete="chrome-off" autocapitalize="off" style="font-weight: bold;">',
         'create': index => {
             var t = {...component_code_name};
@@ -545,9 +613,9 @@
         'index': -1,
         'setup': (result, _this) => {
         },
-        'update': (_this) => {console.log('code name update')},
+        'update': (_this) => {},
         'template': '<button class="tp" onclick="codelist.code_menu_clicked(this, ##index##)" id="##id##"><div class="navigation"></div>',
-        'create': index => {
+        'create': (index, position) => {
             var t = {...component_code_options};
             t.id = component_code_options.id+index
             t.index = index
@@ -566,13 +634,15 @@
                 item.setup(result, item)
             })
         },
-        'update': (_this) => {console.log('code name update')},
+        'update': (_this) => {},
         'template': `<ons-row id="##id##">
-                        <ons-col align="center" width="25%" class="col ons-col-inner">
+                        <ons-col align="center" width="20%" class="col ons-col-inner">
                         </ons-col>
                         <ons-col align="center" width="55%" class="col ons-col-inner">
                         </ons-col>
-                        <ons-col align="right" width="15%" class="col ons-col-inner">
+                        <ons-col class="checkbox--grid" align="right" width="7%" class="col ons-col-inner">
+                        </ons-col>
+                        <ons-col align="right" width="12%" class="col ons-col-inner">
                         </ons-col>
                     </ons-row>`,
         'create': index => {
@@ -587,7 +657,9 @@
             t.obj.find('ons-col').eq(1).append(cc_value.obj)
             var cc_freeze = component_code_freeze.create(index)
             t.obj.find('ons-col').eq(2).append(cc_freeze.obj)
-            t.children = [cc_size, cc_value, cc_freeze]
+            var cc_copy = component_code_copy.create(index)
+            t.obj.find('ons-col').eq(3).append(cc_copy.obj)
+            t.children = [cc_size, cc_value, cc_freeze, cc_copy]
             return t;
         },
         'children': []
@@ -601,7 +673,7 @@
                 _this.obj.val(result.Type)
             }
         },
-        'update': (_this) => {console.log('code name update')},
+        'update': (_this) => {},
         'template': `<select name="code_size" id="##id##" class="select-input select-input--material" onchange="codelist.code_size_changed(this, ##index##)">
                         <option value="byte_1">BYTE</option>
                         <option value="byte_2">2 BYTES</option>
@@ -627,15 +699,15 @@
                 if ($(":focus")[0] && $(":focus")[0].id === _this.obj[0].id){
                     return
                 }
-                _this.obj.val(result.Value)
-                if (result.Value == '??') {
+                _this.obj.val(result.Value.Display)
+                if (result.Value.Display.startsWith('?')) {
                     _this.obj.attr('disabled', 'disabled')
                 } else {
                     _this.obj.removeAttr('disabled')
                 }
             }
         },
-        'update': (_this) => {console.log('code name update')},
+        'update': (_this) => {},
         'template': '<input tabIndex="-1" inputmode="decimal" autocomplete="chrome-off" type="text" id="##id##" name="code_value" class="text-input text-input--material text-full r-value" onkeydown="codelist.code_value_changed(false, this, ##index##)" onblur="codelist.code_value_changed(true, this, ##index##)">',
         'create': index => {
             var t = {...component_code_value};
@@ -664,13 +736,31 @@
             }
 
         },
-        'update': (_this) => {console.log('code name update')},
+        'update': (_this) => {},
         'template': '<label class="checkbox checkbox--material"><input tabIndex="-1" id="##id##" type="checkbox" class="checkbox__input checkbox--material__input" onchange="codelist.code_freeze_changed(this, ##index##)"> <div class="checkbox__checkmark checkbox--material__checkmark"></div>',
         'create': index => {
             var t = {...component_code_freeze};
             t.id = component_code_freeze.id+index
             t.index = index
             t.template = component_code_freeze.template.replaceAll("##index##", index).replaceAll('##id##', t.id)
+            t.obj = $(ons.createElement(t.template))
+            return t;
+        }
+    }
+    var component_code_copy = {
+        'id': 'code_component_copy_',
+        'obj': undefined,
+        'index': -1,
+        'setup': (result, _this) => {
+
+        },
+        'update': (_this) => {},
+        'template': '<ons-button modifier="quiet" name="add_button" data-address="##address##" onclick="codelist.copy_code(##index##, this)"><ons-icon icon="md-copy"></ons-icon></ons-button>',
+        'create': index => {
+            var t = {...component_code_copy};
+            t.id = component_code_copy.id+index
+            t.index = index
+            t.template = component_code_copy.template.replaceAll("##index##", index).replaceAll('##id##', t.id)
             t.obj = $(ons.createElement(t.template))
             return t;
         }
@@ -685,7 +775,7 @@
                 item.setup(result, item)
             })
         },
-        'update': (_this) => {console.log('code name update')},
+        'update': (_this) => {},
         'template': `<ons-row id="##id##">
                         <ons-col align="center" width="20%" class="col ons-col-inner">
                             Address:
@@ -719,7 +809,7 @@
                 }
             }
         },
-        'update': (_this) => {console.log('code name update')},
+        'update': (_this) => {},
         'template': '<input tabIndex="-1" type="text" id="##id##" name="code_address" class="text-input text-input--material text-full r-value" oninput="codelist.address_value_changed(this)" readonly>',
         'create': index => {
             var t = {...component_code_address};
@@ -740,7 +830,7 @@
                 item.setup(result, item)
             })
         },
-        'update': (_this) => {console.log('code name update')},
+        'update': (_this) => {},
         'template': `<ons-row id="##id##">
                         <ons-col align="center" width="20%" class="col ons-col-inner">
                             AOB:
@@ -758,9 +848,9 @@
             t.obj = $(ons.createElement(t.template))
             var cc_aob = component_code_aob.create(index)
             t.obj.find('ons-col').eq(1).append(cc_aob.obj)
-            var cc_copy = component_copy.create(index)
-            t.obj.find('ons-col').eq(2).append(cc_copy.obj)
-            t.children = [cc_aob, cc_copy]
+            var cc_aob_address_copy = component_copy_aob_address.create(index)
+            t.obj.find('ons-col').eq(2).append(cc_aob_address_copy.obj)
+            t.children = [cc_aob, cc_aob_address_copy]
             return t;
         },
         'children': []
@@ -774,7 +864,7 @@
                 _this.obj.val(result.AOB)
             }
         },
-        'update': (_this) => {console.log('code name update')},
+        'update': (_this) => {},
         'template': '<input tabIndex="-1" type="text" id="##id##" name="code_address" class="text-input text-input--material text-full r-value" oninput="codelist.aob_value_changed(this)" readonly>',
         'create': index => {
             var t = {...component_code_aob};
@@ -786,8 +876,8 @@
         }
     }
 
-    var component_copy = {
-        'id': 'code_component_copy_',
+    var component_copy_aob_address = {
+        'id': 'code_component_copy_aob_address_',
         'obj': undefined,
         'index': -1,
         'setup': (result, _this) => {
@@ -797,13 +887,13 @@
                 _this.obj.hide()
             }
         },
-        'update': (_this) => {console.log('code name update')},
+        'update': (_this) => {},
         'template': '<ons-button id="##id##" modifier="material--flat" onclick="codelist.address_copy(##index##)"><ons-icon style="color:#777;" size="26px" icon="md-copy"></ons-icon></ons-button>',
         'create': index => {
-            var t = {...component_copy};
-            t.id = component_copy.id+index
+            var t = {...component_copy_aob_address};
+            t.id = component_copy_aob_address.id+index
             t.index = index
-            t.template = component_copy.template.replaceAll("##index##", index).replaceAll('##id##', t.id)
+            t.template = component_copy_aob_address.template.replaceAll("##index##", index).replaceAll('##id##', t.id)
             t.obj = $(ons.createElement(t.template))
             return t;
         }
@@ -818,7 +908,7 @@
                 item.setup(result, item)
             })
         },
-        'update': (_this) => {console.log('code name update')},
+        'update': (_this) => {},
         'template': `<ons-row id="##id##">
                         <ons-col align="center" width="20%" class="col ons-col-inner">
                             Offset:
@@ -864,7 +954,7 @@
                 _this.obj.val(result.Offset)
             }
         },
-        'update': (_this) => {console.log('code name update')},
+        'update': (_this) => {},
         'template': '<input tabIndex="-1" type="text" id="##id##" name="code_address" class="text-input text-input--material text-full" oninput="codelist.offset_value_changed(this)" readonly>',
         'create': index => {
             var t = {...component_code_offset};
@@ -882,34 +972,26 @@
         'setup': (result, _this) => {
             if (has(result, 'Addresses')) {
                 aob_resolve_map[_this.index] = []
-                if (result.Addresses != null) {
-                    aob_resolve_map[_this.index] = result.Addresses
+                if (result.Addresses.Display.length > 0) {
+                    aob_resolve_map[_this.index] = result.Addresses.Display
                     if ($(":focus")[0] && $(":focus")[0].id === _this.obj[0].id){
                         return
                     }
                     _this.obj.empty()
-                    result.Addresses.forEach((item, index) =>{
-                        var v = item.toString(16).toUpperCase()
+                    result.Addresses.Display.forEach((item, index) =>{
                         _this.obj.append($('<option>', {
-                            value: v,
-                            text: v
+                            value: item,
+                            text: item
                         }));
                     })
-                    if (has(result, 'Selected') && result.Selected !== null) {
-                        var val = result.Selected.toString(16).toUpperCase()
-                        if (_this.obj.find(`option[value="${val}"]`).length > 0) {
-                            _this.obj.val(val)
-                            code_data[_this.index]['Selected'] = result.Selected
-                        }
-                    }
                 }
             }
         },
-        'update': (_this) => {console.log('code name update')},
+        'update': (_this) => {},
         'template': '<select id=##id## size="3" style="min-width:100px;"></select>',
         'changed': (_this) => {
-            _this.selected = _this.obj.val()
-            $.send('/codelist', {'command': 'CODELIST_AOB_SELECT', 'index': _this.index, 'selected': _this.selected}, () => {
+            _this.selected = _this.obj.prop('selectedIndex')
+            $.send('/codelist', {'command': 'CODELIST_AOB_SELECT', 'index': _this.index, 'selected': _this.selected, 'select_index': _this.obj.prop('selectedIndex')}, () => {
                 code_data[_this.index]['Selected'] = _this.selected
             })
         },
@@ -929,7 +1011,7 @@
         'index': -1,
         'setup': (result, _this) => {
         },
-        'update': (_this) => {console.log('code name update')},
+        'update': (_this) => {},
         'template': '<ons-button modifier="quiet" id="##id##" onclick="codelist.on_refresh(this, ##index##)">Refresh</ons-button>',
         'create': index => {
             var t = {...component_code_offset_refresh};
@@ -950,7 +1032,7 @@
                 item.setup(result, item)
             })
         },
-        'update': (_this) => {console.log('code name update')},
+        'update': (_this) => {},
         'template': `<ons-row id="##id##">
                         <ons-row>
                             <ons-col align="center" width="20%" class="col ons-col-inner">
@@ -991,7 +1073,7 @@
                 _this.obj.val(result.Offsets)
             }
         },
-        'update': (_this) => {console.log('code name update')},
+        'update': (_this) => {},
         'template': '<input tabIndex="-1" type="text" id="##id##" name="code_address" class="text-input text-input--material text-full" oninput="codelist.offset_value_changed(this)" readonly>',
         'create': index => {
             var t = {...component_code_offsets};
@@ -1008,10 +1090,11 @@
         'index': -1,
         'setup': (result, _this) => {
             if (has(result, 'Resolved')) {
-                _this.obj.val(parseInt(result.Resolved).toString(16).toUpperCase())
+                pointer_resolve_map[_this.index] = result.Resolved.Display
+                _this.obj.val(result.Resolved.Display)
             }
         },
-        'update': (_this) => {console.log('code name update')},
+        'update': (_this) => {},
         'template': '<input tabIndex="-1" type="text" id="##id##" name="code_address" class="text-input text-input--material text-full" oninput="codelist.offset_value_changed(this)" readonly>',
         'create': index => {
             var t = {...component_code_offsets_address};
@@ -1029,7 +1112,7 @@
         'obj': undefined,
         'setup': (result, _this) => {
         },
-        'update': (_this) => {console.log('code name update')},
+        'update': (_this) => {},
         'setup': (data) => {
             if (has(data, 'title')) {
                 component_code_dialog.obj.find('p').text(data.title)
@@ -1124,7 +1207,7 @@
             else if ($("#add_code_type").val() === 'pointer') {
                 var addr = $("#add_code_address").val()
                 var offsets = $("#add_code_offsets").val()
-                if (/^\d+(, ?\d+)*$/i.test(offsets) && ((/^(?!.{256,})(?!(aux|clock\$|con|nul|prn|com[1-9]|lpt[1-9])(?:$|\.))[^ ][ \.\w-$()+=[\];#@~,&amp;']+[^\. ]:\d+\+[0-9a-f]+$/i.test(addr)) || /^[0-9A-F]{5,16}$/i.test(addr))) {
+                if (/^[0-9a-f]+(, ?[0-9a-f]+)*$/i.test(offsets) && ((/^(?!.{256,})(?!(aux|clock\$|con|nul|prn|com[1-9]|lpt[1-9])(?:$|\.))[^ ][ \.\w-$()+=[\];#@~,&amp;']+[^\. ]:\d+\+[0-9a-f]+$/i.test(addr)) || /^[0-9A-F]{5,16}$/i.test(addr))) {
                     $("#add_code_button").removeAttr('disabled')
                 } else {
                     $("#add_code_button").attr('disabled', 'disabled')

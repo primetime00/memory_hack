@@ -1,18 +1,28 @@
 import ctypes
 from typing import List, Union
 
+import mem_edit
 from mem_edit import Process
 
 from app.script_common.aob import AOB
 from app.search.searcher import Searcher
+from app.search.searcher_multi import SearcherMulti
+from app.helpers.search_results import SearchResults
+from app.helpers.directory_utils import memory_directory
 
 ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, ctypes.Union]
 
 class ScriptUtilities:
-    def __init__(self, searcher: Searcher):
-        self.searcher: Searcher = searcher
+    def __init__(self, mem: mem_edit.Process, name: str, multi:bool = True):
+        self.name = name
+        self.multi = multi
+        self.process = mem
+        self.searcher: Searcher = None
+
 
     def search_aob(self, aob: AOB):
+        if self.searcher is None:
+            self.create_searcher()
         self.searcher.set_search_size('array')
         self.searcher.search_memory_value(aob.get_aob_string())
         if len(self.searcher.results) == 0:
@@ -20,13 +30,15 @@ class ScriptUtilities:
         return [x['address'] for x in self.searcher.results[0:40]]
 
     def compare_aob(self, aob: AOB):
+        if self.searcher is None:
+            self.create_searcher()
         size = aob.aob.aob_item['size']
         values = aob.aob.aob_item['aob_bytes']
         bases = []
         for base in aob.get_bases():
             found = True
             try:
-                buf = self.searcher.memory.read_memory(base, (ctypes.c_ubyte * size)())
+                buf = self.process.read_memory(base, (ctypes.c_ubyte * size)())
                 for i in range(0, len(buf)):
                     if values[i] > 255:
                         continue
@@ -79,6 +91,8 @@ class ScriptUtilities:
 
     def search_all_memory(self, mem: Process, aob: AOB, filter_func = None, filter_args=None) -> List:
         found = []
+        if self.searcher is None:
+            self.create_searcher()
         for start, stop in mem.list_mapped_regions(True):
             try:
                 region_buffer = (ctypes.c_byte * (stop - start))()
@@ -91,8 +105,17 @@ class ScriptUtilities:
                 pass
         return found
 
-    def search_aob_all_memory(self, mem: Process, aob: AOB) -> List:
-        return self.search_all_memory(mem, aob, filter_func=self._filter if aob.has_wildcards() else None, filter_args=aob)
+    def search_aob_all_memory(self, aob: AOB) -> List:
+        if self.searcher is None:
+            self.create_searcher()
+        self.searcher.search_memory_value(aob.get_aob_string())
+        with self.searcher.results.db() as conn:
+            res = self.searcher.results.get_results(conn, _count=4).fetchall()
+            if len(res) == 0:
+                return []
+            return [x[0] for x in res]
+
+        #return self.search_all_memory(mem, aob, filter_func=self._filter if aob.has_wildcards() else None, filter_args=aob)
 
     def compare_aob2(self, mem:Process, addr:int, aob:AOB):
         res = True
@@ -110,3 +133,10 @@ class ScriptUtilities:
             if res and values[i] != mem[i]:
                 res = False
         return res, new_values, aob.aob.aob_item['aob_string']
+
+    def create_searcher(self):
+        if self.multi:
+            self.searcher = SearcherMulti(self.process, results=SearchResults(db_path=memory_directory.joinpath("{}.db".format(self.name))))
+        else:
+            self.searcher = Searcher(self.process, results=SearchResults(db_path=memory_directory.joinpath("{}.db".format(self.name))))
+        self.searcher.set_search_size('array')

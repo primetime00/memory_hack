@@ -135,6 +135,9 @@ class IntSearchBuffer(SearchBuffer):
                     self.results.clear()
             start = result + 1
             result = haystack.find(needle, start)
+        if self.result_callback and len(self.results) >= self.result_threshold:
+            self.result_callback(self.results)
+            self.results.clear()
         return len(haystack)
 
     def find_by_operation(self, operation:ValueOperation, args=None):
@@ -201,20 +204,19 @@ class AOBSearchBuffer(SearchBuffer):
     def _haystack_search(self, value: AOB):
         haystack = bytes(self.buffer)
         needle = bytes(value.value.get_search_value())
-        results = []
         start = 0
         result = self._haystack_find(haystack, needle, start, value.value.aob_item['aob_bytes'], value.value.get_offset())
         value_length = len(value.value.get_array())
         while start < len(haystack) and result != -1:
-            results.append( (result+self.start_offset, bytes(self.buffer[result:result+value_length])) )
-            if self.result_callback and len(results) >= self.result_threshold:
-                self.result_callback(results)
-                results.clear()
+            self.results.append( (result+self.start_offset, bytes(self.buffer[result:result+value_length])) )
+            if self.result_callback and len(self.results) >= self.result_threshold:
+                self.result_callback(self.results)
+                self.results.clear()
             start = result + 1 + value.value.get_offset()
             result = self._haystack_find(haystack, needle, start, value.value.aob_item['aob_bytes'], value.value.get_offset())
-        if self.result_callback and len(results) > 0:
-            self.result_callback(results)
-            results.clear()
+        if self.result_callback and len(self.results) > 0:
+            self.result_callback(self.results)
+            self.results.clear()
         return len(haystack)
 
     def find_by_operation(self, operation:ValueOperation, args=None):

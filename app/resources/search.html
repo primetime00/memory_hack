@@ -50,7 +50,7 @@
       <ons-row id="row_search_value">
         <ons-col align="center" width="20%" class="col ons-col-inner"><span id="value_header">Value</span>:</ons-col>
         <ons-col align="center" width="40%" class="col ons-col-inner">
-          <input id="search_value" inputmode="decimal" name="search_value" class="text-input text-input--material r-value" oninput="search.search_value_changed(this.value)" autocomplete="off">
+          <input id="search_value" inputmode="decimal" name="search_value" class="text-input text-input--material r-value" onkeydown="search.on_return_pressed(this)" oninput="search.search_value_changed(this.value)" autocomplete="off">
         </ons-col>
         <ons-col align="center" width="50px" class="col ons-col-inner"><ons-button id="search_paste_button" modifier="material--flat" onclick="document.clipboard.paste(search)"><ons-icon style="color:#777;" size="28px" icon="md-paste"></ons-icon></ons-button></ons-col>
       </ons-row>
