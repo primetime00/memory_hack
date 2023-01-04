@@ -177,7 +177,6 @@
         }
     }
     search.clipboard_data_pasted = function(data) {
-        console.log('data', data)
         if (sel_search_type.val() === 'unknown_near') {
             if (has(data, 'resolved')) {
                 inp_search_value.val(data.resolved)

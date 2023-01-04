@@ -2,7 +2,6 @@ import copy
 import ctypes
 import json
 import os
-import re
 from threading import Thread, Lock, Event
 from typing import Union
 
@@ -15,6 +14,7 @@ from app.helpers.directory_utils import codes_directory
 from app.helpers.exceptions import AOBException
 from app.helpers.exceptions import CodelistException
 from app.helpers.memory_utils import get_ctype
+from app.helpers.process import BaseConvert
 from app.script_common.aob import AOB
 from app.script_common.utilities import ScriptUtilities
 
@@ -56,6 +56,7 @@ class CodeList(MemoryHandler):
         self.process_map = None
         self.base_lookup_map = {}
         self.component_index = 0
+        self.base_converter = BaseConvert()
 
         if not self.directory.exists():
             self.directory.mkdir(parents=True, exist_ok=True)
@@ -117,10 +118,7 @@ class CodeList(MemoryHandler):
         if code['Source'] == 'address':
             with self.update_lock:
                 code['Value'] = str(b.value)
-                if ':' in code['Address']:
-                    addr = self._convert_base(code['Address'])
-                else:
-                    addr = int(code['Address'], 16)
+                addr = self.base_converter.convert(self.mem(), code['Address'])
                 self.mem().write_memory(addr, b)
         elif code['Source'] == 'pointer':
             with self.update_lock:
@@ -422,12 +420,8 @@ class CodeList(MemoryHandler):
                 self.result_map.clear()
                 for key, code in self.code_data.items():
                     if code['Source'] == 'address':
-                        addr = code['Address']
                         try:
-                            if ':' in addr:
-                                addr = self._convert_base(addr)
-                            else:
-                                addr = int(addr, 16)
+                            addr = self.base_converter.convert(self.mem(), code['Address'])
                             read = self.get_read(code, addr)
                             code['Resolved'] = addr if addr > 0xffff else 0
                         except (ProcessLookupError, PermissionError):
@@ -440,14 +434,10 @@ class CodeList(MemoryHandler):
                         code['Value'] = read
                         self.result_map[key] = {'Value': {'Actual': read.value if read is not None else None, 'Display': str(read.value) if read is not None else '??'}}
                     elif code['Source'] == 'pointer':
-                        addr = code['Address']
                         offsets = [int(x.strip(), 16) for x in code['Offsets'].split(',')]
                         buf = ctypes.c_uint64()
                         try:
-                            if ':' in addr:
-                                addr = self._convert_base(addr)
-                            else:
-                                addr = int(addr, 16)
+                            addr = self.base_converter.convert(self.mem(), code['Address'])
                             for offset in offsets:
                                 self.mem().read_memory(addr, buf)
                                 addr = buf.value+offset
@@ -590,23 +580,3 @@ class CodeList(MemoryHandler):
         if self.freeze_thread and self.freeze_thread.is_alive():
             self.freeze_event.set()
             self.freeze_thread.join()
-
-    def _convert_base(self, addr):
-        if addr in self.base_lookup_map:
-            return self.base_lookup_map[addr]
-
-        base_data = re.split(':|\+', addr)
-        base_lk = base_data[0] + ':' + base_data[1]
-        if base_lk in self.base_lookup_map:
-            self.base_lookup_map[addr] = self.base_lookup_map[base_lk] + int(base_data[2], 16)
-            return self.base_lookup_map[addr]
-
-        if self.process_map is None:
-            from app.helpers.process import get_process_map
-            self.process_map = get_process_map(self.mem(), writeable_only=False)
-        match = [x for x in self.process_map if x['pathname'].endswith(base_data[0]) and x['map_index'] == int(base_data[1])]
-        if len(match) == 0:
-            raise CodelistException("Could not find base of {}".format(addr))
-        self.base_lookup_map[base_lk] = match[0]['start']
-        self.base_lookup_map[addr] = match[0]['start']+int(base_data[2], 16)
-        return self.base_lookup_map[addr]

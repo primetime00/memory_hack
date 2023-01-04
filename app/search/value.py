@@ -372,6 +372,9 @@ class AOB(Value):
     def get_ctype(self):
         return ctypes.c_ubyte
 
+    def write_bytes_to_memory(self, memory: mem_edit.Process, address: int):
+        data = bytes(self.value.aob_item['aob_bytes'])
+        memory.write_memory(address, (ctypes.c_byte * self.store_size)(*data))
 
     def compare_memory(self, memory: mem_edit.Process, address: int):
         try:
@@ -388,6 +391,6 @@ class AOB(Value):
             return -1
 
     def to_bytes(self):
-        return self.bytes
+        return bytes(self.value.aob_item['aob_bytes'])
 
 

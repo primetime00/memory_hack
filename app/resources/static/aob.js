@@ -225,20 +225,32 @@
     aob.clipboard_data_pasted = function(data) {
         if (sel_aob_search_type.val() === 'value') {
             if (has(data, 'value')) {
-                inp_address_value.val(data.value)
+                inp_address_value.val(data.value.Display)
             } else {
-                sel_aob_search_type.val('address')
-                update(sel_aob_search_type)
-                inp_address_value.val(parseInt(data.address).toString(16).toUpperCase())
+                if (has(data, 'address')) {
+                    sel_aob_search_type.val('address')
+                    update(sel_aob_search_type)
+                    if (has(data, 'resolved')) {
+                        inp_address_value.val(data.resolved)
+                    } else {
+                        inp_address_value.val(data.address)
+                    }
+                }
             }
             update(inp_address_value)
         } else {
             if (has(data, 'address')) {
-                inp_address_value.val(parseInt(data.address).toString(16).toUpperCase())
+                if (has(data, 'resolved')) {
+                    inp_address_value.val(data.resolved)
+                } else {
+                    inp_address_value.val(data.address)
+                }
             } else if (sel_aob_search_type.find('option[value="value"]').length > 0) {
-                sel_aob_search_type.val('value')
-                update(sel_aob_search_type)
-                inp_address_value.val(data.value)
+                if (has(data, 'value')) {
+                    sel_aob_search_type.val('value')
+                    update(sel_aob_search_type)
+                    inp_address_value.val(data.value.Display)
+                }
             }
             update(inp_address_value)
         }
@@ -1017,7 +1029,7 @@
             return
         }
         if (_type === 'address') {
-            value_valid = /^[0-9A-F]{5,16}$/i.test(_value)
+            value_valid = /^(?!.{256,})(?!(aux|clock\$|con|nul|prn|com[1-9]|lpt[1-9])(?:$|\.))[^ ][ \.\w-$()+=[\];#@~,&amp;']+[^\. ]:\d+\+[0-9a-f]+$/i.test(_value) || /^[0-9A-F]{5,16}$/i.test(_value)
         } else {
             var n = Number(_value)
             switch (_size) {

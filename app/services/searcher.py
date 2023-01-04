@@ -432,7 +432,7 @@ class Search(MemoryHandler):
             if size == 'array':
                 for i in range(0, len(results)):
                     v = results[i]
-                    byte_str = ' '.join(memory_utils.bytes_to_aob(v))
+                    byte_str = ' '.join(memory_utils.bytes_to_aob(v['value']))
                     results[i]['value'] = byte_str
             else:
                 for v in results:

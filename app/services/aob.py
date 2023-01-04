@@ -17,6 +17,7 @@ from app.helpers.dyn_html import DynamicHTML
 from app.helpers.exceptions import AOBException, BreakException
 from app.helpers.memory_handler import MemoryHandler
 from app.helpers.memory_utils import value_to_hex, bytes_to_aobstr
+from app.helpers.process import BaseConvert
 from app.helpers.progress import Progress
 
 
@@ -47,6 +48,7 @@ class AOB(MemoryHandler):
         self.current_name = ''
         self.set_current_name('')
         self.current_search_type = 'address'
+        self.base_converter = BaseConvert()
         self.current_address = 0
         self.current_range = 65536
         self.current_value = None
@@ -223,7 +225,8 @@ class AOB(MemoryHandler):
             resp.media['is_initial_search'] = ab_file.count_aob_results() == 0
             resp.media['number_of_results'] = ab_file.count_aob_results()
             resp.media['is_final'] = ab_file.is_final()
-            if self.current_search_type == 'address' and (not self.current_address or int(self.current_address, 16) <= 0xFFFF):
+            addr = self.base_converter.convert(self.mem(), str(self.current_address))
+            if self.current_search_type == 'address' and (not addr or addr <= 0xFFFF):
                 self.current_address = ""
             resp.media['value'] = self.current_value if self.current_search_type == 'value' else self.current_address
             resp.media['type'] = self.current_search_type
@@ -264,8 +267,9 @@ class AOB(MemoryHandler):
         def __init__(self, _memory, _name, _type=None, _address_value=None, _range=None, _size=None):
             super().__init__(target=self.process)
             self.memory: Process = _memory
+            self.base_converter = BaseConvert()
             self.current_name = _name
-            self.current_address = int(_address_value, 16) if _type == 'address' else 0
+            self.current_address = self.base_converter.convert(_memory, _address_value) if _type == 'address' else 0
             self.current_range = int(_range) if _range else 0
             if self.current_range <= 0:
                 raise AOBException('Range must be greater than 0.')
