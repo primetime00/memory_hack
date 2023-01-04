@@ -4,6 +4,7 @@ import os
 import time
 from typing import Union
 
+import mem_edit
 from mem_edit import Process
 
 from app.helpers.aob_value import AOBValue
@@ -453,6 +454,9 @@ class Searcher:
             return []
         with self.results.db() as conn:
             return [{'address': x[0], 'value': x[1]} for x in self.results.get_results(conn, _count=limit)]
+
+    def set_memory(self, mem: mem_edit.Process):
+        self.memory = mem
 
     def reset(self):
         if self.progress:

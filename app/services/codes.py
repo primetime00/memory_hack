@@ -117,19 +117,16 @@ class CodeList(MemoryHandler):
 
         if code['Source'] == 'address':
             with self.update_lock:
-                code['Value'] = str(b.value)
                 addr = self.base_converter.convert(self.mem(), code['Address'])
                 self.mem().write_memory(addr, b)
         elif code['Source'] == 'pointer':
             with self.update_lock:
                 if 'Resolved' in code and code['Resolved'] > 0:
-                    code['Value'] = str(b.value)
                     self.mem().write_memory(code['Resolved'], b)
         else:
             if code['AOB'] not in self.aob_map:
                 raise CodelistException('Could not write AOB value because it cannot be found')
             with self.update_lock:
-                code['Value'] = str(b.value)
                 for base in self.aob_map[code['AOB']].get_bases():
                     self.mem().write_memory(base+int(code['Offset'], 16), b)
 
@@ -140,10 +137,12 @@ class CodeList(MemoryHandler):
             raise CodelistException("Can't write code that isn't in the list")
         with self.update_lock:
             value = copy.copy(self.get_results()[index])
+
             code = self.code_data[index]
             code['Freeze'] = frozen
             if frozen:
-                self.freeze_map[index] = {'value': code['Value'], 'index': index, 'code': code}
+                dt = memory_utils.typeToCType[(code['Type'], code['Signed'])]
+                self.freeze_map[index] = {'value': dt(value['Value']['Actual']), 'index': index, 'code': code}
             else:
                 if index in self.freeze_map:
                     del self.freeze_map[index]
@@ -431,7 +430,6 @@ class CodeList(MemoryHandler):
                             read = None
                         except CodelistException:
                             read = None
-                        code['Value'] = read
                         self.result_map[key] = {'Value': {'Actual': read.value if read is not None else None, 'Display': str(read.value) if read is not None else '??'}}
                     elif code['Source'] == 'pointer':
                         offsets = [int(x.strip(), 16) for x in code['Offsets'].split(',')]
@@ -443,7 +441,6 @@ class CodeList(MemoryHandler):
                                 addr = buf.value+offset
                             read = self.get_read(code, addr)
                             code['Resolved'] = addr if addr > 0xffff else 0
-                            code['Value'] = read
                             if addr <= 0xffff:
                                 addr = None
                         except (ProcessLookupError, PermissionError):
@@ -472,7 +469,6 @@ class CodeList(MemoryHandler):
                         except AOBException:
                             read, addrs, selected = (None, None, None)
                         code['Selected'] = selected
-                        code['Value'] = read
                         self.result_map[key] = {'Value': {'Actual': read.value if read is not None else None, 'Display': str(read.value) if read is not None else '??'},
                                                 'Addresses': {'Actual': addrs, 'Display': ["{:X}".format(x) for x in addrs] if addrs is not None else []},
                                                 'Selected': selected}

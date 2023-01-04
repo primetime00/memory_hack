@@ -80,6 +80,9 @@ class Search(MemoryHandler):
 
     def set(self, data):
         self.round = 0
+        if self.searcher:
+            self.searcher.set_memory(self.mem())
+            self.searcher.reset()
         pass
 
 
@@ -90,6 +93,7 @@ class Search(MemoryHandler):
         if self.search_thread and self.search_thread.is_alive():
             self.searcher.cancel()
             self.search_thread.join()
+        self.progress.reset()
         self.stop_updater()
         self.searcher.reset()
         self.round = 0
@@ -134,6 +138,7 @@ class Search(MemoryHandler):
         if self.flow == self.FLOW_SEARCHING: #we are stopping
             self.searcher.cancel()
             self.search_thread.join()
+            self.progress.reset()
             if not self.searcher.get_cancel(): #was cancellation successful:
                 self.round = self.previous_stats['round']
                 self.flow = self.previous_stats['flow']
@@ -149,6 +154,7 @@ class Search(MemoryHandler):
         else:
             if self.type in ['increase', 'decrease', 'unchanged', 'changed', 'changed_by']:
                 self.type = 'equal_to'
+            self.progress.reset()
             self.stop_updater()
             self.flow = self.FLOW_START
             resp.media['results'] = []
