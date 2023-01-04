@@ -4,11 +4,11 @@ from typing import List, Union
 import mem_edit
 from mem_edit import Process
 
+from app.helpers.directory_utils import memory_directory
+from app.helpers.search_results import SearchResults
 from app.script_common.aob import AOB
 from app.search.searcher import Searcher
 from app.search.searcher_multi import SearcherMulti
-from app.helpers.search_results import SearchResults
-from app.helpers.directory_utils import memory_directory
 
 ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, ctypes.Union]
 

@@ -1,17 +1,10 @@
-import ctypes
-import json
 import platform
 import re
-from pathlib import Path
-from queue import Queue
-from threading import Thread
 
 from app.helpers.data_store import DataStore
-from app.helpers.directory_utils import scripts_memory_directory
 from app.helpers.process import get_process_map
 from app.script_common import BaseScript
 from app.script_ui import BaseUI, Button, Select, Input, Text
-from app.search.searcher_multi import SearcherMulti
 
 
 class PointerOffset(BaseScript):
@@ -120,64 +113,21 @@ class PointerOffset(BaseScript):
         if self.get_data("INPUT_CHANGE"):
             self.check_for_calculate()
 
-    def _find_address(self, ptr, pm):
-        for process in pm:
-            matcher = re.match(self.re_fn, ptr.strip())
-            if process['pathname'].endswith(matcher.group(1)) and process['map_index'] == int(matcher.group(2)):
-                return process['start'] + int(matcher.group(3), 16)
-        return None
-
-    def generate_pointer_text(self, pointers):
-        data = "<ons-row><strong>Valid results: {}</strong></ons-row>".format(len(pointers))
-        for p in pointers:
-            data += "<ons-row>"
-
-            pt = p['path'].split('/')[-1] if self.is_linux() else p['path'].split('\\')[-1]
-            data += "<ons-row>{}:{}+{:X}</ons-row>".format(pt, p['node'], p['base_offset'])
-            data += "<ons-row>"
-            for offset in p['offsets']:
-                data += '{:X}, '.format(offset)
-            data = data[0:-2]
-            data += "</ons-row>"
-            data += "<ons-row>"
-            base_address = '{}:{}+{:X}'.format(pt, p['node'], p['base_offset'])
-            copy_data = "{{'base_address': '{}', 'offsets': '{}'}}".format(base_address, ", ".join("{:X}".format(x) for x in p['offsets']))
-            data += '<ons-button modifier="quiet" name="copy_button" onclick="document.clipboard.copy({})">Copy</ons-button></ons-col>'.format(copy_data)
-            data += "</ons-row>"
-
-            data += "</ons-row>"
-        return data
-
     def is_linux(self):
         return self.get_data("SYSTEM") == 'Linux'
 
     def calculate_pointer(self):
         pointer_address = self.get_ui_control("POINTER_ADDRESS").get_text()
         pointer_offsets = self.get_ui_control("POINTER_OFFSETS").get_text()
-        output_address = self.get_ui_control("OUTPUT_ADDRESS").get_text()
-        pm = self.get_data("PROCESS_MAP")
-        if ':' in output_address:
-            output_address = self._find_address(output_address, pm)
-        else:
-            output_address = int(output_address, 16)
+        output_address = self.get_address(self.get_ui_control("OUTPUT_ADDRESS").get_text())
 
-        if ':' in pointer_address:
-            addr = self._find_address(pointer_address, pm)
-        else:
-            addr = int(pointer_address,16)
-
-        offsets = [int(o.strip(), 16) for o in pointer_offsets.split(',')]
-        try:
-            for offset in offsets:
-                read = self.get_memory().read_memory(addr, ctypes.c_uint64()).value
-                read = read + offset
-                addr = read
-        except Exception:
+        ptr = self.process_pointer(pointer_address, pointer_offsets, return_base=True)
+        if ptr is None:
             return None
-        base = addr - offsets[-1]
-        if output_address < base:
+        if output_address < ptr:
             return None
-        if output_address - base >= 4096:
+        if output_address - ptr >= 4096:
             return None
-        offsets[-1] = output_address - base
-        return {'pointer': self.get_ui_control("POINTER_ADDRESS").get_text(), 'offsets': ", ".join([str('{:X}'.format(x)) for x in offsets])}
+        offsets = self.string_to_offsets(pointer_offsets)
+        offsets[-1] = output_address - ptr
+        return {'pointer': self.get_ui_control("POINTER_ADDRESS").get_text(), 'offsets': self.offsets_to_string(offsets)}

@@ -15,8 +15,8 @@ from app.search.operations import GreaterThan, LessThan, GreaterThanFloat, LessT
     DecreaseOperation, \
     IncreaseOperationFloat, DecreaseOperationFloat, ChangedOperation, UnchangedOperation, ChangedOperationFloat, \
     UnchangedOperationFloat, ChangedByOperation, ChangedByOperationFloat
-from app.search.searcher_multi import SearcherMulti
 from app.search.searcher import Searcher
+from app.search.searcher_multi import SearcherMulti
 from app.search.value import Value
 
 ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, ctypes.Union]

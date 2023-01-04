@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import ctypes
 import sqlite3
+from contextlib import contextmanager
 from typing import Union
 
 from app.helpers.directory_utils import memory_directory
-from contextlib import contextmanager
 
 ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, ctypes.Union]
 

@@ -11,6 +11,7 @@ class BaseUI:
         self.on_enabled = None
         self.on_hidden = None
         self.on_process = None
+        self.on_process_args = None
 
         self.interact_queue = Queue()
         self.update_queue = Queue()
@@ -33,8 +34,9 @@ class BaseUI:
     def set_on_hidden(self, func: callable):
         self.on_hidden = func
 
-    def set_on_process(self, func: callable):
+    def set_on_process(self, func: callable, *args):
         self.on_process = func
+        self.on_process_args = args
 
     def get_return_data(self):
         return self.return_data
@@ -109,7 +111,7 @@ class BaseUI:
             func, args = self.interact_queue.get()
             func(self, *args)
         if self.on_process:
-            self.on_process(self)
+            self.on_process(self, self.on_process_args)
 
 
     def update(self):

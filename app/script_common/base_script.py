@@ -1,25 +1,30 @@
 import ctypes
+import re
 from typing import Union
 
 import mem_edit
 
-from app.helpers.directory_utils import scripts_memory_directory
-from app.helpers.search_results import SearchResults
+from app.helpers.process import get_process_map
 from app.script_common.aob import AOB
 from app.script_common.utilities import ScriptUtilities
 from app.script_ui._base import BaseUI
 from app.script_ui.list import ListUI
-from app.search.searcher_multi import SearcherMulti as Searcher
 
 ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, ctypes.Union]
 
 class BaseScript:
+
+    re_fn = r'^((?!(?:COM[0-9]|CON|LPT[0-9]|NUL|PRN|AUX|com[0-9]|con|lpt[0-9]|nul|prn|aux)|\s|[\.]{2,})[^\\\/:*"?<>|]{1,254}(?<![\s\.])):(\d+)\+([0-9a-f]+)$'
+    re_addr = '^[0-9A-F]{5,16}$'
+    re_of = r'^\d+(, ?\d+)*$'
+
     def __init__(self):
         self.memory: mem_edit.Process = None
         self.utilities: ScriptUtilities = None
         self.process_name:str = ""
         self.user_data = {}
         self.include_paths = []
+        self.path_cache = {}
         self.list_ui: ListUI = ListUI()
         self.build_ui()
 
@@ -44,6 +49,44 @@ class BaseScript:
 
     def get_memory(self) -> mem_edit.Process:
         return self.memory
+
+    def get_address(self, addr: str):
+        if addr in self.path_cache:
+            return self.path_cache[addr]
+        pm = self.get_data("_PROCESS_MAP")
+        if pm is None:
+            pm = get_process_map(self.memory, include_paths=self.include_paths)
+            self.put_data("_PROCESS_MAP", pm)
+        if ':' in addr:
+            for process in pm:
+                matcher = re.match(self.re_fn, addr.strip())
+                if process['pathname'].endswith(matcher.group(1)) and process['map_index'] == int(matcher.group(2)):
+                    res = process['start'] + int(matcher.group(3), 16)
+                    self.path_cache[addr] = res
+                    return res
+            return None
+        else:
+            return int(addr, 16)
+
+    def process_pointer(self, address: str, offsets: str, return_base: bool = False):
+        addr = self.get_address(address)
+        offset_values = [int(x.strip(), 16) for x in offsets.split(',')]
+        try:
+            offset = 0
+            for offset in offset_values:
+                read = self.get_memory().read_memory(addr, ctypes.c_uint64()).value
+                read = read + offset
+                addr = read
+            return addr - offset if return_base else addr
+        except Exception:
+            return None
+
+    def offsets_to_string(self, offsets: list):
+        return ", ".join("{:X}".format(x) for x in offsets)
+
+    def string_to_offsets(self, offsets: str):
+        return [int(x.strip(), 16) for x in offsets.split(",")]
+
 
     def set_process(self, proc: str):
         self.process_name = proc
