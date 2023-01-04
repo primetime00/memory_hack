@@ -59,7 +59,7 @@ class BaseScript:
             self.put_data("_PROCESS_MAP", pm)
         if ':' in addr:
             for process in pm:
-                matcher = re.match(self.re_fn, addr.strip())
+                matcher = re.match(self.re_fn, addr.strip(), re.IGNORECASE)
                 if process['pathname'].endswith(matcher.group(1)) and process['map_index'] == int(matcher.group(2)):
                     res = process['start'] + int(matcher.group(3), 16)
                     self.path_cache[addr] = res

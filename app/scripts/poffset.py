@@ -99,7 +99,7 @@ class PointerOffset(BaseScript):
             ele.update_queue.put({'op': "script", 'data': {'script': 'document.clipboard.copy({{"address": "{}", "offsets": "{}"}})'.format(rp['pointer'], rp['offsets'])}})
 
     def address_validator(self, txt: str):
-        if re.match(self.re_fn, txt.upper().strip()) or re.match(self.re_addr, txt.upper().strip()):
+        if re.match(self.re_fn, txt.upper().strip(), re.IGNORECASE) or re.match(self.re_addr, txt.upper().strip(), re.IGNORECASE):
             return True
         return False
 
