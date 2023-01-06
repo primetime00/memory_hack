@@ -225,7 +225,6 @@ class AOB(MemoryHandler):
             resp.media['is_initial_search'] = ab_file.count_aob_results() == 0
             resp.media['number_of_results'] = ab_file.count_aob_results()
             resp.media['is_final'] = ab_file.is_final()
-            print(self.current_address)
             addr = self.base_converter.convert(self.mem(), str(self.current_address))
             if self.current_search_type == 'address' and (not addr or addr <= 0xFFFF):
                 self.current_address = "0"
