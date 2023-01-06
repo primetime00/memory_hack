@@ -20,7 +20,7 @@ class PointerValidator(BaseScript):
         self.put_data("SYSTEM", platform.system())
 
     def get_name(self):
-        return "Pointer Search"
+        return "Pointer Verify"
 
     def get_app(self):
         return []

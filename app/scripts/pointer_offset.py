@@ -17,7 +17,7 @@ class PointerOffset(BaseScript):
         self.put_data("INPUT_CHANGE", False)
 
     def get_name(self):
-        return "Pointer Offseter"
+        return "Pointer Offset Tool"
 
     def get_app(self):
         return []
@@ -126,7 +126,7 @@ class PointerOffset(BaseScript):
             return None
         if output_address < ptr:
             return None
-        if output_address - ptr >= 4096:
+        if output_address - ptr > 0xFFFFF:
             return None
         offsets = self.string_to_offsets(pointer_offsets)
         offsets[-1] = output_address - ptr

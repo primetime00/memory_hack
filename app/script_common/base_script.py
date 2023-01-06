@@ -17,6 +17,7 @@ class BaseScript:
     re_fn = r'^((?!(?:COM[0-9]|CON|LPT[0-9]|NUL|PRN|AUX|com[0-9]|con|lpt[0-9]|nul|prn|aux)|\s|[\.]{2,})[^\\\/:*"?<>|]{1,254}(?<![\s\.])):(\d+)\+([0-9a-f]+)$'
     re_addr = '^[0-9A-F]{5,16}$'
     re_of = r'^\d+(, ?\d+)*$'
+    re_aob = r'^(([A-F0-9]{2}|\?{2})\s)*([A-F0-9]{2}|\?{2})$'
 
     def __init__(self):
         self.memory: mem_edit.Process = None

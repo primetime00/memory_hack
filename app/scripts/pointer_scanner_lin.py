@@ -31,8 +31,8 @@ class PointerScanner(BaseScript):
 
     def build_ui(self):
         self.add_ui_element(Select("PROCS", "Process", values=[('none', "None")], on_changed=self.ctrl_changed, children=[Button("REFRESH", "Refresh", on_pressed=self.refresh_pid)]))
-        self.add_ui_element(Input("ADDRESS", "Address", on_changed=self.ctrl_changed, change_on_focus=False, validator=self.address_validator, default_text="", children=[Button("PASTE", "Paste", on_pressed=self.ctrl_pressed)]))
-        self.add_ui_element(Input("OFFSET", "Offset", on_changed=self.ctrl_changed, change_on_focus=False, validator=self.offset_validator, default_text="4096"))
+        self.add_ui_element(Input("ADDRESS", "Address", on_changed=self.ctrl_changed, change_on_focus=False, default_text="", children=[Button("PASTE", "Paste", on_pressed=self.ctrl_pressed)]))
+        self.add_ui_element(Input("OFFSET", "Offset", on_changed=self.ctrl_changed, change_on_focus=False, default_text="4096"))
         self.add_ui_element(Select("LEVELS", "Levels", on_changed=self.ctrl_changed, values=[(str(x), str(x)) for x in range(1, 7)]))
         self.add_ui_element(MultiSelect("REGIONS", "Regions", on_changed=self.ctrl_changed, values=[(str(x), str(x)) for x in range(1, 7)]))
         self.get_ui_control("LEVELS").set_value("3")
@@ -117,9 +117,12 @@ class PointerScanner(BaseScript):
             self.check_for_start()
 
     def check_for_start(self):
-        if len(self.get_ui_control("ADDRESS").get_text()) > 4 and \
-                0 <= int(self.get_ui_control("OFFSET").get_text()) <= 0xFFFF and \
-                self.get_ui_control("REGIONS").get_selection():
+        addr = self.get_ui_control("ADDRESS").get_text()
+        offset = self.get_ui_control("OFFSET").get_text()
+        if not (self.address_validator(addr) and self.offset_validator(offset)):
+            self.get_ui_control("SEARCH").hide()
+            return
+        if len(addr) > 4 and 0 <= int(offset) <= 0xFFFFFF and self.get_ui_control("REGIONS").get_selection():
             self.get_ui_control("SEARCH").show()
         else:
             self.get_ui_control("SEARCH").hide()
