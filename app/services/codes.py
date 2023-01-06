@@ -559,8 +559,8 @@ class CodeList(MemoryHandler):
             aob = self.aob_map[code['AOB']]
             bases = aob.get_bases()
             for b in bases:
-                res, _, _ = self.utilities.compare_aob(self.mem(), b, aob)
-                if res:
+                res = self.utilities.compare_aob(aob)
+                if b in res:
                     address_list.append(b + int(code['Offset'], 16))
         return address_list
 
