@@ -130,6 +130,13 @@ class Searcher:
     def get_include_paths(self):
         return self.include_paths
 
+    def set_write_only(self, write_only: bool):
+        self.write_only = write_only
+        self.total_size, self.mem_start, self.mem_end, self.mem_average = self.get_total_memory_size()
+
+    def get_write_only(self):
+        return self.write_only
+
     def get_regions(self):
         return self.memory.list_mapped_regions(writeable_only=self.write_only, include_paths=self.include_paths)
 
@@ -461,6 +468,7 @@ class Searcher:
     def reset(self):
         if self.progress:
             self.progress.reset()
+        self.cancel_search = False
         self.delete_previous_results_and_captures()
         self.delete_captures()
 

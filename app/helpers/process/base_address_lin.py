@@ -57,7 +57,7 @@ def get_base_address(process: mem_edit.Process):
             return p['start']
     return -1
 
-def get_address_base(process: mem_edit.Process, address):
+def get_address_base(process: mem_edit.Process, address: int):
     pm = sorted(get_process_map(process, writeable_only=False), key=lambda x: x['start'])
     for p in pm:
         if p['start'] <= address <= p['stop']:

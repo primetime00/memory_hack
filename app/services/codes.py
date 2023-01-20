@@ -14,7 +14,7 @@ from app.helpers.directory_utils import codes_directory
 from app.helpers.exceptions import AOBException
 from app.helpers.exceptions import CodelistException
 from app.helpers.memory_utils import get_ctype
-from app.helpers.process import BaseConvert
+from app.helpers.process import BaseConvert, BaseConvertException
 from app.script_common.aob import AOB
 from app.script_common.utilities import ScriptUtilities
 
@@ -173,6 +173,10 @@ class CodeList(MemoryHandler):
             if index in self.freeze_map:
                 del self.freeze_map[index]
         del self.code_data[index]
+        try:
+            self.component_index = max(list(self.code_data.keys()))+1
+        except ValueError:
+            self.component_index = 0
         if index in self.result_map:
             del self.result_map[index]
         resp.media['remove_index'] = index
@@ -253,12 +257,12 @@ class CodeList(MemoryHandler):
                     }
         if len(self.code_data) == 1:
             resp.media['file_data'] = self.code_data
-            self.component_index = len(self.code_data)
+            self.component_index = max(list(self.code_data.keys()))+1
         else:
             resp.media['index'] = index
             if 'index' not in req.media:
                 resp.media['new_code'] = self.code_data[index]
-                self.component_index += 1
+                self.component_index = max(list(self.code_data.keys()))+1
             else:
                 resp.media['edit_code'] = self.code_data[index]
         if not (self.freeze_thread and self.freeze_thread.is_alive()) and self.freeze_map:
@@ -361,7 +365,7 @@ class CodeList(MemoryHandler):
         except:
             raise CodelistException('Could not load code file')
         resp.media['file_data'] = self.code_data
-        self.component_index = len(self.code_data)
+        self.component_index = max(list(self.code_data.keys()))+1
         resp.media['file'] = self.loaded_file
         resp.media['repeat'] = 1000
         self.start_updater()
@@ -430,6 +434,8 @@ class CodeList(MemoryHandler):
                             read = None
                         except CodelistException:
                             read = None
+                        except BaseConvertException:
+                            read = None
                         self.result_map[key] = {'Value': {'Actual': read.value if read is not None else None, 'Display': str(read.value) if read is not None else '??'}}
                     elif code['Source'] == 'pointer':
                         offsets = [int(x.strip(), 16) for x in code['Offsets'].split(',')]
@@ -453,6 +459,9 @@ class CodeList(MemoryHandler):
                         except CodelistException:
                             read = None
                             addr = None
+                        except BaseConvertException:
+                            read = None
+                            addr = None
                         self.result_map[key] = {'Value': {'Actual': read.value if read is not None else None, 'Display': str(read.value) if read is not None else '??'},
                                                 'Resolved': {'Actual': addr, 'Display': "{:X}".format(addr) if addr is not None else '????????'}}
                     else:
@@ -468,7 +477,11 @@ class CodeList(MemoryHandler):
                             read, addrs, selected = (None, None, None)
                         except AOBException:
                             read, addrs, selected = (None, None, None)
-                        code['Selected'] = selected
+                        if selected is None:
+                            if 'Selected' in code:
+                                del code['Selected']
+                        else:
+                            code['Selected'] = selected
                         self.result_map[key] = {'Value': {'Actual': read.value if read is not None else None, 'Display': str(read.value) if read is not None else '??'},
                                                 'Addresses': {'Actual': addrs, 'Display': ["{:X}".format(x) for x in addrs] if addrs is not None else []},
                                                 'Selected': selected}

@@ -33,29 +33,31 @@
             el.checked = false
         }
         $("#"+id).attr('disabled', 'disabled')
-        post_interact(id, {'value': val})
+        post_interact(id, {"type": "text", 'value': val, "data": $("#"+id).data()})
     }
 
     script.script_interact_button = function(event) {
         var id = event.currentTarget.id
-        post_interact(id, {})
+        var data = {"type": "button", "data": $("#"+id).data()}
+        post_interact(id, data)
     }
 
     script.script_interact_select = function(event) {
         var id = event.currentTarget.id
-        post_interact(id, {"value": event.currentTarget.value})
+        post_interact(id, {"type": "select", "value": event.currentTarget.value, "data": $("#"+id).data()})
     }
 
     script.script_interact_multi_select = function(event) {
         var id = event.currentTarget.id
         var root = $(event.currentTarget)
-        post_interact(id, {"value": root.val()})
+        post_interact(id, {"type": "multi-select", "value": root.val(), "data": $("#"+id).data()})
     }
 
 
     script.script_interact_toggle = function(event) {
         var target = event.target
-        post_interact(event.target.id, {"checked": target.checked})
+        var id = target.id
+        post_interact(event.target.id, {"type": "toggle", "checked": target.checked, "data": $("#"+id).data()})
     }
 
     script.clipboard_data_copied = function(data) {
@@ -149,33 +151,31 @@
         script.script_name_selected('_null')
     }
 
-    function update_controls(controls) {
-        $.each(controls , function (id, instructions) {
-            $.each(instructions , function (index, instruction) {
-                switch (instruction.op) {
-                    case "add_attribute":
-                        $("#"+id).attr(instruction.data.attr, instruction.data.value)
-                        break;
-                    case "remove_attribute":
-                        $("#"+id).removeAttr(instruction.data.attr)
-                        break;
-                    case "prop":
-                        $("#"+id).prop(instruction.data.name, instruction.data.value)
-                        break;
-                    case "value":
-                        $("#"+id).val(instruction.data.value)
-                        break;
-                    case "script":
-                        Function('"use strict"; '+ instruction.data.script)()
-                        break;
-                    case "inner-html":
-                        $("#"+id).empty()
-                        $("#"+id).append(instruction.data.html)
-                        break;
-                    default:
-                        break;
-                }
-            });
+    function update_controls(instructions) {
+        $.each(instructions, function (index, instruction) {
+            switch (instruction.op) {
+                case "add_attribute":
+                    $("#"+instruction.data.id).attr(instruction.data.attr, instruction.data.value)
+                    break;
+                case "remove_attribute":
+                    $("#"+instruction.data.id).removeAttr(instruction.data.attr)
+                    break;
+                case "prop":
+                    $("#"+instruction.data.id).prop(instruction.data.name, instruction.data.value)
+                    break;
+                case "value":
+                    $("#"+instruction.data.id).val(instruction.data.value)
+                    break;
+                case "script":
+                    Function('"use strict"; '+ instruction.data.script)()
+                    break;
+                case "inner-html":
+                    $("#"+instruction.data.id).empty()
+                    $("#"+instruction.data.id).append(instruction.data.html)
+                    break;
+                default:
+                    break;
+            }
         });
     }
 
@@ -184,10 +184,11 @@
     }
 
     function post_interact(id, data) {
+        var interact_data = { "type": "SCRIPT_INTERACT", "id": id, "data": data }
         $.ajax ({
             url: "/script",
             type: "POST",
-            data: JSON.stringify({ "type": "SCRIPT_INTERACT", "id": id, "data": data }),
+            data: JSON.stringify(interact_data),
             dataType: "json",
             contentType: "application/json; charset=utf-8",
             success: (res) => {$("#"+id).removeAttr('disabled');  on_script_interacted(res);}
