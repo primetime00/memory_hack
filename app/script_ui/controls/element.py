@@ -1,6 +1,6 @@
 from queue import Queue
-
 from .build import Build
+from typing import List, Dict
 
 
 class Element(Build):
@@ -28,14 +28,14 @@ class Element(Build):
         self.enabled = True
         self.hidden = False
 
-        self.id_map: dict[str, Element] = {}
-        self.element_map: dict[str, Element] = {}
+        self.id_map: Dict[str, Element] = {}
+        self.element_map: Dict[str, Element] = {}
         self.style: str = kwargs.get('style', '')
         self.keys = kwargs
 
         self.data_map: dict = {}
 
-    def children(self) -> list['Element']:
+    def children(self) -> List['Element']:
         return []
 
     def add_element(self, ele: 'Element') -> 'Element':
@@ -43,7 +43,7 @@ class Element(Build):
         ele.parent = self
         return ele
 
-    def add_elements(self, elements: list['Element']):
+    def add_elements(self, elements: List['Element']):
         for ele in elements:
             self.add_element(ele)
         return self

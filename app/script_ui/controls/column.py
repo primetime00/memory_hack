@@ -1,11 +1,12 @@
 from .element import Element
+from typing import List
 
 
 class Column(Element):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.column_items: list[Element] = []
+        self.column_items: List[Element] = []
         self.width: str = kwargs.get('width', '')
 
     def children(self):

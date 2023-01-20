@@ -1,13 +1,13 @@
 from app.helpers.exceptions import ScriptException
 from .element import Element
 from .page import Page
-
+from typing import List
 
 class UI(Element):
 
     def __init__(self, **kwargs):
         super().__init__(id='ui_root')
-        self.pages: list[Page] = []
+        self.pages: List[Page] = []
         self.script_ids.append('ui_root')
         self.html:str = None
         self.title = kwargs.get('title', 'Untitled')

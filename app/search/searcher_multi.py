@@ -254,7 +254,6 @@ class SearcherMulti(Searcher):
         memory = self.get_mp_memory()
         results = []
         count = 0
-
         for region in regions:
             start = region['start']
             size = region['size']
@@ -375,6 +374,7 @@ class SearcherMulti(Searcher):
     def _search_continue_operation_results_thread(self, args):
         size = args['size']
         sv = Value.create(args['value']['string'], args['value']['size'])
+        sv.signed = self.signed
         operation = args['operation']
         input_results = args['results']
         memory = self.get_mp_memory()

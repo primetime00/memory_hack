@@ -1,5 +1,5 @@
 import ctypes
-from typing import Union
+from typing import Union, Dict
 
 import mem_edit
 
@@ -12,7 +12,7 @@ class TopScript(BaseScript):
 
     def __init__(self):
         super().__init__()
-        self.subscripts: dict[str, SubScript] = {}
+        self.subscripts: Dict[str, SubScript] = {}
 
     def add_script(self, script:SubScript):
         self.subscripts[script.get_id()] = script

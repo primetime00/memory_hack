@@ -1,7 +1,8 @@
 from .element import Element
+from typing import List
 
 class Children:
-    def children(self) -> list[Element]:
+    def children(self) -> List[Element]:
         return []
 
     def add_element(self, ele: Element) -> Element:

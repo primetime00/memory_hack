@@ -1,11 +1,12 @@
 from .column import Column
 from .element import Element
+from typing import List
 
 
 class Row(Element):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.row_items: list[Element] = []
+        self.row_items: List[Element] = []
         self.style += "min-height: 50px;"
 
     def children(self):
@@ -29,7 +30,7 @@ class Row(Element):
         for item in self.children():
             item.perform_process()
 
-    def add_elements(self, elements: list['Element']):
+    def add_elements(self, elements: List['Element']):
         for ele in elements:
             col = self.add_element(Column())
             col.add_element(ele)

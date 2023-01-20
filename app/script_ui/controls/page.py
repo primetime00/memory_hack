@@ -7,6 +7,7 @@ from typing import Union
 from .build import Build
 from .element import Element
 from .row import Row
+from typing import List
 
 
 class Page(Element):
@@ -38,7 +39,7 @@ class Page(Element):
         for ele in self.children():
             ele.perform_process()
 
-    def add_elements(self, elements: list[Element], **kwargs):
+    def add_elements(self, elements: List[Element], **kwargs):
         if not elements:
             return self
         if 'id' not in kwargs:

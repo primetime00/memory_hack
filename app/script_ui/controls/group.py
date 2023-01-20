@@ -1,11 +1,11 @@
 from .element import Element
-
+from typing import List
 
 class Group(Element):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.group_items: list[Element] = []
+        self.group_items: List[Element] = []
 
     def children(self):
         return self.group_items
