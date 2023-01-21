@@ -40,7 +40,7 @@ class Searcher:
         self.total_size, self.mem_start, self.mem_end, self.mem_average = self.get_total_memory_size()
         self.progress:Progress = progress
         self.search_size = None
-        self.signed = True
+        self.signed = False
         self.results: SearchResults = None
         self.capture_files = []
         self.cancel_search = False
@@ -73,7 +73,7 @@ class Searcher:
             if self.progress:
                 self.progress.add_constraint(0, self.total_size, 1.0)
         elif search_type == self.SEARCH_TYPE_COMPARE_CAPTURE:
-            self.signed = False
+            #self.signed = False
             if self.progress:
                 self.progress.reset()
                 self.progress.add_constraint(0, self.total_size, 1.0)
