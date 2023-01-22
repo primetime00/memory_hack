@@ -21,6 +21,13 @@ def download_source():
     print('downloading source')
     request.urlretrieve(remote_url, local_file)
 
+def download_mem_edit():
+    remote_url = 'https://github.com/primetime00/mem_edit/archive/refs/heads/master.zip'
+    # Define the local filename to save data
+    local_file = 'medit.zip'
+    # Download remote and save locally
+    request.urlretrieve(remote_url, local_file)
+
 def extract_source():
     print('extracting...')
     with zipfile.ZipFile("master.zip","r") as zip_ref:
@@ -44,9 +51,25 @@ def create_venv():
 
 def patch_mem_edit():
     print('patching memory editor')
-    patch_path = Path("./app/patches/mem_edit.patch")
-    lib_path = Path("venv/lib/python3.10/site-packages/mem_edit")
-    subprocess.check_call(['/usr/bin/patch', "-p0", "-d", str(lib_path.absolute()), "-i", str(patch_path.absolute())])
+    master_name = 'mem_edit-master'
+    dir_name = 'mem_edit/'
+    dest_path = [s for s in Path('.').glob('venv/lib/**/*') if s.is_dir() and str(s).endswith('mem_edit')][0].parent
+
+    with zipfile.ZipFile("medit.zip","r") as zip_ref:
+        for x in zip_ref.infolist():
+            fp = x.filename.replace(master_name+'/','')
+            if len(fp) == 0:
+                continue
+            if dir_name not in fp:
+                continue
+            if x.is_dir():
+                os.makedirs(fp, exist_ok=True)
+            else:
+                data = zip_ref.read(x)
+                data_path = dest_path.joinpath(fp)
+                data_path.write_bytes(data)
+    os.unlink("medit.zip")
+    shutil.rmtree(str(Path('mem_edit').absolute()))
 
 def extract_onsen():
     print('extracting front-end...')
@@ -118,9 +141,13 @@ def uninstall_service():
 def uninstall_files():
     shutil.rmtree(str(Path('app').absolute()))
     shutil.rmtree(str(Path('venv').absolute()))
+    shutil.rmtree(str(Path('docs').absolute()))
     os.unlink(str(Path('mem_manip.py').absolute()))
     if Path('run.sh').exists():
         os.unlink(str(Path('run.sh').absolute()))
+    if Path('README.md').exists():
+        os.unlink(str(Path('README.md').absolute()))
+
 
 def wants_service():
     return question('\nWould you like to install Memory Manipulator as a service?')
@@ -130,8 +157,6 @@ def wants_service_run():
 
 def wants_uninstall():
     return question('Would you like to uninstall Memory Manipulator?')
-
-
 
 
 if '--service_install' in sys.argv:
@@ -162,6 +187,7 @@ else:
             exit(0)
     else:
         download_source()
+        download_mem_edit()
         extract_source()
         create_venv()
         patch_mem_edit()

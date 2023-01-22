@@ -22,6 +22,13 @@ def download_source():
     print('downloading source')
     request.urlretrieve(remote_url, local_file)
 
+def download_mem_edit():
+    remote_url = 'https://github.com/primetime00/mem_edit/archive/refs/heads/master.zip'
+    # Define the local filename to save data
+    local_file = 'medit.zip'
+    # Download remote and save locally
+    request.urlretrieve(remote_url, local_file)
+
 def download_nssm():
     remote_url = 'https://nssm.cc/release/nssm-2.24.zip'
     local_file = 'nssm.zip'
@@ -56,14 +63,28 @@ def create_venv():
     os.makedirs('venv', exist_ok=True)
     venv.create('.\\venv', with_pip=True)
     subprocess.check_call(['.\\venv\\Scripts\\python.exe', "-m", "pip", "install", "-r", "app\\patches\\requirements.txt"])
-    subprocess.check_call(['.\\venv\\Scripts\\python.exe', "-m", "pip", "install", "patch"])
-
 
 def patch_mem_edit():
     print('patching memory editor')
-    patch_path = Path(".\\app\\patches\\mem_edit.patch")
-    lib_path = Path("venv\\Lib\\site-packages\\mem_edit")
-    subprocess.call(['.\\venv\\Scripts\\python.exe', "-m", "patch", "-p0", "-d", str(lib_path.absolute()), str(patch_path.absolute())])
+    master_name = 'mem_edit-master'
+    dir_name = 'mem_edit/'
+    dest_path = [s for s in Path('.').glob('venv\\Lib\\**\\*') if s.is_dir() and str(s).endswith('mem_edit')][0].parent
+
+    with zipfile.ZipFile("medit.zip","r") as zip_ref:
+        for x in zip_ref.infolist():
+            fp = x.filename.replace(master_name+'/','')
+            if len(fp) == 0:
+                continue
+            if dir_name not in fp:
+                continue
+            if x.is_dir():
+                os.makedirs(fp, exist_ok=True)
+            else:
+                data = zip_ref.read(x)
+                data_path = dest_path.joinpath(fp)
+                data_path.write_bytes(data)
+    os.unlink("medit.zip")
+    shutil.rmtree(str(Path('mem_edit').absolute()))
 
 def extract_onsen():
     print('extracting front-end...')
@@ -165,12 +186,14 @@ def uninstall_service():
 def uninstall_files():
     shutil.rmtree(str(Path('app').absolute()))
     shutil.rmtree(str(Path('venv').absolute()))
+    shutil.rmtree(str(Path('docs').absolute()))
     os.unlink(str(Path('mem_manip.py').absolute()))
     if Path('run.bat').exists():
         os.unlink(str(Path('run.bat').absolute()))
     for item in Path('.\\').glob('nssm.*'):
         os.unlink(str(item.absolute()))
-
+    if Path('README.md').exists():
+        os.unlink(str(Path('README.md').absolute()))
 
 def wants_service():
     return question('\nWould you like to install Memory Manipulator as a service?')
@@ -213,6 +236,7 @@ if installed():
         exit(0)
 else:
     download_source()
+    download_mem_edit()
     download_nssm()
     extract_nssm()
     extract_source()
