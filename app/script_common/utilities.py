@@ -140,3 +140,4 @@ class ScriptUtilities:
         else:
             self.searcher = Searcher(self.process, results=SearchResults(db_path=memory_directory.joinpath("{}.db".format(self.name))))
         self.searcher.set_search_size('array')
+        self.searcher.set_include_paths(['[heap]', ' '])
