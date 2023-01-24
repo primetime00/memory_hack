@@ -13,7 +13,7 @@ class IconButton(Button):
 
 class CopyButton(IconButton):
     def __init__(self, on_click: callable, **kwargs):
-        kwargs['width'] = "40px"
+        kwargs['width'] = "50px"
         super().__init__("md-copy", on_click, True, **kwargs)
 
     def copy(self, data: dict):
@@ -22,7 +22,7 @@ class CopyButton(IconButton):
 
 class PasteButton(IconButton):
     def __init__(self, on_click: callable, **kwargs):
-        kwargs['width'] = "40px"
+        kwargs['width'] = "50px"
         super().__init__("md-paste", on_click, True, **kwargs)
 
 
