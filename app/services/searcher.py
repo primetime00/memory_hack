@@ -2,6 +2,7 @@ import copy
 import ctypes
 import logging
 import traceback
+from queue import Queue, PriorityQueue
 from threading import Thread, Lock, Event
 from typing import Union
 
@@ -247,6 +248,7 @@ class Search(MemoryHandler):
             resp.media['count'] = 0
             resp.media['results'] = []
         else:
+            self.update_thread.add_action('refresh')
             resp.media['results'] = self.get_updated_addresses()
             resp.media['array'] = isinstance(self.update_thread.parsed_value, ctypes.Array)
             resp.media['count'] = len(self.searcher.results)
@@ -416,7 +418,7 @@ class Search(MemoryHandler):
 
     def stop_updater(self):
         if self.update_thread and self.update_thread.is_alive():
-            self.update_thread.stop.set()
+            self.update_thread.add_action('quit')
             self.update_thread.join()
         self.update_thread = None
 
@@ -424,7 +426,6 @@ class Search(MemoryHandler):
         def __init__(self, mem, addrs, pv: Value, s: Searcher):
             super().__init__(target=self.process)
             self.memory = mem
-            self.stop = Event()
             self.addresses = copy.deepcopy(addrs)
             self.parsed_value = Value.copy(pv, _signed=s.signed)
             self.results_to_update(pv.get_store_type(), self.addresses)
@@ -432,6 +433,8 @@ class Search(MemoryHandler):
             self.write_list = []
             self.freeze_map = {}
             self.error = ""
+            self.update_queue: PriorityQueue = PriorityQueue()
+            self.add_action('refresh')
 
         @classmethod
         def results_to_update(cls, size, results):
@@ -447,22 +450,25 @@ class Search(MemoryHandler):
 
         def _loop(self):
             try:
-                while not self.stop.is_set():
-                    self.lock.acquire()
-                    if len(self.write_list) > 0:
-                        for item in self.write_list:
-                            val: Value = item[1]
-                            val.write_bytes_to_memory(self.memory, item[0])
-                        self.write_list.clear()
-                    if len(self.freeze_map) > 0:
-                        for addr, value in self.freeze_map.items():
-                            self.memory.write_memory(addr, value)
-                    for i in range(0, len(self.addresses)):
-                        addr = self.addresses[i]
-                        self.parsed_value.read_memory(self.memory, addr['address'])
-                        self.addresses[i]['value'] = self.parsed_value.get_printable()
-                    self.lock.release()
-                    self.stop.wait(1)
+                while True:
+                    update_data = self.update_queue.get()
+                    if update_data[1] == 'quit':
+                        break
+                    if update_data[1] == 'refresh':
+                        self.lock.acquire()
+                        if len(self.write_list) > 0:
+                            for item in self.write_list:
+                                val: Value = item[1]
+                                val.write_bytes_to_memory(self.memory, item[0])
+                            self.write_list.clear()
+                        if len(self.freeze_map) > 0:
+                            for addr, value in self.freeze_map.items():
+                                self.memory.write_memory(addr, value)
+                        for i in range(0, len(self.addresses)):
+                            addr = self.addresses[i]
+                            self.parsed_value.read_memory(self.memory, addr['address'])
+                            self.addresses[i]['value'] = self.parsed_value.get_printable()
+                        self.lock.release()
             except Exception as e:
                 self.error = str(e)
             finally:
@@ -470,6 +476,14 @@ class Search(MemoryHandler):
                 if self.lock.locked():
                     self.lock.release()
 
+
+        def add_action(self, action:str):
+            if action.casefold().strip() == 'quit':
+                self.update_queue.put((1, 'quit'))
+            elif action.casefold().strip() == 'refresh':
+                self.update_queue.put((2, 'refresh'))
+            else:
+                self.update_queue.put((3, action.casefold().strip()))
         def process(self):
             try:
                 self._loop()

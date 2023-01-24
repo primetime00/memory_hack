@@ -25,7 +25,7 @@ class AOBOffset(BaseScript):
 
         main_page.add_elements([
             controls.Text("AOB:", width="40px"),
-            controls.Input(on_change=self.ctrl_changed, id='AOB_STRING', trigger_by_focus=True),
+            controls.Input(on_change=self.ctrl_changed, id='AOB_STRING', trigger_by_focus=False),
             controls.advanced.PasteButton(on_click=self.on_paste, id='AOB_PASTE')])
 
         main_page.add_elements([

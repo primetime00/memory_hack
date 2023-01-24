@@ -40,6 +40,12 @@
   var load_count = 0;
   $(document).on('prechange', function(event) {
     $('ons-toolbar .center').innerHTML = event.originalEvent.tabItem.getAttribute('label');
+    var ds = event.originalEvent.tabItem.dataset.tab;
+    search.on_tab_set(ds)
+    codelist.on_tab_set(ds)
+    aob.on_tab_set(ds)
+    script.on_tab_set(ds)
+
   });
 
   $(document).on('init', function(event) {
@@ -200,13 +206,13 @@ div .input_item{
   </ons-toolbar>
 
   <ons-tabbar position="auto">
-    <ons-tab page="/codelist" label="Codes" icon="md-view-toc" active #codelist_active#>
+    <ons-tab page="/codelist" data-tab="codelist" label="Codes" icon="md-view-toc" active #codelist_active#>
     </ons-tab>
-    <ons-tab page="/search" label="Search" icon="md-search" #search_active#>
+    <ons-tab page="/search" data-tab="search" label="Search" icon="md-search" #search_active#>
     </ons-tab>
-    <ons-tab page="/aob" label="AOB" icon="md-trending-up" #aob_active#>
+    <ons-tab page="/aob" data-tab="aob" label="AOB" icon="md-trending-up" #aob_active#>
     </ons-tab>
-    <ons-tab page="/script" label="Scripts" icon="md-language-python" #script_active#>
+    <ons-tab page="/script" data-tab="scripts" label="Scripts" icon="md-language-python" #script_active#>
     </ons-tab>
   </ons-tabbar>
 </ons-page>

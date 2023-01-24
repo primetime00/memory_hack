@@ -260,6 +260,10 @@
         $("#aob_paste_button").hide()
     }
 
+    aob.on_tab_set = function(tab) {
+    };
+
+
     //Private Methods
     function on_aob_ready() {
         $.send('/aob', { "command": "AOB_INITIALIZE" }, on_aob_status);

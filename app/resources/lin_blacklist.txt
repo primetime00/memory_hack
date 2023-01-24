@@ -166,3 +166,4 @@ PluginLoader
 gamemoded
 start-gamescope
 bash
+systemctl

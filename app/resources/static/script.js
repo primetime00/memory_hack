@@ -93,6 +93,9 @@
         }
     }
 
+    script.on_tab_set = function(tab) {
+    };
+
 
     //Private Method
     function on_script_status(result) {

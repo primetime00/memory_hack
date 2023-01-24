@@ -51,7 +51,7 @@
     var current_process = ""
     var initialized = false
     var value_valid = false
-    var updater = null
+    search.updater = null
 
 
     //Public Property
@@ -148,6 +148,20 @@
             set_process(process_name)
         }
     }
+
+    search.on_tab_set = function(tab) {
+        if (tab !== 'search') {
+            if (search.updater !== null) {
+                clearTimeout(search.updater)
+                search.updater = null
+            }
+        } else {
+            if (search.updater === null && current_flow === flow_map["FLOW_RESULTS"]) {
+                search.updater = setTimeout(request_update, 100)
+            }
+        }
+    };
+
 
     search.ready = function()  {
       initialize()
@@ -253,11 +267,13 @@
                 $.send('/search', { "command": "SEARCH_STATUS" }, on_search_status);
             }, repeat);
         }
-        if (updater === null && current_flow === flow_map["FLOW_RESULTS"]) {
-            updater = setTimeout(request_update, 1000)
-        } else if (updater !== null && current_flow !== flow_map["FLOW_RESULTS"]) {
-            clearTimeout(updater)
-            updater = null
+        console.log('aaa1')
+        if (search.updater === null && current_flow === flow_map["FLOW_RESULTS"]) {
+            console.log('aaa2')
+            search.updater = setTimeout(request_update, 1000)
+        } else if (search.updater !== null && current_flow !== flow_map["FLOW_RESULTS"]) {
+            clearTimeout(search.updater)
+            search.updater = null
         }
     }
 
@@ -267,7 +283,7 @@
             if (current_flow === flow_map["FLOW_RESULTS"]){
                 setup_results_list(result)
                 if (result.repeat > 0) {
-                    updater = setTimeout(request_update, result.repeat)
+                    search.updater = setTimeout(request_update, result.repeat)
                 }
             }
         });

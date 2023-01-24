@@ -51,6 +51,11 @@
         }
     }
 
+    codelist.on_tab_set = function(tab) {
+        console.log(tab)
+    };
+
+
     codelist.ready = function()  {
         sel_codelist_process = $("#codelist_process");
         div_codelist_block = $("#codelist_block");
