@@ -69,7 +69,7 @@ class BaseScript:
         return {}
 
     def get_speed(self):
-        return 1
+        return 0.5
 
     def handle_interaction(self, _id, data):
         if _id == '__copy':

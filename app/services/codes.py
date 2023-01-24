@@ -89,13 +89,13 @@ class CodeList(MemoryHandler):
 
     def handle_get(self, req: Request, resp: Response):
         resp.media['files'] = self.get_code_files()
-        resp.media['repeat'] = 1000 if self.code_data else 0
+        resp.media['repeat'] = 400 if self.code_data else 0
         resp.media['file'] = self.loaded_file
         if self.code_data:
             resp.media['file_data'] = self.code_data
 
     def handle_status(self, req: Request, resp: Response):
-        resp.media['repeat'] = 1000 if self.code_data else 0
+        resp.media['repeat'] = 400 if self.code_data else 0
         if self.code_data:
             resp.media['results'] = []
             with self.update_lock:
@@ -271,7 +271,7 @@ class CodeList(MemoryHandler):
             self.stop_freezer()
         if not (self.update_thread and self.update_thread.is_alive()):
             self.start_updater()
-        resp.media['repeat'] = 1000
+        resp.media['repeat'] = 400
 
     def handle_aob_base_select(self, req: Request, resp: Response):
         with self.update_lock:
@@ -367,7 +367,7 @@ class CodeList(MemoryHandler):
         resp.media['file_data'] = self.code_data
         self.component_index = max(list(self.code_data.keys()))+1
         resp.media['file'] = self.loaded_file
-        resp.media['repeat'] = 1000
+        resp.media['repeat'] = 400
         self.start_updater()
 
     def process(self, req: Request, resp: Response):

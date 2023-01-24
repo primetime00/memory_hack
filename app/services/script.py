@@ -112,7 +112,7 @@ class Script(MemoryHandler):
                 raise ScriptException(err, from_thread=True)
             if self.script_thread.is_alive():
                 resp.media['controls'] = self.current_script_obj.retrieve_ui_updates()
-                resp.media['repeat'] = 500
+                resp.media['repeat'] = 200
 
     def handle_script_interact(self, req: Request, resp: Response):
         _id = req.media['id']
@@ -285,7 +285,7 @@ class Script(MemoryHandler):
             pos = line.rfind(", line ")
             if pos < 0:
                 continue
-            msg += '{}\n'.format(line[pos+2: ])
+            msg += '{}\n'.format(line[pos+2:])
             break
         msg += lines[-1]
         return msg
