@@ -22,7 +22,7 @@
     var row_search_progress;
     var search_progress;
     var row_aob_initial_search;
-    var row_search_results_header;
+    var div_search_result_container;
     var row_search_result_count;
     var result_count;
     var btn_download;
@@ -31,12 +31,19 @@
     var result_list = [];
 
     var row_item_template = [
-        '<ons-row class="result_row" id="result_##count##" style="margin-bottom:10px;">',
-            '<ons-col align="center" width="10%" class="col ons-col-inner aob_size" id="result_size_##count##">##size##</ons-col>',
-            '<ons-col align="center" width="14%" class="col ons-col-inner aob_offset" id="result_offset_##count##">##offset##</ons-col>',
-            '<ons-col align="center" width="50%" class="col ons-col-inner aob" id="result_aob_##count##">##aob##</ons-col>',
-            '<ons-col align="center" width="26%" class="col ons-col-inner aob" id="result_aob_##count##"><ons-button modifier="quiet" name="copy_button" onclick="aob.copy_result(##count##, this)" ##disabled##>Copy</ons-button></ons-col>',
-        '</ons-row>'].join('\n')
+        '<ons-list-item class="result_row" id="result_##count##" style="margin-bottom:10px;">',
+            '<ons-row>',
+                '<ons-col name="offset" align="center" width="25%" class="col ons-col-inner aob_offset" id="result_offset_##count##" data-offset="##offset##">##offset##</ons-col>',
+                '<ons-col name="size" align="center" width="12%" class="col ons-col-inner aob_size" id="result_size_##count##">##size##</ons-col>',
+                '<ons-col align="center" width="20%" class="col ons-col-inner"><ons-button modifier="quiet" name="count_button" onclick="aob.count_result(##count##, this)">Count</ons-button></ons-col>',
+                '<ons-col  name="counts" align="center" width="12%" class="col ons-col-inner" id="aob_counts_##count##"></ons-col>',
+                '<ons-col align="center" width="13%" class="col ons-col-inner aob"><ons-button modifier="quiet" name="delete_button" onclick="aob.delete_result(##count##, this)"><ons-icon icon="md-delete" size="20px"/></ons-button></ons-col>',
+                '<ons-col align="center" width="13%" class="col ons-col-inner aob" id="result_aob_##count##"><ons-button modifier="quiet" name="copy_button" onclick="aob.copy_result(##count##, this)" ##disabled##><ons-icon icon="md-copy" size="20px"/></ons-button></ons-col>',
+            '</ons-row>',
+            '<ons-row>',
+                '<ons-col  name="aob" align="center" width="95%" class="col ons-col-inner aob" id="result_aob_##count##">##aob##</ons-col>',
+            '</ons-row>',
+        '</ons-list-item>'].join('\n')
 
     //Public Property
     aob.test = "Bacon Strips";
@@ -62,7 +69,7 @@
         search_progress = $("#aob_search_progress");
         $("#aob_paste_button").hide()
 
-        row_search_results_header = $("#aob_search_results_header");
+        div_search_result_container = $("#aob_result_container");
         row_search_result_count = $("#aob_search_result_count_row");
         result_count = $("#aob_result_count");
         btn_download = $("#aob_download_button");
@@ -210,6 +217,15 @@
             $.post('/aob', { "command": "AOB_UPLOAD", data: result, name: fileName }, on_aob_status);
         }
     }
+
+    aob.count_result = function(index, element) {
+        $.post('/aob', { "command": "AOB_COUNT", index: index, name: inp_aob_name.val() }, on_aob_status);
+    }
+
+    aob.delete_result = function(index, element) {
+        $.post('/aob', { "command": "AOB_DELETE", index: index, name: inp_aob_name.val() }, on_aob_status);
+    }
+
 
     aob.copy_result = function(index, element) {
         var offset = result_list[index].offset.startsWith('-') ? result_list[index].offset.replace('-', '') : '-'+result_list[index].offset
@@ -664,11 +680,7 @@
                 break
             case flow_map["FLOW_NO_RESULTS"]:
                 btn_search.text('Search')
-                if (value_valid && range_valid && inp_aob_name.val().length > 0) {
-                    btn_search.removeAttr('disabled')
-                } else {
-                    btn_search.attr('disabled', 'disabled')
-                }
+                btn_search.attr('disabled', 'disabled')
                 break
         }
     }
@@ -709,14 +721,14 @@
             case flow_map["FLOW_START"]:
                 row_aob_initial_search.hide()
                 div_search_results.hide()
-                row_search_results_header.hide()
+                div_search_result_container.hide()
                 row_search_result_count.hide()
                 btn_download.hide()
                 div_search_results.children('.result_row').hide()
                 break
             case flow_map["FLOW_WORKING"]:
                 row_aob_initial_search.hide()
-                row_search_results_header.hide()
+                div_search_result_container.hide()
                 row_search_result_count.hide()
                 btn_download.hide()
                 div_search_results.children('.result_row').hide()
@@ -726,23 +738,37 @@
                 if (has(result, 'results')){
                     result_list = result.results
                     result_count.text(result.results.length)
-                    div_search_results.children('.result_row').remove()
+                    var last_index = 0
                     for (i=0; i<result.results.length; i++) {
                         var rz = result.results[i]
+                        var aob_count = ''
+                        if (has(rz, 'count')) {aob_count = rz.count.toString() }
                         var size = rz.size
                         var offset = rz.offset
                         var aob = rz.aob
+                        var res_id = $("#result_"+i)
+                        last_index = i+1
+                        if (res_id.length > 0) {
+                            res_id.find('[name="offset"]').html(offset)
+                            res_id.find('[name="size"]').html(size)
+                            res_id.find('[name="counts"]').html('<b>'+aob_count+'</b>')
+                            res_id.find('[name="aob"]').html(aob)
+                            continue
+                        }
                         var ele_txt = row_item_template.replaceAll('##count##', i).replaceAll('##size##', size).replaceAll('##offset##', offset).replaceAll('##aob##', aob).replaceAll('##disabled##', aob == '...' ? 'disabled' : '')
-                        div_search_results.append(ele_txt)
+                        div_search_result_container.append(ele_txt)
+                    }
+                    while ($("#result_"+last_index).length > 0) {
+                        $("#result_"+last_index).remove()
                     }
                 }
                 div_search_results.children('.result_row').show()
-                row_search_results_header.show()
+                div_search_result_container.show()
                 row_search_result_count.show()
                 btn_download.show()
                 break
             case flow_map["FLOW_INITIAL_COMPLETE"]:
-                row_search_results_header.hide()
+                div_search_result_container.hide()
                 row_search_result_count.hide()
                 btn_download.hide()
                 div_search_results.children('.result_row').hide()
@@ -751,7 +777,7 @@
             case flow_map["FLOW_NO_RESULTS"]:
                 row_aob_initial_search.hide()
                 div_search_results.children('.result_row').hide()
-                row_search_results_header.show()
+                div_search_result_container.hide()
                 row_search_result_count.show()
                 result_count.text(0)
                 btn_download.hide()
@@ -1013,17 +1039,14 @@
                 }
                 break
             case flow_map["FLOW_NO_RESULTS"]:
-                if (value_valid && range_valid && _name_input.length > 0) {
-                    btn_search.removeAttr('disabled')
-                } else {
-                    btn_search.attr('disabled', 'disabled')
-                }
+                btn_search.attr('disabled', 'disabled')
                 break
         }
     }
 
     function lookup_name_selected(name) {
         current_flow = flow_map['FLOW_LOOKUP']
+        value_valid = false
         $.send('/aob', { "command": "AOB_SELECT", "name": name }, on_aob_status)
     }
 

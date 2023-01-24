@@ -52,7 +52,7 @@
     }
 
     codelist.on_tab_set = function(tab) {
-        console.log(tab)
+
     };
 
 

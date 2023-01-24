@@ -267,9 +267,7 @@
                 $.send('/search', { "command": "SEARCH_STATUS" }, on_search_status);
             }, repeat);
         }
-        console.log('aaa1')
         if (search.updater === null && current_flow === flow_map["FLOW_RESULTS"]) {
-            console.log('aaa2')
             search.updater = setTimeout(request_update, 1000)
         } else if (search.updater !== null && current_flow !== flow_map["FLOW_RESULTS"]) {
             clearTimeout(search.updater)

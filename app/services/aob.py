@@ -3,6 +3,7 @@ import logging
 import os
 from io import StringIO
 from pathlib import Path
+from queue import Queue
 from threading import Thread
 
 from falcon import Request, Response, MEDIA_JSON
@@ -19,6 +20,8 @@ from app.helpers.memory_handler import MemoryHandler
 from app.helpers.memory_utils import value_to_hex, bytes_to_aobstr
 from app.helpers.process import BaseConvert
 from app.helpers.progress import Progress
+from app.search.searcher_multi import SearcherMulti
+from app.helpers.search_results import SearchResults
 
 
 class AOB(MemoryHandler):
@@ -38,13 +41,17 @@ class AOB(MemoryHandler):
             "AOB_SEARCH": self.handle_search,
             "AOB_DOWNLOAD": self.handle_download,
             "AOB_UPLOAD": self.handle_upload,
-            "AOB_STATUS": self.handle_initialization
+            "AOB_STATUS": self.handle_initialization,
+            "AOB_COUNT": self.handle_count,
+            "AOB_DELETE": self.handle_delete,
         }
         self.flow = self.FLOW_START
         self.previous_state = {'flow': self.FLOW_START, 'name': ""}
 
 
         self.aob_work_thread: AOB.AOBWorkThread = None
+        self.count_thread: Thread = None
+        self.count_queue: Queue = Queue()
         self.current_name = ''
         self.set_current_name('')
         self.current_search_type = 'address'
@@ -53,6 +60,8 @@ class AOB(MemoryHandler):
         self.current_range = 65536
         self.current_value = None
         self.current_value_size = None
+        self.searcher: SearcherMulti = None
+        self.aob_results: list = []
 
         if not AOB.directory.exists():
             os.makedirs(AOB.directory, exist_ok=True)
@@ -64,6 +73,9 @@ class AOB(MemoryHandler):
         if self.aob_work_thread and self.aob_work_thread.is_alive():
             DataStore().get_operation_control().control_break()
             self.aob_work_thread.join()
+
+    def set(self, data):
+        self.searcher = SearcherMulti(self.mem(), write_only=True, directory=AOB.directory, results=SearchResults('aob', db_path=AOB.directory.joinpath('aob_count.db')))
 
     def release(self):
         self.reset()
@@ -132,6 +144,7 @@ class AOB(MemoryHandler):
             aob_file.read_stream(StringIO(data))
             self.current_name = proposed_filename
             self.process_selected_file(resp, aob_file)
+            self.aob_results = aob_file.get_results()
             resp.media['name'] = proposed_filename
             resp.media['range'] = aob_file.get_range()
             aob_file.write()
@@ -181,6 +194,7 @@ class AOB(MemoryHandler):
             if self.aob_work_thread and not self.aob_work_thread.is_alive():
                 ab_file = self.aob_work_thread.get_file()
                 self.process_selected_file(resp, ab_file)
+                self.aob_results = ab_file.get_results()
                 resp.media['name'] = self.current_name
                 resp.media['names'] = self.get_aob_list()
                 resp.media['type'] = self.current_search_type
@@ -193,6 +207,12 @@ class AOB(MemoryHandler):
             resp.media['name'] = self.current_name
             resp.media['names'] = self.get_aob_list()
             resp.media['type'] = self.current_search_type
+            if self.count_thread and self.count_thread.is_alive():
+                resp.media['repeat'] = 400
+            while not self.count_queue.empty():
+                cc = self.count_queue.get()
+                self.aob_results[cc[0]]['count'] = cc[1]
+            resp.media['results'] = self.aob_results
         elif self.flow == self.FLOW_INITIAL_COMPLETE:
             ab_file = AOBFile(directory=AOB.directory, filename=self.current_name+'.aob')
             self.process_selected_file(resp, ab_file)
@@ -209,6 +229,7 @@ class AOB(MemoryHandler):
         if self.current_name in self.get_aob_list():
             ab_file = AOBFile(directory=AOB.directory, filename=self.current_name+'.aob')
             self.process_selected_file(resp, ab_file)
+            self.aob_results = ab_file.get_results()
             resp.media['name'] = self.current_name
             resp.media['names'] = self.get_aob_list()
             resp.media['type'] = self.current_search_type
@@ -218,6 +239,28 @@ class AOB(MemoryHandler):
             resp.media['names'] = self.get_aob_list()
             resp.media['type'] = self.current_search_type
             resp.media['valid_types'] = ['address']
+
+    def handle_count(self, req: Request, resp: Response):
+        ab_file = AOBFile(directory=AOB.directory, filename=self.current_name + '.aob')
+        aob = ab_file.get_aob_list()[int(req.media['index'])]
+        resp.media['repeat'] = 400
+        self.count_thread = Thread(target=self._count_thread, args=(aob, int(req.media['index']),))
+        self.count_thread.start()
+
+    def handle_delete(self, req: Request, resp: Response):
+        index = int(req.media['index'])
+        ab_file = AOBFile(directory=AOB.directory, filename=self.current_name + '.aob')
+        ab_file.remove_index(index)
+        ab_file.write()
+        self.aob_results.pop(index)
+        resp.media['repeat'] = 100
+
+    def _count_thread(self, aob, index):
+        aob_str: str = aob['aob_string']
+        self.searcher.set_search_size('array')
+        self.searcher.search_memory_value(aob_str)
+        self.count_queue.put((index, len(self.searcher.results)))
+
 
     def process_selected_file(self, resp: Response, ab_file: AOBFile):
         if not ab_file.is_final() and not ab_file.is_initial():
