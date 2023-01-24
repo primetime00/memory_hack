@@ -15,9 +15,9 @@ class Input(BaseControl):
     def build(self, id_map: {}):
         id_map[self.script_ids[-1]] = self
         if not self.trigger_by_focus:
-            return '<ons-input id="{}" style="width:100%;" modifier="underbar" value="{}" oninput="script.script_interact_value(event)" float {}></ons-input>'.format(self.script_ids[-1], self.text, 'readonly' if self.readonly else '')
+            return '<ons-input id="{}" style="width:100%;" class="text-input text-input--material r-value" autocomplete="chrome-off" autocapitalize="off" modifier="underbar" value="{}" oninput="script.script_interact_value(event)" float {}></ons-input>'.format(self.script_ids[-1], self.text, 'readonly' if self.readonly else '')
         else:
-            return '<ons-input id="{}" style="width:100%;" modifier="underbar" value="{}" onchange="script.script_interact_value(event)" float {}></ons-input>'.format(self.script_ids[-1], self.text, 'readonly' if self.readonly else '')
+            return '<ons-input id="{}" style="width:100%;" class="text-input text-input--material r-value" autocomplete="chrome-off" autocapitalize="off" modifier="underbar" value="{}" onchange="script.script_interact_value(event)" float {}></ons-input>'.format(self.script_ids[-1], self.text, 'readonly' if self.readonly else '')
 
 
     def handle_interaction(self, _id: str, data):
