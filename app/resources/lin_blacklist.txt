@@ -160,3 +160,9 @@ pressure-vessel*
 wine64
 wineserver
 jcef_helper
+ds-inhibit
+fancontrol*
+PluginLoader
+gamemoded
+start-gamescope
+bash

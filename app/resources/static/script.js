@@ -28,11 +28,11 @@
     script.script_interact_value = function(event) {
         var val = event.currentTarget.value
         var id = event.currentTarget.id.replace('input_', '')
-        var el = $("#"+id)[0]
-        if (el.checked !== undefined) {
-            el.checked = false
-        }
-        $("#"+id).attr('disabled', 'disabled')
+        //var el = $("#"+id)[0]
+        //if (el.checked !== undefined) {
+        //    el.checked = false
+        //}
+        //$("#"+id).attr('disabled', 'disabled')
         post_interact(id, {"type": "text", 'value': val, "data": $("#"+id).data()})
     }
 
