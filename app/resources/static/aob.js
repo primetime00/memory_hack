@@ -217,6 +217,7 @@
     }
 
     aob.aob_upload_file_changed = function(file) {
+        $('#aob_upload_button').val("");
         if (file.size > 600000) {
             ons.notification.toast('File must be under 600KB', { timeout: 2000, animation: 'fall' })
             return
