@@ -24,14 +24,20 @@
             </ons-col>
           </ons-row>
           <ons-row>
-            <ons-col width="80%" class="col ons-col-inner">
+            <ons-col width="50%" class="col ons-col-inner">
               <select id="aob_selection" class="select-input select-input--material" onchange="aob.aob_search_name_selected(this.value)">
                 <option value="_null"></option>
               </select>
             </ons-col>
-            <ons-col width="20%" class="col ons-col-inner">
+            <ons-col width="16%" class="col ons-col-inner">
               <input type="file" id="aob_upload_button" onchange="aob.aob_upload_file_changed(this.files[0])" hidden/>
-              <label class="upload_button" for="aob_upload_button">Upload</label>
+              <label for="aob_upload_button"><ons-button modifier="quiet"><ons-icon icon="md-upload" size="25px"></ons-icon></ons-button></label>
+            </ons-col>
+            <ons-col width="16%" class="col ons-col-inner">
+              <ons-button id="aob_download_button" modifier="quiet" onclick="aob.on_download_clicked(this)"><ons-icon icon="md-download" size="25px"></ons-icon></ons-button>
+            </ons-col>
+            <ons-col width="16%" class="col ons-col-inner">
+              <ons-button id="aob_delete_file_button" modifier="quiet" onclick="aob.on_delete_file_clicked(this)"><ons-icon icon="md-delete" size="25px"></ons-icon></ons-button>
             </ons-col>
           </ons-row>
         </ons-col>
@@ -99,9 +105,6 @@
 
       <ons-row id="aob_search_result_count_row" style="margin-top:15px;">
         <ons-col align="center" width="18%" class="col ons-col-inner"><span id="aob_result_count">4000</span> AOBs</ons-col>
-        <ons-col align="center" width="30%" class="col ons-col-inner">
-          <ons-button id="aob_download_button" onclick="aob.on_download_clicked(this)">Download</ons-button>
-        </ons-col>
       </ons-row>
 
       <ons-list id="aob_result_container">

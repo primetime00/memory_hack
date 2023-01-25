@@ -44,6 +44,7 @@ class AOB(MemoryHandler):
             "AOB_STATUS": self.handle_initialization,
             "AOB_COUNT": self.handle_count,
             "AOB_DELETE": self.handle_delete,
+            "AOB_DELETE_FILE": self.handle_delete_file,
         }
         self.flow = self.FLOW_START
         self.previous_state = {'flow': self.FLOW_START, 'name': ""}
@@ -254,6 +255,18 @@ class AOB(MemoryHandler):
         ab_file.write()
         self.aob_results.pop(index)
         resp.media['repeat'] = 100
+
+    def handle_delete_file(self, req: Request, resp: Response):
+        fname = req.media['file']
+        for f in AOB.directory.glob('{}.*'.format(fname)):
+            f.unlink(missing_ok=True)
+        self.set_current_name("")
+        self.flow = self.FLOW_START
+        resp.media['name'] = self.current_name
+        resp.media['names'] = self.get_aob_list()
+        resp.media['type'] = self.current_search_type
+        resp.media['valid_types'] = ['address']
+
 
     def _count_thread(self, aob, index):
         aob_str: str = aob['aob_string']

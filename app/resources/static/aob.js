@@ -26,6 +26,7 @@
     var row_search_result_count;
     var result_count;
     var btn_download;
+    var btn_delete_file;
 
     var aob_list = [];
     var result_list = [];
@@ -73,6 +74,7 @@
         row_search_result_count = $("#aob_search_result_count_row");
         result_count = $("#aob_result_count");
         btn_download = $("#aob_download_button");
+        btn_delete_file = $("#aob_delete_file_button");
     };
 
     aob.on_update_process_list = function(process_list_add, process_list_remove) {
@@ -151,6 +153,19 @@
             update(btn_search)
         }
     };
+
+    aob.on_delete_file_clicked = function(element) {
+        ons.createElement('delete_aob_file', { append: true }).then(function(dialog) {
+            var name = sel_aob_name.val()
+            $(dialog).find('#delete_aob_file_name').text(name)
+            $(dialog).find('ons-alert-dialog-button[name="cancel_button"]').bind('click', () => {dialog.hide()})
+            $(dialog).find('ons-alert-dialog-button[name="delete_button"]').bind('click', () => {
+                $.send('/aob', { 'command': "AOB_DELETE_FILE", 'file': name}, on_aob_status);
+                dialog.hide()
+            })
+            dialog.show();
+        });
+    }
 
     aob.on_download_clicked = function(element) {
         btn_download.attr('disabled', 'disabled')
@@ -371,6 +386,7 @@
     function setup_aob_name_list(result) {
         switch (current_flow) {
             case flow_map["FLOW_START"]:
+                btn_delete_file.hide()
                 sel_aob_name.removeAttr('disabled')
                 if (has(result, 'names')) {
                     sel_aob_name.find('option[value != "_null"]').remove()
@@ -386,6 +402,7 @@
                 }
                 break
             case flow_map["FLOW_WORKING"]:
+            btn_delete_file.hide()
                 sel_aob_name.attr('disabled', 'disabled')
                 break
             case flow_map["FLOW_RESULTS"]:
@@ -402,6 +419,7 @@
                 } else if (result.names.includes(inp_aob_name.val())) {
                     sel_aob_name.val(inp_aob_name.val())
                 }
+                btn_delete_file.show()
                 break
             case flow_map["FLOW_INITIAL_COMPLETE"]:
                 sel_aob_name.removeAttr('disabled')
@@ -417,6 +435,7 @@
                 } else if (result.names.includes(inp_aob_name.val())) {
                     sel_aob_name.val(inp_aob_name.val())
                 }
+                btn_delete_file.show()
                 break
             case flow_map["FLOW_NO_RESULTS"]:
                 sel_aob_name.removeAttr('disabled')
@@ -432,6 +451,7 @@
                 } else if (result.names.includes(inp_aob_name.val())) {
                     sel_aob_name.val(inp_aob_name.val())
                 }
+                btn_delete_file.show()
                 break
         }
     }
