@@ -1,4 +1,5 @@
 import os
+import platform
 import shutil
 import stat
 import subprocess
@@ -77,7 +78,7 @@ def extract_onsen():
         zip_ref.extractall("app/resources/static/")
 
 def get_hostname():
-    hostname = subprocess.check_output(['/usr/bin/hostnamectl', "--static"]).decode().strip()
+    hostname = platform.node().strip()
     return hostname
 
 def create_run_script():
