@@ -1,9 +1,15 @@
 [Unit]
 Description=Memory Manipulation Service
 After=multi-user.target
+StartLimitIntervalSec=500
+StartLimitBurst=5
+
+
 [Service]
 Type=simple
-Restart=always
 ExecStart=#venv# #script#
+Restart=on-failure
+RestartSec=5s
+
 [Install]
 WantedBy=multi-user.target
