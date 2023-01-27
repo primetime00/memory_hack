@@ -77,7 +77,7 @@ def extract_onsen():
         zip_ref.extractall("app/resources/static/")
 
 def get_hostname():
-    hostname = subprocess.check_output(['/usr/bin/hostnamectl', "--static"]).decode()
+    hostname = subprocess.check_output(['/usr/bin/hostnamectl', "--static"]).decode().strip()
     return hostname
 
 def create_run_script():
