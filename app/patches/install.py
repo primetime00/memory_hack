@@ -76,6 +76,10 @@ def extract_onsen():
     with zipfile.ZipFile("app/resources/static/onsen.zip","r") as zip_ref:
         zip_ref.extractall("app/resources/static/")
 
+def get_hostname():
+    hostname = subprocess.check_output(['/usr/bin/hostnamectl', "--static"]).decode()
+    return hostname
+
 def create_run_script():
     with open('run.sh', 'wt') as fp:
         fp.write("#!/bin/bash\n")
@@ -163,7 +167,7 @@ if '--service_install' in sys.argv:
     if os.geteuid() != 0:
         get_sudo('--service_install')
     install_service()
-    print("Service installation complete.\nYou can test by accessing http://localhost:5000.")
+    print("Service installation complete.\nYou can test by accessing http://{}:5000.".format(get_hostname()))
 elif '--service_remove' in sys.argv:
     if os.geteuid() != 0:
         get_sudo('--service_remove')
@@ -202,7 +206,7 @@ else:
             if wants_service_run():
                 if os.geteuid() != 0:
                     get_sudo('--service_run')
-                    print("Service is running.\nYou can test by accessing http://localhost:5000.")
+                    print("Service is running.\nYou can test by accessing http://{}:5000.".format(get_hostname()))
     else:
         if wants_service():
             get_sudo('--service_install')
