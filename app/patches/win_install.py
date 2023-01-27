@@ -6,6 +6,7 @@ import sys
 import time
 import venv
 import zipfile
+import platform
 from pathlib import Path
 from urllib import request
 
@@ -90,6 +91,10 @@ def extract_onsen():
     print('extracting front-end...')
     with zipfile.ZipFile("app\\resources\\static\\onsen.zip","r") as zip_ref:
         zip_ref.extractall("app\\resources\\static\\")
+
+def get_hostname():
+    hostname = platform.node().strip()
+    return hostname
 
 def create_run_script():
     with open('run.bat', 'wt') as fp:
@@ -256,14 +261,14 @@ if has_service():
                 if not wait_for_service():
                     print("Could not run service.")
                 else:
-                    print("Service is running.\nYou can test by accessing http://localhost:5000.")
+                    print("Service is running.\nYou can test by accessing http://{}:5000.".format(get_hostname()))
 else:
     if wants_service():
         get_sudo('--service_install')
         if not wait_for_service():
             print("Could not run/install service.")
         else:
-            print("Service is running.\nYou can test by accessing http://localhost:5000.")
+            print("Service is running.\nYou can test by accessing http://{}:5000.".format(get_hostname()))
     else:
         print("Installation complete.  You can manually start Memory Manipulator by running\n'run.bat'")
 
