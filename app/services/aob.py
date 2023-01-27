@@ -23,6 +23,7 @@ from app.helpers.process import BaseConvert
 from app.helpers.progress import Progress
 from app.helpers.search_results import SearchResults
 from app.search.searcher_multi import SearcherMulti
+import app.helpers.process as pc
 
 
 class AOB(MemoryHandler):
@@ -416,10 +417,22 @@ class AOB(MemoryHandler):
 
         def aob_address_search(self):
             self.progress.add_constraint(0, 1, 0.1)
+            au = AOBUtilities(self.memory, DataStore().get_operation_control(), self.progress)
+            heap_start, heap_end = au.find_heap_data(self.memory, self.current_address)
             start = self.current_address - self.aob_file.get_address_offset()
             end = start+self.aob_file.get_length()
+            start_diff = heap_start - start
+            end_diff = heap_end - end
+            real_start = max(start, heap_start)
+            real_end = min(end, heap_end)
             try:
-                new_data = self.memory.read_memory(start, (ctypes.c_ubyte * (end - start))())
+                new_data = (ctypes.c_ubyte * (end - start))()
+                if start_diff > 0 or end_diff < 0:
+                    new_data_address = ctypes.addressof(new_data)
+                    real_data = (ctypes.c_ubyte * (real_end - real_start)).from_address(new_data_address+start_diff)
+                    self.memory.read_memory(real_start, real_data)
+                else:
+                    new_data = self.memory.read_memory(start, new_data)
             except OSError:
                 self.progress.mark()
                 return 0
