@@ -1,7 +1,9 @@
+from typing import List
+
 from app.helpers.exceptions import ScriptException
 from .element import Element
 from .page import Page
-from typing import List
+
 
 class UI(Element):
 

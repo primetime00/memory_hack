@@ -2,8 +2,8 @@ import copy
 import ctypes
 import logging
 import traceback
-from queue import Queue, PriorityQueue
-from threading import Thread, Lock, Event
+from queue import PriorityQueue
+from threading import Thread, Lock
 from typing import Union
 
 from falcon import Request, Response

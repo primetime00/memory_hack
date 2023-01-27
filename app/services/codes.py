@@ -23,6 +23,7 @@ ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, cty
 
 class CodeList(MemoryHandler):
     directory = codes_directory
+    _FILE_VERSION = 1
     def __init__(self):
         super().__init__('codelist')
         self.handle_map = {
@@ -49,6 +50,7 @@ class CodeList(MemoryHandler):
 
         self.code_data = None
         self.loaded_file = "_null"
+        self.file_version = CodeList._FILE_VERSION
         self.aob_map = {}
         self.result_map = {}
         self.freeze_map = {}
@@ -293,7 +295,9 @@ class CodeList(MemoryHandler):
                     del item['Selected']
             pt = self.directory.joinpath(file+'.codes')
             with open(pt, 'wt') as f:
-                json.dump(list(write_data.values()), f, indent=4)
+                file_data = {'version': CodeList._FILE_VERSION,
+                             'codes': list(write_data.values())}
+                json.dump(file_data, f, indent=4)
         except:
             raise CodelistException('Could not save codes.')
         if pt.stem != self.loaded_file:
@@ -356,11 +360,17 @@ class CodeList(MemoryHandler):
             with open(pt, 'rt') as ifile:
                 self.code_data = {}
                 codes = json.load(ifile)
+                if type(codes) is dict:
+                    self.file_version = codes.get('version', CodeList._FILE_VERSION)
+                    codes = codes.get('codes', [])
+                else:
+                    self.file_version = CodeList._FILE_VERSION
                 for i in range(0, len(codes)):
                     v = codes[i]
                     v['Value'] = {'Actual': None, 'Display': "??"}
                     v['Freeze'] = False
                     self.code_data[i] = v
+                    self.file_version = CodeList._FILE_VERSION
                 self.loaded_file = pt.stem
         except:
             raise CodelistException('Could not load code file')
@@ -477,6 +487,8 @@ class CodeList(MemoryHandler):
                             read, addrs, selected = (None, None, None)
                         except AOBException:
                             read, addrs, selected = (None, None, None)
+                        except Exception: #somethiung else happened
+                            return
                         if selected is None:
                             if 'Selected' in code:
                                 del code['Selected']

@@ -183,22 +183,32 @@ class AOBSearchBuffer(SearchBuffer):
     def find_value(self, value: AOB):
         return self._haystack_search(value)
 
-    def _haystack_find(self, haystack: bytes, needle: bytes, start: int, aob_bytes, search_offset: int):
-        result = haystack.find(needle, start)
-        if result == -1:
-            return -1
-        start = result-search_offset
-        if start < 0:
-            return -1
-        if start+len(aob_bytes) >= len(haystack):
-            return -1
+    def aob_match(self, haystack, aob_bytes, start: int):
         aob_index = -1
-        for i in range(start, start+len(aob_bytes)):
+        for i in range(start, start + len(aob_bytes)):
             aob_index += 1
             if aob_bytes[aob_index] >= 256:
                 continue
             if int(haystack[i]) != aob_bytes[aob_index]:
+                return False
+        return True
+
+    def _haystack_find(self, haystack: bytes, needle: bytes, start: int, aob_bytes, search_offset: int):
+        while True:
+            result = haystack.find(needle, start)
+            if result == -1:
                 return -1
+            start = result-search_offset
+            if start < 0:
+                return -1
+            if start+len(aob_bytes) >= len(haystack):
+                return -1
+            if not self.aob_match(haystack, aob_bytes, start):
+                start += len(aob_bytes)
+                if start >= len(haystack):
+                    return -1
+                continue
+            break
         return start
 
     def _haystack_search(self, value: AOB):

@@ -218,15 +218,15 @@
 
     aob.aob_upload_file_changed = function(file) {
         $('#aob_upload_button').val("");
-        if (file.size > 600000) {
-            ons.notification.toast('File must be under 600KB', { timeout: 2000, animation: 'fall' })
+        if (file.size > 60000000) {
+            ons.notification.toast('File must be under 60MB', { timeout: 2000, animation: 'fall' })
             return
         } else if (file.size <= 20) {
             ons.notification.toast('AOB file is too small.', { timeout: 2000, animation: 'fall' })
             return
         }
         var reader = new FileReader();
-        reader.readAsText(file, 'UTF-8');
+        reader.readAsDataURL(file);
         reader.onload = function(event) {
             var result = event.target.result;
             var fileName = file.name;
@@ -781,6 +781,7 @@
                     }
                     while ($("#result_"+last_index).length > 0) {
                         $("#result_"+last_index).remove()
+                        last_index += 1
                     }
                 }
                 div_search_results.children('.result_row').show()

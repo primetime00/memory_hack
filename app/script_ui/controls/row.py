@@ -1,6 +1,7 @@
+from typing import List
+
 from .column import Column
 from .element import Element
-from typing import List
 
 
 class Row(Element):

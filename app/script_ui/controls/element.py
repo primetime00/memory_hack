@@ -1,6 +1,7 @@
 from queue import Queue
-from .build import Build
 from typing import List, Dict
+
+from .build import Build
 
 
 class Element(Build):

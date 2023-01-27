@@ -1,5 +1,7 @@
-from .element import Element
 from typing import List
+
+from .element import Element
+
 
 class Children:
     def children(self) -> List[Element]:

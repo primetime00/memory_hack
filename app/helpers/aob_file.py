@@ -1,4 +1,5 @@
 import logging
+import pickle
 import re
 from io import BytesIO
 from pathlib import Path
@@ -12,56 +13,30 @@ class AOBFile():
     smallest_run = 5
     consecutive_wildcards = 5
     header = ['Process: ', 'Name: ', 'Range: ', 'Offset: ', 'Length: ', 'Valid: ']
+    FILE_STATE_NOT_EXIST = 0
+    FILE_STATE_INITIAL_RESULTS = 1
+    FILE_STATE_HAS_RESULTS = 2
+    FILE_STATE_NO_RESULTS = 3
+    FILE_STATE_NEEDS_SEARCH = 4
+    _FILE_VERSION = 1
 
     def __init__(self, directory: Path = aob_directory, filename=None):
         self.process = ""
         self.directory = directory
         self.name = ""
         self.range = 0
-        self.offset = 0
+        self.address_offset = 0
         self.length = 0
         self.valid = 0
         self.final = False
-        self.initial = False
+        self.initial = True
+        self.data_list = []
         self.aob_list = []
+        self.file_state = AOBFile.FILE_STATE_NOT_EXIST
         self.filename = filename
+        self._version = AOBFile._FILE_VERSION
         if self.filename and self.directory.joinpath(self.filename).exists():
             self.read()
-
-    def read_stream(self, handle):
-        count = 0
-        try:
-            for line in handle.readlines():
-                line = line.replace('\n', '').strip()
-                if line.startswith('Process: '):
-                    self.process = line[9:]
-                elif line.startswith('Name: '):
-                    self.name = line[6:]
-                elif line.startswith('Range: '):
-                    self.range = int(line[7:])
-                elif line.startswith('Offset: '):
-                    self.offset = int(line[8:])
-                elif line.startswith('Length: '):
-                    self.length = int(line[8:])
-                elif line.startswith('Valid: '):
-                    self.valid = int(line[7:])
-                elif line.startswith('Final: '):
-                    self.final = line[7:].casefold() == 'true'
-                elif line.startswith('Initial: '):
-                    self.initial = line[9:].casefold() == 'true'
-                elif line.startswith('Size: '):
-                    matches = re.match(AOBFile._pattern, line)
-                    size = int(matches.group(1))
-                    offset = int(matches.group(2).replace(' ', ''), 16)
-                    aob = matches.group(3)
-                    self.aob_list.append(self.create_aob(size, offset, aob))
-                count += 1
-                if count > 4 and not self.process:
-                    raise AOBException('Could not parse AOB file.')
-        except ValueError as e:
-            raise AOBException('Could not parse AOB data [{}]'.format(e))
-        except:
-            raise AOBException('Could not parse AOB data')
 
     def read(self, filename=None):
         if filename:
@@ -73,13 +48,38 @@ class AOBFile():
         path = self.directory.joinpath(filename)
         if not path.exists():
             raise AOBException("Cannot find aob file {}".format(str(path.absolute())))
-        with open(path, "rt") as f:
-            try:
-                self.read_stream(f)
-            except AOBException as e:
-                raise AOBException("{} {}".format(str(path.absolute()), e.get_message()))
-        self.valid = len(self.aob_list)
+        with open(path, "rb") as f:
+            self.read_stream(f)
+
+    def read_stream(self, handle):
+        try:
+            data = pickle.load(handle)
+            self.process = data['process']
+            self.range = data['range']
+            self.address_offset = data['offset']
+            self.length = data['length']
+            self.valid = data['valid']
+            self.final = data['final']
+            self.initial = data['initial']
+            self.data_list = data['aob_data']
+            self._version = data.get('_version', 1)
+        except Exception as e:
+            raise AOBException('Could not parse AOB data')
+        self.valid = True
         self.validate()
+        if len(self.data_list) == 0:
+            self.file_state = AOBFile.FILE_STATE_NEEDS_SEARCH
+        elif len(self.data_list) == 1:
+            self.file_state = AOBFile.FILE_STATE_INITIAL_RESULTS
+        elif len(self.data_list) >= 2:
+            if len(self.data_list[-1]) > 0:
+                self.file_state = AOBFile.FILE_STATE_HAS_RESULTS
+            else:
+                self.file_state = AOBFile.FILE_STATE_NO_RESULTS
+
+
+    def get_state(self):
+        return self.file_state
 
     def validate(self):
         if not self.name:
@@ -98,15 +98,24 @@ class AOBFile():
         res['aob_bytes'] = [int(x, 16) if x != '??' else 256 for x in res['aob_array']]
         return res
 
-    def create_aob_from_array(self, offset: int, aob_array: list):
+    def create_aob_from_array(self, mem_start: int, aob_values: list):
+        offset = self.address_offset - mem_start
+        size = len(aob_values)
+        aob_string = ""
+        for item in aob_values:
+            if item <= 255:
+                aob_string += '{:02X} '.format(item)
+            else:
+                aob_string += '?? '
+
         results = []
         aob_array, start, length = self.strip(aob_array)
-        offset = offset+start
+        mem_start = mem_start + start
         groups = self.divide(aob_array, wildcard_length=self.consecutive_wildcards)
         if len(groups)>1:
             pass
         for item in groups:
-            na_start = offset+item['start']
+            na_start = mem_start + item['start']
             if len(item['aob']) < self.smallest_run:
                 continue
             res = {'size': len(item['aob']), 'offset': na_start, 'aob_string': ' '.join(item['aob']), 'aob_array': item['aob']}
@@ -116,7 +125,7 @@ class AOBFile():
 
 
     def add_aob_array(self, aob_array, run_start):
-        aobs = self.create_aob_from_array(run_start-self.offset, aob_array)
+        aobs = self.create_aob_from_array(run_start - self.address_offset, aob_array)
         if aobs:
             self.aob_list.extend(aobs)
         else:
@@ -139,25 +148,26 @@ class AOBFile():
             logging.warning("Could not modify AOB.  There were none to add.\noriginal[{}]\nnew[{}]".format(" ".join(aob_item['aob_array']), " ".join(new_aob)))
 
 
-
     def write(self):
         self.validate()
         path = self.directory.joinpath('{}'.format(self.filename))
-        self.valid = len(self.aob_list)
-        with open(path.absolute(), "wt") as f:
-            try:
-                f.write('Process: {}\n'.format(self.process))
-                f.write('Name: {}\n'.format(self.name))
-                f.write('Range: {}\n'.format(self.range))
-                f.write('Offset: {}\n'.format(self.offset))
-                f.write('Length: {}\n'.format(self.length))
-                f.write('Valid: {}\n'.format(self.valid))
-                f.write('Final: {}\n'.format(str(self.final).casefold()))
-                f.write('Initial: {}\n\n'.format(str(self.initial).casefold()))
-                for aob in sorted(self.aob_list, key=lambda x:x['offset']):
-                    f.write("Size: {:<5} Offset: {:<15X} {}\n".format(aob['size'], aob['offset'], aob['aob_string']))
-            except Exception as e:
-                raise AOBException('Could not write AOB file {} [{}]'.format(str(path.absolute()), e))
+        data = {
+            'process': self.process,
+            'name': self.name,
+            'range': self.range,
+            'offset': self.address_offset,
+            'length': self.length,
+            'valid': self.valid,
+            'final': self.final,
+            'initial': self.initial,
+            'aob_data': self.data_list,
+            '_version': AOBFile._FILE_VERSION
+        }
+        try:
+            with open(path.absolute(), "wb") as f:
+                pickle.dump(data, f)
+        except Exception as e:
+            raise AOBException('Could not write AOB file {} [{}]'.format(str(path.absolute()), e))
 
     def get_filename(self) -> str:
         if self.name:
@@ -180,11 +190,12 @@ class AOBFile():
     def get_results(self):
         self.validate()
         results = []
-        for item in sorted(self.aob_list, key=lambda x: x['offset']):
-            res = {'size': item['size'], 'offset': '{:X}'.format(item['offset']),
-                   'aob': item['aob_string'] }
-                   #'aob': item['aob_string'] if item['size'] <= 50 else " ".join(item['aob_array'][0:50])}
-            results.append(res)
+        if self.data_list and len(self.data_list) > 1:
+            for item in sorted(self.data_list[-1], key=lambda x: x['offset_from_address']):
+                res = {'size': item['size'], 'offset': '{:X}'.format(item['offset_from_address']),
+                       'aob': item['aob_string'] }
+                       #'aob': item['aob_string'] if item['size'] <= 50 else " ".join(item['aob_array'][0:50])}
+                results.append(res)
         return results
 
     def is_final(self):
@@ -203,7 +214,9 @@ class AOBFile():
         return self.aob_list
 
     def count_aob_results(self):
-        return len(self.aob_list)
+        if self.data_list and len(self.data_list) > 1:
+            return len(self.data_list[-1])
+        return 0
 
     def exists(self):
         if not self.filename:
@@ -214,19 +227,28 @@ class AOBFile():
         self.process = _process
 
     def set_name(self, _name: str):
-        self.name = _name
+        if _name != self.name: #we loaded a new file or something
+            self.name = _name
+            self.filename = self.name+'.aob'
+            if not self.directory.joinpath(self.filename).exists():
+                self.file_state = AOBFile.FILE_STATE_NOT_EXIST
+            else:
+                self.read()
+
+
+
 
     def set_range(self, _range: int):
         self.range = _range
 
-    def set_offset(self, _offset: int):
-        self.offset = _offset
+    def set_address_offset(self, _offset: int):
+        self.address_offset = _offset
 
     def set_length(self, _length: int):
         self.length = _length
 
-    def get_offset(self) -> int:
-        return self.offset
+    def get_address_offset(self) -> int:
+        return self.address_offset
 
     def get_length(self) -> int:
         return self.length
@@ -235,50 +257,8 @@ class AOBFile():
         return self.range
 
     def remove_index(self, index=0):
-        self.aob_list.pop(index)
-        self.valid = len(self.aob_list)
-
-    def strip(self, aob_array: list):
-        aob_index = 0
-        aob_list = aob_array
-        while aob_list[aob_index] == '??':
-            aob_index += 1
-        start = aob_index
-        aob_index = len(aob_list) - 1
-        while aob_list[aob_index] == '??':
-            aob_index -= 1
-        end = aob_index
-        if start == 0 and end == len(aob_list) - 1: #we didn't strip
-            return aob_list, start, len(aob_list)
-        else:
-            aob_list = aob_list[start:end + 1]
-            return aob_list, start, len(aob_list)
-
-    def divide(self, aob_array: list, wildcard_length=5):
-        pos = 0
-        start = 0
-        aob_groups = []
-        if len(aob_array) < wildcard_length:
-            aob_groups.append({'start': 0, 'aob': aob_array})
-            return aob_groups
-        while True:
-            try:
-                pos = aob_array.index('??', pos)
-                if all(bt == '??' for bt in aob_array[pos:pos + wildcard_length]): #we need to divide
-                    new_aob = aob_array[start:pos]
-                    if len(new_aob) > 0:
-                        new_aob, start2, len2 = self.strip(new_aob)
-                        aob_groups.append({'start': start+start2, 'aob': new_aob})
-                    start = pos+wildcard_length+1
-                    pos = start
-                else:
-                    pos += 1
-            except ValueError: #none/no more found
-                new_aob = aob_array[start:]
-                if len(new_aob) > 0:
-                    new_aob, start2, len2 = self.strip(new_aob)
-                    aob_groups.append({'start': start + start2, 'aob': new_aob})
-                return aob_groups
+        if self.data_list and len(self.data_list) > 1:
+            self.data_list[-1].pop(index)
 
     def remove_aob_string(self, aob_string):
         aob_string_list = [x['aob_string'] for x in self.aob_list]
@@ -315,6 +295,129 @@ class AOBFile():
     def has_memory_file(self):
         return self.get_memory_file().exists()
 
+    def add_data(self, data: bytes):
+        covert_data = []
+        if self.data_list and len(self.data_list[-1]) == 0:
+            return
+        for b in data:
+            covert_data.append(b)
+        if len(self.data_list) == 0:
+            res = {'size': len(covert_data), 'start': 0, 'aob_bytes': covert_data, 'index': 0, 'offset_from_address': 0 - self.address_offset}
+            self.data_list.append([res])
+            self.initial = True
+            self.file_state = AOBFile.FILE_STATE_INITIAL_RESULTS
+        else:
+            aobs = self.compare_data(covert_data,  max_length=200)
+            self.data_list.append(aobs)
+            self.file_state = AOBFile.FILE_STATE_HAS_RESULTS
+            if len(self.data_list[-1]) == 0:
+                self.file_state = AOBFile.FILE_STATE_NO_RESULTS
+            self.initial = False
+            while len(self.data_list) > 3:
+                self.data_list.pop(0)
+
+
+    def range_aob(self, lst: list, length: int, start: int, max_wild: int):
+        i = start
+        stop = start+length
+        if start >= stop:
+            return start, stop+1, i+1
+        while True:
+            try:
+                i = lst.index(256, i)
+                if stop - i < max_wild:  # found last aob
+                    i = stop - 1
+                    end = i
+                    while lst[end] == 256:
+                        end -= 1
+                    break
+                if all(lst[j] == 256 for j in range(i, i + max_wild)):  # we have a row of 5 wildcards
+                    end = i
+                    while lst[end] == 256:
+                        end -= 1
+                    break
+                else:
+                    i += max_wild
+            except ValueError:  # can't find anymore wildcards
+                end = stop - 1
+                i = stop
+                while lst[end] == 256:
+                    end -= 1
+                break
+        return start, end + 1, i
+
+    def extract_aobs(self, lst: list, start:int, length: int, max_wildcards: int, min_length: int, distinct: int):
+        i = start
+        start_length = length
+        end = start+length
+        aob_list = []
+        while i < end:
+            while lst[i] == 256:
+                i += 1
+                length -= 1
+                if i >= end:
+                    break
+            _start, _end, _index = self.range_aob(lst, length, i, max_wildcards)
+            if _end - _start >= min_length:
+                res_list = lst[_start: _end]
+                ds = distinct + 1 if 256 in res_list else distinct
+                if len(set(res_list)) >= ds:
+                    aob_list.append({'start': _start, 'end': _end, 'data': res_list})
+            i = _index + 1
+            length = start_length - i
+        return aob_list
+
+    def compare_data(self, data: list, max_length=-1):
+        old_aobs = self.data_list[-1]
+        old_index = old_aobs[0]['index']
+        for old_aob in old_aobs:
+            start = old_aob['start']
+            length = old_aob['size']
+            old_data = old_aob['aob_bytes']
+            j = 0
+            for i in range(start, start+length):
+                if data[i] != old_data[j]:
+                    data[i] = 256
+                j += 1
+        aobs = []
+        for old_aob in old_aobs:
+            length = old_aob['size']
+            start = old_aob['start']
+            if max_length <= 0 or max_length >= length:
+                aobs.append(self.extract_aobs(data, start=start, length=length, max_wildcards=4, min_length=5, distinct=3))
+            else:
+                while length > 0:
+                    aobs.append(self.extract_aobs(data, start=start, length=min(max_length, length), max_wildcards=4, min_length=5, distinct=3))
+                    length -= max_length
+                    start += max_length
+        all_aobs = sum(aobs, [])
+        prep_aobs = []
+        for aob in all_aobs:
+            res = {'size': len(aob['data']), 'start': aob['start'], 'aob_bytes': aob['data'], 'index': old_index+1, 'offset_from_address': aob['start'] - self.address_offset}
+            aob_string = ''
+            for b in aob['data']:
+                if b == 256:
+                    aob_string += '?? '
+                else:
+                    aob_string += '{:02X} '.format(b)
+            aob_string = aob_string.strip()
+            res['aob_string'] = aob_string
+            prep_aobs.append(res)
+        return prep_aobs
+
+    def get_data_list(self):
+        return self.data_list
+
+    def rewind(self):
+        if self.data_list and len(self.data_list) > 2:
+            self.data_list.pop()
+            if len(self.data_list[-1]) > 0:
+                self.file_state = AOBFile.FILE_STATE_HAS_RESULTS
+            else:
+                self.file_state = AOBFile.FILE_STATE_NO_RESULTS
+
+    def get_name(self):
+        return self.name
 
 
 
