@@ -264,7 +264,6 @@ class AOB(MemoryHandler):
     def _count_thread(self, aob, index):
         aob_str: str = aob['aob']
         self.searcher.set_search_size('array')
-        self.searcher.set_include_paths(['[heap]', ' '])
         self.searcher.search_memory_value(aob_str)
         self.count_queue.put((index, len(self.searcher.results)))
 
