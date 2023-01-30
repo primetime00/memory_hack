@@ -12,7 +12,9 @@
     var aob_resolve_map = {}
     var pointer_resolve_map = {}
     var value_map = {}
-    var repeater = undefined
+
+    //public vars
+    codelist.updater = null
 
     //Public Method
     codelist.on_process_changed = function(process) {
@@ -52,7 +54,16 @@
     }
 
     codelist.on_tab_set = function(tab) {
-
+        if (tab !== 'codelist') {
+            if (codelist.updater !== null) {
+                clearTimeout(codelist.updater)
+                codelist.updater = null
+            }
+        } else {
+            if (codelist.updater === null) {
+                codelist.updater = setTimeout(()=>{$.send('/codelist', { "command": "CODELIST_STATUS" }, on_codelist_status);}, 100)
+            }
+        }
     };
 
 
@@ -88,6 +99,7 @@
     }
 
     codelist.code_value_changed = function(did_blur, ele, index) {
+        event.stopPropagation()
         if (!did_blur) {
             if(event.key === 'Enter' || event.key === 'Return'  || event.keyCode == 13) {
                 ele.blur()
@@ -127,9 +139,9 @@
             items = $(popover).find('ons-list-item')
             for (i=0; i<items.length; i++) {
                 var item = items[i]
-                //if (item.getAttribute("name") === 'copy_clipboard' && document.clipboard.has_address() && aob_resolve_map.hasOwnProperty(index) && aob_resolve_map[index].length > 0) {
-                //    $(item).removeClass('hidden')
-                //}
+                if (item.getAttribute("name") === 'address_to_aob' && document.clipboard.has_address() && !document.clipboard.has_pointer() && aob_resolve_map.hasOwnProperty(index) && aob_resolve_map[index].length > 0) {
+                    $(item).removeClass('hidden')
+                }
                 $(item).bind('click', {list_id: item.getAttribute("name"), code_index: index}, (event) => {codelist.option_clicked(event.data.list_id, event.data.code_index); popover.hide()})
             }
             popover.show("#"+ele.id);
@@ -177,16 +189,16 @@
             case 'delete':
                 $.send('/codelist', { 'command': "CODELIST_DELETE_CODE", 'index': code_index}, on_codelist_status);
                 break
-            case 'copy_clipboard':
+            case 'address_to_aob':
                 var new_address = document.clipboard.data.address
                 var offset = parseInt(code_data[code_index].Offset, 16)
                 var selected = code_data[code_index].Selected
+                var resolves = aob_resolve_map[code_index]
                 var resolved = selected - offset
                 var new_offset = new_address - resolved
-                var cmd = { 'command': "CODELIST_ADD_CODE", 'type': 'aob',
-                              'address': 0,
-                              'aob': code_data[code_index].AOB,
-                              'offset': new_offset.toString(16) }
+                var cmd = { 'command': "CODELIST_ADD_CODE", 'type': 'aob_from_address',
+                              'address': new_address,
+                              'index': code_index}
 
                 $.send('/codelist', cmd, on_codelist_status);
                 break
@@ -322,6 +334,7 @@
     codelist.copy_code = function(index, element) {
         var source = code_data[index]['Source']
         var data;
+        event.stopPropagation()
         if (source === 'address') {
             data = {'address': code_data[index]['Address'], 'value': value_map[index]}
         } else if (source === 'pointer') {
@@ -406,10 +419,10 @@
             ons.notification.toast(result.error, { timeout: 4000, animation: 'fall' })
         }
         if (has(result, 'repeat') && result.repeat > 0) {
-            if (repeater !== undefined) {
-                clearTimeout(repeater);
+            if (codelist.updater !== undefined) {
+                clearTimeout(codelist.updater);
             }
-            repeater = setTimeout(()=>{$.send('/codelist', { "command": "CODELIST_STATUS" }, on_codelist_status);}, result.repeat)
+            codelist.updater = setTimeout(()=>{$.send('/codelist', { "command": "CODELIST_STATUS" }, on_codelist_status);}, result.repeat)
         }
     }
 
@@ -634,7 +647,7 @@
             })
         },
         'update': (_this) => {},
-        'template': '<ons-list-item id="##id##" modifier="longdivider"></ons-list-item>',
+        'template': '<ons-list-item id="##id##" modifier="longdivider" expandable><div name="expand" class="expandable-content"></div></ons-list-item>',
         'create': (index, data) => {
             var t = {...component_code};
             t.id = component_code.id+index
@@ -654,7 +667,11 @@
                 t.children.push(component_row_offset.create(index))
             }
             t.children.forEach((item, index) =>{
-                t.obj.append(item.obj)
+                if (index == 0) {
+                    t.obj.find('.center').append(item.obj)
+                } else {
+                    t.obj.find('div[name="expand"]').append(item.obj)
+                }
             })
             return t;
         },
@@ -791,6 +808,7 @@
             t.index = index
             t.template = component_code_size.template.replaceAll("##index##", index).replaceAll('##id##', t.id)
             t.obj = $(ons.createElement(t.template))
+            t.obj.bind('click', function() {event.stopPropagation();})
             return t;
         }
     }
@@ -820,6 +838,7 @@
             t.index = index
             t.template = component_code_value.template.replaceAll("##index##", index).replaceAll('##id##', t.id)
             t.obj = $(ons.createElement(t.template))
+            t.obj.bind('click', 'input[type=text]', function(){ this.select(); event.stopPropagation() })
             return t;
         }
     }
@@ -849,6 +868,7 @@
             t.index = index
             t.template = component_code_freeze.template.replaceAll("##index##", index).replaceAll('##id##', t.id)
             t.obj = $(ons.createElement(t.template))
+            t.obj.bind('click', function() {event.stopPropagation();})
             return t;
         }
     }

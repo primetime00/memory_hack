@@ -191,6 +191,27 @@ class CodeList(MemoryHandler):
         tp = req.media['type']
         if not self.code_data:
             self.code_data = {}
+        if tp == 'aob_from_address':
+            aob = self.code_data[int(req.media['index'])]['AOB']
+            addr = int(req.media['address'], 16)
+            bases = self.aob_map[aob].get_bases()
+            if not bases:
+                return
+            min_item = 0xFF
+            min_distance = 0x7FFFFFFFFFFFFFFF
+            for i in range(0, len(bases)):
+                cr = bases[i]
+                dist = abs(addr - cr)
+                if dist < min_distance:
+                    min_distance = dist
+                    min_item = i
+            offset = bases[min_item] - addr
+            req.media['aob'] = aob
+            req.media['offset'] = '{:X}'.format(-offset)
+            req.media['address'] = 0
+            req.media['type'] = 'aob'
+            del req.media['index']
+            tp = 'aob'
         with self.update_lock:
             if 'index' in req.media:
                 index = int(req.media['index'])

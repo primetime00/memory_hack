@@ -104,6 +104,15 @@
         }
         return false;
       },
+      'has_pointer': () => {
+        if (Object.keys(document.clipboard.data).length === 0) {
+          return false;
+        }
+        if (document.clipboard.data.hasOwnProperty("address") && document.clipboard.data.hasOwnProperty("offsets")) {
+          return true;
+        }
+        return false;
+      },
       'clear': () => {
         document.clipboard.data = {}
         search.clipboard_data_cleared()
@@ -237,8 +246,8 @@ div .input_item{
         <ons-list-item class="more-options" name="copy" tappable>
           <div class="center">Copy</div>
         </ons-list-item>
-        <ons-list-item class="more-options hidden" name="copy_clipboard" tappable>
-          <div class="center">Copy From Clipboard</div>
+        <ons-list-item class="more-options hidden" name="address_to_aob" tappable>
+          <div class="center">AOB From Address</div>
         </ons-list-item>
         <ons-list-item class="more-options" name="delete" tappable>
           <div class="center">Delete</div>
