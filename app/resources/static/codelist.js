@@ -529,8 +529,6 @@
         }
     }
 
-
-
     var component_code_list = {
         'id': "code_list",
         'obj': undefined,
@@ -618,7 +616,7 @@
             })
         },
         'update': (_this) => {},
-        'template': '<ons-list-header id="##id##" style="background-color:#ddd;"></ons-list-header>',
+        'template': '<ons-list-header id="##id##" style="background-color:#ddd; padding:0px 5px ;"></ons-list-header>',
         'create': (index, data) => {
             var t = {...component_code_header};
             t.id = component_code_header.id+index
@@ -673,6 +671,12 @@
                     t.obj.find('div[name="expand"]').append(item.obj)
                 }
             })
+            t.obj.find('div.top > div.center').css('max-height', '32px')
+            t.obj.find('div.top > div.center').css('min-height', '8px')
+            t.obj.find('div.top > div.center').css('align-content', 'center')
+            t.obj.find('div.top > div.right').css('max-height', '32px')
+            t.obj.find('div.top > div.right').css('min-height', '8px')
+            t.obj.find('div.top > div.right').css('align-content', 'center')
             return t;
         },
         'children': []
@@ -758,9 +762,9 @@
         },
         'update': (_this) => {},
         'template': `<ons-row id="##id##">
-                        <ons-col align="center" width="20%" class="col ons-col-inner">
+                        <ons-col align="center" width="22%" class="col ons-col-inner">
                         </ons-col>
-                        <ons-col align="center" width="55%" class="col ons-col-inner">
+                        <ons-col align="center" width="54%" class="col ons-col-inner">
                         </ons-col>
                         <ons-col class="checkbox--grid" align="right" width="7%" class="col ons-col-inner">
                         </ons-col>
