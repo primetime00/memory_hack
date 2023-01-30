@@ -730,6 +730,12 @@
             t.index = index
             t.template = component_code_name.template.replaceAll("##index##", index).replaceAll('##id##', t.id)
             t.obj = $(ons.createElement(t.template))
+            t.obj.bind('click', 'input[type=text]', function(){
+                if (this.value.startsWith('Code #')) {
+                    this.select()
+                }
+                event.stopPropagation()
+            })
             return t;
         }
     }

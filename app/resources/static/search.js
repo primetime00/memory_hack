@@ -37,7 +37,7 @@
                 '<label class="checkbox checkbox--material"><input tabIndex="-1" id="search_freeze_##index##" type="checkbox" class="checkbox__input checkbox--material__input freeze" data-address="##address##" onchange="search.result_freeze(this, ##index##)"> <div class="checkbox__checkmark checkbox--material__checkmark"></div>',
             '</ons-col>',
             '<ons-col align="center" width="18%" class="col ons-col-inner">',
-                '<ons-col align="center" width="98px" class="col ons-col-inner"><ons-button modifier="quiet" name="add_button" data-address="##address##" onclick="search.copy_result(##index##, this)">Copy</ons-button></ons-col>',
+                '<ons-col align="center" width="98px" class="col ons-col-inner"><ons-button modifier="quiet" name="add_button" data-address="##address##" onclick="search.copy_result(##index##, this)"><ons-icon icon="md-copy"/></ons-button></ons-col>',
             '</ons-col>',
           '</ons-row>',
       '</ons-list-item>',
@@ -178,7 +178,9 @@
       for (i=0; i<40; i++) {
         var el = ons.createElement(li_template.replaceAll('##index##', i).replaceAll('##address##', 0).replaceAll('##value##', 0))
         list_search_result_list.append(el)
+        $(el).find('input[name="search_value"]').bind('click', function(){ this.select()})
       }
+      $("#search_value").bind('click', function(){ this.select()})
     };
 
     search.copy_result = function(index, element) {
