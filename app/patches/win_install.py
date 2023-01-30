@@ -1,12 +1,12 @@
 import ctypes
 import os
+import platform
 import shutil
 import subprocess
 import sys
 import time
 import venv
 import zipfile
-import platform
 from pathlib import Path
 from urllib import request
 

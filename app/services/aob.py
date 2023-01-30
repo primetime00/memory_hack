@@ -23,7 +23,6 @@ from app.helpers.process import BaseConvert
 from app.helpers.progress import Progress
 from app.helpers.search_results import SearchResults
 from app.search.searcher_multi import SearcherMulti
-import app.helpers.process as pc
 
 
 class AOB(MemoryHandler):
@@ -133,7 +132,7 @@ class AOB(MemoryHandler):
 
     def handle_upload(self, req: Request, resp: Response):
         name: str = req.media['name'].strip()
-        data: str = base64.b64decode(req.media['data'].split(',')[1])
+        data = base64.b64decode(req.media['data'].split(',')[1])
         pt = Path(name)
         filename: str = pt.stem
         name_list = [item.casefold() for item in self.get_aob_list()]

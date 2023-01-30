@@ -25,13 +25,22 @@
           </ons-col>
         </ons-row>
         <ons-row>
-          <ons-col align="center" width="18%" class="col ons-col-inner">
+          <ons-col align="left" class="col ons-col-inner">
           </ons-col>
-          <ons-col align="left" width="25%" class="col ons-col-inner">
-            <ons-button modifier="" id="codelist_save_button" onclick="codelist.on_save_clicked(this)">Save</ons-button>
+          <ons-col align="center" width="20%" class="col ons-col-inner">
+            <ons-button modifier="" id="codelist_save_button" onclick="codelist.on_save_clicked(this)"><ons-icon icon="md-floppy" size="25px"></ons-icon></ons-button>
           </ons-col>
-          <ons-col align="left" width="25%" class="col ons-col-inner">
-            <ons-button modifier="" id="codelist_delete_button" onclick="codelist.on_delete_clicked(this)">Delete</ons-button>
+          <ons-col align="center" width="20%" class="col ons-col-inner">
+            <ons-button modifier="" id="codelist_download_button" onclick="codelist.on_download_clicked(this)"><ons-icon icon="md-download" size="25px"></ons-icon></ons-button>
+          </ons-col>
+          <ons-col align="center" width="20%" class="col ons-col-inner">
+            <input type="file" id="codelist_upload_button" onchange="codelist.on_upload_clicked(this.files[0])" hidden/>
+            <label for="codelist_upload_button"><ons-button><ons-icon icon="md-upload" size="25px"></ons-icon></ons-button></label>
+          </ons-col>
+          <ons-col align="center" width="20%" class="col ons-col-inner">
+            <ons-button modifier="" id="codelist_delete_button" onclick="codelist.on_delete_clicked(this)"><ons-icon icon="md-delete" size="25px"></ons-icon></ons-button>
+          </ons-col>
+          <ons-col align="left"  class="col ons-col-inner">
           </ons-col>
         </ons-row>
       </ons-col>

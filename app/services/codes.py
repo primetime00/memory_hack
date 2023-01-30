@@ -1,7 +1,10 @@
+import base64
 import copy
 import ctypes
 import json
 import os
+from io import BytesIO
+from pathlib import Path
 from threading import Thread, Lock, Event
 from typing import Union
 
@@ -39,7 +42,8 @@ class CodeList(MemoryHandler):
             "CODELIST_SAVE": self.handle_save,
             "CODELIST_DELETE_LIST": self.handle_delete_list,
             "CODELIST_ADD_CODE": self.handle_add_code,
-            "CODELIST_AOB_SELECT": self.handle_aob_base_select
+            "CODELIST_AOB_SELECT": self.handle_aob_base_select,
+            "CODELIST_UPLOAD": self.handle_upload
         }
         self.update_thread: Thread = None
         self.update_event: Event = None
@@ -284,20 +288,10 @@ class CodeList(MemoryHandler):
 
     def handle_save(self, req: Request, resp: Response):
         file = req.media['file']
-        write_data = copy.copy(self.code_data)
         try:
-            for key, item in write_data.items():
-                if 'Value' in item:
-                    del item['Value']
-                if 'Resolved' in item:
-                    del item['Resolved']
-                if 'Selected' in item:
-                    del item['Selected']
+            dt = self.dump_codelist()
             pt = self.directory.joinpath(file+'.codes')
-            with open(pt, 'wt') as f:
-                file_data = {'version': CodeList._FILE_VERSION,
-                             'codes': list(write_data.values())}
-                json.dump(file_data, f, indent=4)
+            pt.write_text(dt)
         except:
             raise CodelistException('Could not save codes.')
         if pt.stem != self.loaded_file:
@@ -318,7 +312,35 @@ class CodeList(MemoryHandler):
         resp.media['file'] = self.loaded_file
         resp.media['files'] = self.get_code_files()
 
+    def get_stream(self) -> BytesIO:
+        dt = self.dump_codelist()
+        return BytesIO(dt.encode())
 
+    def handle_download(self, req: Request, resp: Response):
+        name = req.params['name']
+        resp.downloadable_as = name+'.codes'
+        resp.content_type = 'application/octet-stream'
+        resp.stream = self.get_stream()
+        resp.status = 200
+
+    def handle_upload(self, req: Request, resp: Response):
+        name: str = req.media['name'].strip()
+        data = base64.b64decode(req.media['data'].split(',')[1])
+        pt = Path(name)
+        filename: str = pt.stem
+        name_list = [item.casefold() for item in self.get_code_files()]
+        index = 0
+        proposed_filename = filename
+        while proposed_filename.casefold() in name_list:
+            index += 1
+            proposed_filename = "{}-{:03d}".format(filename, index)
+        with open(Path(CodeList.directory.joinpath(proposed_filename+'.codes')), 'wt') as f:
+            f.write(data.decode())
+        resp.media['message'] = 'Upload complete'
+        req.media['file'] = proposed_filename
+        self.handle_load(req, resp)
+        resp.media['file'] = self.loaded_file
+        resp.media['files'] = self.get_code_files()
 
 
     def handle_name(self, req: Request, resp: Response):
@@ -380,6 +402,19 @@ class CodeList(MemoryHandler):
         resp.media['repeat'] = 400
         self.start_updater()
 
+    def dump_codelist(self):
+        write_data = copy.copy(self.code_data)
+        for key, item in write_data.items():
+            if 'Value' in item:
+                del item['Value']
+            if 'Resolved' in item:
+                del item['Resolved']
+            if 'Selected' in item:
+                del item['Selected']
+        file_data = {'version': CodeList._FILE_VERSION,
+                     'codes': list(write_data.values())}
+        return json.dumps(file_data, indent=4)
+
     def process(self, req: Request, resp: Response):
         resp.media = {}
         command = req.media['command']
@@ -393,8 +428,9 @@ class CodeList(MemoryHandler):
             pass
 
     def get_code_files(self):
-        pt = self.directory.glob('*.codes')
-        return [x.stem for x in pt]
+        pt = list(self.directory.glob('*.codes'))
+        st = [(x.stem, x.stat().st_mtime) for x in pt]
+        return [y[0] for y in sorted(st, key=lambda x: x[1], reverse=False)]
 
 
     def read_aob_value(self, aob: AOB, code):

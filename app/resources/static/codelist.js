@@ -220,6 +220,76 @@
         });
     }
 
+    codelist.on_download_clicked = function(ele) {
+        component_codelist_download.obj.attr('disabled', 'disabled')
+        var name = component_codelist_file.file
+        if (name === '_null') {
+            name = 'unknown_codelist'
+        }
+        $.ajax({
+            type: "GET",
+            url: '/codelist',
+            data: { "name": name },
+            xhrFields: {
+                responseType: 'blob' // to avoid binary data being mangled on charset conversion
+            },
+            success: function(blob, status, xhr) {
+                // check for a filename
+                var filename = "";
+                var disposition = xhr.getResponseHeader('Content-Disposition');
+                if (disposition && disposition.indexOf('attachment') !== -1) {
+                    var filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                    var matches = filenameRegex.exec(disposition);
+                    if (matches != null && matches[1]) filename = matches[1].replace(/['"]/g, '');
+                }
+
+                if (typeof window.navigator.msSaveBlob !== 'undefined') {
+                    // IE workaround for "HTML7007: One or more blob URLs were revoked by closing the blob for which they were created. These URLs will no longer resolve as the data backing the URL has been freed."
+                    window.navigator.msSaveBlob(blob, filename);
+                } else {
+                    var URL = window.URL || window.webkitURL;
+                    var downloadUrl = URL.createObjectURL(blob);
+
+                    if (filename) {
+                        // use HTML5 a[download] attribute to specify filename
+                        var a = document.createElement("a");
+                        // safari doesn't support this yet
+                        if (typeof a.download === 'undefined') {
+                            window.location.href = downloadUrl;
+                        } else {
+                            a.href = downloadUrl;
+                            a.download = filename;
+                            document.body.appendChild(a);
+                            a.click();
+                        }
+                    } else {
+                        window.location.href = downloadUrl;
+                    }
+
+                    setTimeout(function () { URL.revokeObjectURL(downloadUrl); component_codelist_download.obj.removeAttr('disabled') }, 100); // cleanup
+                }
+            }
+        });
+    }
+
+    codelist.on_upload_clicked = function(file) {
+        $('#codelist_upload_button').val("");
+        if (file.size > 600000) {
+            ons.notification.toast('File must be under 600KB', { timeout: 2000, animation: 'fall' })
+            return
+        } else if (file.size <= 20) {
+            ons.notification.toast('Codelist file is too small.', { timeout: 2000, animation: 'fall' })
+            return
+        }
+        var reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = function(event) {
+            var result = event.target.result;
+            var fileName = file.name;
+            $.post('/codelist', { "command": "CODELIST_UPLOAD", data: result, name: fileName }, on_codelist_status);
+        }
+    }
+
     codelist.on_delete_clicked = function(ele) {
         ons.createElement('delete_code_file', { append: true }).then(function(dialog) {
             $(dialog).find('#delete_code_file_name').text(component_codelist_file.file)
@@ -353,11 +423,19 @@
             if (component_codelist_save.obj === undefined) {
                 component_codelist_save.obj = $('#'+component_codelist_save.id)
             }
+            if (component_codelist_download.obj === undefined) {
+                component_codelist_download.obj = $('#'+component_codelist_download.id)
+            }
+            if (component_codelist_upload.obj === undefined) {
+                component_codelist_upload.obj = $('#'+component_codelist_upload.id)
+            }
             if (component_codelist_delete.obj === undefined) {
                 component_codelist_delete.obj = $('#'+component_codelist_delete.id)
             }
             component_codelist_file.setup(result, component_codelist_file)
             component_codelist_save.setup(result, component_codelist_save)
+            component_codelist_download.setup(result, component_codelist_download)
+            component_codelist_upload.setup(result, component_codelist_upload)
             component_codelist_delete.setup(result, component_codelist_delete)
         },
         'update': (_this) => {}
@@ -372,6 +450,28 @@
             } else {
                 _this.obj.attr('disabled', 'disabled')
             }
+        },
+        'update': (_this) => {}
+    }
+
+    var component_codelist_download = {
+        'id': "codelist_download_button",
+        'obj': undefined,
+        'setup': (result, _this) => {
+            if (code_list && code_list.children.length > 0) {
+                _this.obj.removeAttr('disabled')
+            } else {
+                _this.obj.attr('disabled', 'disabled')
+            }
+        },
+        'update': (_this) => {}
+    }
+
+    var component_codelist_upload = {
+        'id': "codelist_upload_button",
+        'obj': undefined,
+        'setup': (result, _this) => {
+                _this.obj.removeAttr('disabled')
         },
         'update': (_this) => {}
     }
@@ -1244,7 +1344,7 @@
     }
 
 
-    var component_list = [component_codelist_file, component_codelist_save, component_codelist_delete, component_code_list]
+    var component_list = [component_codelist_file, component_codelist_save, component_codelist_download, component_codelist_upload, component_codelist_delete, component_code_list]
 
     function set_process(process_name) {
         sel_codelist_process.val(process_name)

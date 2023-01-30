@@ -57,7 +57,6 @@ class AOBResource:
         aob_instance = DataStore().get_service('aob')
         if 'name' in req.params:
             aob_instance.handle_download(req, resp)
-            pass
         else:
             resp.content_type = falcon.MEDIA_HTML
             resp.text = aob_instance.html_main()
@@ -70,10 +69,14 @@ class AOBResource:
 
 
 class CodeListResource:
+
     def on_get(self, req, resp):
         codelist_instance = DataStore().get_service('codelist')
-        resp.content_type = falcon.MEDIA_HTML
-        resp.text = codelist_instance.html_main()
+        if 'name' in req.params:
+            codelist_instance.handle_download(req, resp)
+        else:
+            resp.content_type = falcon.MEDIA_HTML
+            resp.text = codelist_instance.html_main()
 
     def on_post(self, req: falcon.Request, resp: falcon.Response):
         codelist_instance = DataStore().get_service('codelist')
