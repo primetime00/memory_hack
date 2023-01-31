@@ -60,6 +60,14 @@ def find_trends(data: list):
                     tl.append('down')
                     ol.pop(0)
 
+
+def is_sub(sub, lst):
+    ln = len(sub)
+    for i in range(len(lst) - ln + 1):
+        if all(sub[j] == lst[i+j] for j in range(ln)):
+            return True, i
+    return False, 0
+
 def calculate_trend(trend_list: list, data: dict) -> list:
     valid_keys = []
     for key in sorted(data.keys()):
@@ -67,13 +75,25 @@ def calculate_trend(trend_list: list, data: dict) -> list:
         ol = tl.copy()
         dl = trend_list.copy()
         match_percent = 1.0
+        sub_check = False
         while True:
             if len(ol) == 0:
                 break
+            sub, start = is_sub(dl, ol)
             if dl == ol:
                 valid_keys.append((key, match_percent))
                 break
+            elif sub and not sub_check:
+                sub_check = True
+                after = ol[start+len(dl):]
+                before = ol[:start]
+                had_downs = any(x == 'down' or x == 'decline' for x in before) or any(x == 'down' or x == 'decline' for x in after)
+                had_ups = any(x == 'up' or x == 'incline' for x in before) or any(x == 'up' or x == 'incline' for x in after)
+                if not(had_downs and had_ups):
+                    valid_keys.append((key, match_percent))
+                    break
             else:
+                sub_check = False
                 if ol[0] == 'flat':
                     ol.pop(0)
                     if dl[0] != 'flat':
