@@ -3,6 +3,8 @@ import copy
 import ctypes
 import json
 import os
+import random
+import time
 from io import BytesIO
 from pathlib import Path
 from threading import Thread, Lock, Event
@@ -52,7 +54,7 @@ class CodeList(MemoryHandler):
         self.freeze_thread: Thread = None
         self.freeze_event: Event = None
 
-        self.code_data = None
+        self.code_data: dict = None
         self.loaded_file = "_null"
         self.file_version = CodeList._FILE_VERSION
         self.aob_map = {}
@@ -120,7 +122,6 @@ class CodeList(MemoryHandler):
             with self.update_lock:
                 self.freeze_map[index]['value'] = b
             return
-
         if code['Source'] == 'address':
             with self.update_lock:
                 addr = self.base_converter.convert(self.mem(), code['Address'])
@@ -139,20 +140,24 @@ class CodeList(MemoryHandler):
     def handle_freeze(self, req: Request, resp: Response):
         frozen = req.media['freeze'] == 'true'
         index = int(req.media['index'])
+        resp.media['frozen'] = {'index': index}
         if index not in self.code_data:
             raise CodelistException("Can't write code that isn't in the list")
         with self.update_lock:
             value = copy.copy(self.get_results()[index])
-
+            if value['Value']['Actual'] is None:
+                resp.media['frozen']['set'] = False
+                return
             code = self.code_data[index]
             code['Freeze'] = frozen
             if frozen:
                 dt = memory_utils.typeToCType[(code['Type'], code['Signed'])]
                 self.freeze_map[index] = {'value': dt(value['Value']['Actual']), 'index': index, 'code': code}
+                resp.media['frozen']['set'] = True
             else:
                 if index in self.freeze_map:
                     del self.freeze_map[index]
-
+                resp.media['frozen']['set'] = False
         if not (self.freeze_thread and self.freeze_thread.is_alive()) and self.freeze_map:
             self.start_freezer()
         if not self.freeze_map:
@@ -178,7 +183,7 @@ class CodeList(MemoryHandler):
         with self.update_lock:
             if index in self.freeze_map:
                 del self.freeze_map[index]
-        del self.code_data[index]
+        self.process_delete(self.code_data[index], index)
         try:
             self.component_index = max(list(self.code_data.keys()))+1
         except ValueError:
@@ -251,6 +256,7 @@ class CodeList(MemoryHandler):
                         del cd['Value']
                     if 'Offsets' in cd:
                         del cd['Offsets']
+                self.process_add(cd)
             else:
                 index = self.component_index
                 if tp == 'address':
@@ -282,6 +288,7 @@ class CodeList(MemoryHandler):
                         "AOB": req.media['aob'].upper(),
                         "Offset": req.media['offset'].upper()
                     }
+                self.process_add(self.code_data[index])
         if len(self.code_data) == 1:
             resp.media['file_data'] = self.code_data
             self.component_index = max(list(self.code_data.keys()))+1
@@ -394,7 +401,7 @@ class CodeList(MemoryHandler):
             resp.media['file_data'] = self.code_data
             resp.media['file'] = self.loaded_file
             self.freeze_map = {}
-            self.aob_map = {}
+            self.aob_map.clear()
             return
         pt = self.directory.joinpath(req.media['file']+'.codes')
         if not pt.exists():
@@ -414,6 +421,7 @@ class CodeList(MemoryHandler):
                     v['Freeze'] = False
                     self.code_data[i] = v
                     self.file_version = CodeList._FILE_VERSION
+                    self.process_add(v)
                 self.loaded_file = pt.stem
         except:
             raise CodelistException('Could not load code file')
@@ -458,36 +466,47 @@ class CodeList(MemoryHandler):
         offset = int(code['Offset'], 16)
         selected = code['Selected'] if 'Selected' in code and code['Selected'] else -1
         if aob.is_found():
-            bases = self.utilities.compare_aob(aob)
-            if not bases:
-                aob.clear_bases()
-            else:
-                addrs = aob.get_bases()
-                if 'Selected' not in code and len(addrs) > 0:
-                    selected = 0
-                elif 'Selected' in code:
-                    selected = min(len(addrs)-1, code['Selected'])
-                pos = addrs[selected]
-                return self.get_read(code, pos + offset), [x+offset for x in aob.get_bases()], selected, selected >= 0
-
-        if not aob.is_found():
-            addrs = self.utilities.search_aob_all_memory(aob)
-            if not addrs:
-                aob.clear_bases()
-            else:
-                aob.set_bases(addrs)
-                if 'Selected' not in code and len(addrs) > 0:
-                    selected = 0
-                elif 'Selected' in code:
-                    selected = min(len(addrs)-1, code['Selected'])
-                pos = addrs[selected]
-                return self.get_read(code, pos + offset), [x+offset for x in aob.get_bases()], selected, selected >= 0
+            addrs = aob.get_bases()
+            if 'Selected' not in code and len(addrs) > 0:
+                selected = 0
+            elif 'Selected' in code:
+                selected = min(len(addrs)-1, code['Selected'])
+            pos = addrs[selected]
+            return self.get_read(code, pos + offset), [x+offset for x in aob.get_bases()], selected, selected >= 0
         return None, [], 0, 0
 
+
+    def process_add(self, code):
+        if code['Source'] == 'aob':
+            if code['AOB'] not in self.aob_map:
+                self.aob_map[code['AOB']] = AOB('', code['AOB'])
+
+    def process_delete(self, code, index):
+        if code['Source'] == 'aob':
+            aob_str = code['AOB']
+            del self.code_data[index]
+            if aob_str not in [x['AOB'] for x in self.code_data.values() if x['Source'] == 'aob']:
+                del self.aob_map[aob_str]
+        else:
+            del self.code_data[index]
+
+    def update_aobs(self):
+        for aob in self.aob_map.values():
+            if aob.is_found():
+                if aob.get_last_searched() > random.randint(15, 18):
+                    bases = self.utilities.search_aob_all_memory(aob)
+                else:
+                    bases = self.utilities.compare_aob(aob)
+                aob.set_bases(bases)
+            if not aob.is_found() and aob.get_last_searched() > random.randint(8, 12):
+                bases = self.utilities.search_aob_all_memory(aob)
+                aob.set_bases(bases)
     def _update_process(self):
         while not self.update_event.is_set():
             with self.update_lock:
                 self.result_map.clear()
+                if self.aob_map:
+                    self.update_aobs()
                 for key, code in self.code_data.items():
                     if code['Source'] == 'address':
                         try:
@@ -534,8 +553,6 @@ class CodeList(MemoryHandler):
                     else:
                         aob_str = code['AOB']
                         try:
-                            if aob_str not in self.aob_map:
-                                self.aob_map[aob_str] = AOB(code['Name'], aob_str)
                             read, addrs, selected, select_valid = self.read_aob_value(self.aob_map[aob_str], code)
                         except (ProcessLookupError, PermissionError):
                             self.update_event.set()
@@ -600,7 +617,6 @@ class CodeList(MemoryHandler):
 
     def start_updater(self):
         self.freeze_map = {}
-        self.aob_map = {}
         self.update_thread = Thread(target=self._update_process)
         self.update_event = Event()
         self.update_thread.start()
@@ -625,7 +641,7 @@ class CodeList(MemoryHandler):
                 except (ProcessLookupError, PermissionError) as e:
                     self.freeze_map.clear()
                     self.freeze_event.set()
-            self.freeze_event.wait(0.5)
+            self.freeze_event.wait(0.25)
 
     def get_addresses(self, code):
         address_list = []
@@ -641,9 +657,7 @@ class CodeList(MemoryHandler):
             aob = self.aob_map[code['AOB']]
             bases = aob.get_bases()
             for b in bases:
-                res = self.utilities.compare_aob(aob)
-                if b in res:
-                    address_list.append(b + int(code['Offset'], 16))
+                address_list.append(b + int(code['Offset'], 16))
         return address_list
 
 

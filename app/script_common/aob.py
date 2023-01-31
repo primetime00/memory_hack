@@ -1,6 +1,7 @@
 from threading import Lock
 
 from app.helpers.aob_value import AOBValue
+import time
 
 
 class AOB:
@@ -10,6 +11,7 @@ class AOB:
         self.aob_string = aob_str
         self.bases = []
         self._last_found = -1
+        self._last_searched = -1
         self.base_lock = Lock()
 
     def get_aob_string(self):
@@ -31,6 +33,12 @@ class AOB:
     def clear_bases(self):
         self.bases.clear()
         self._last_found = 0
+
+    def get_last_searched(self):
+        return time.time() - self._last_searched
+
+    def set_last_searched(self):
+        self._last_searched = time.time()
 
     def will_warn(self):
         return self._last_found != 0

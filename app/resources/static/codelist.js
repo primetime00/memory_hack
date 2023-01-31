@@ -125,7 +125,11 @@
     }
 
     codelist.code_freeze_changed = function(ele, index) {
-        $.send('/codelist', { 'command': "CODELIST_FREEZE", 'index': index, 'freeze': ele.checked}, on_codelist_status);
+        $.send('/codelist', { 'command': "CODELIST_FREEZE", 'index': index, 'freeze': ele.checked}, function(result) {
+            var st = result.frozen.set
+            $(ele).prop("checked", st);
+            on_codelist_status(result)
+        });
     }
 
     codelist.on_refresh = function(element, index) {

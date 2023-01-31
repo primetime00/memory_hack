@@ -109,6 +109,7 @@ class ScriptUtilities:
         if self.searcher is None:
             self.create_searcher()
         self.searcher.search_memory_value(aob.get_aob_string())
+        aob.set_last_searched()
         with self.searcher.results.db() as conn:
             res = self.searcher.results.get_results(conn, _count=4).fetchall()
             if len(res) == 0:
