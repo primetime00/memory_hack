@@ -45,7 +45,8 @@ class CodeList(MemoryHandler):
             "CODELIST_DELETE_LIST": self.handle_delete_list,
             "CODELIST_ADD_CODE": self.handle_add_code,
             "CODELIST_AOB_SELECT": self.handle_aob_base_select,
-            "CODELIST_UPLOAD": self.handle_upload
+            "CODELIST_UPLOAD": self.handle_upload,
+            "CODELIST_REBASE_CODE": self.handle_rebase,
         }
         self.update_thread: Thread = None
         self.update_event: Event = None
@@ -305,6 +306,83 @@ class CodeList(MemoryHandler):
             self.stop_freezer()
         if not (self.update_thread and self.update_thread.is_alive()):
             self.start_updater()
+        resp.media['repeat'] = 400
+
+    def handle_rebase(self, req: Request, resp: Response):
+        tp = req.media['type']
+        with self.update_lock:
+            if 'index' in req.media:
+                index = int(req.media['index'])
+                cd = self.code_data[index]
+                if tp != cd['Source']:
+                    return
+                if index in self.result_map:
+                    del self.result_map[index]
+                if index in self.freeze_map:
+                    del self.freeze_map[index]
+                    cd['Freeze'] = False
+                if tp == 'address':
+                    old_address = cd['Address']
+                    new_address = req.media['address']
+                    diff = int(new_address, 16) - int(old_address, 16)
+                    cd['Address'] = req.media['address']
+                    cd['Freeze'] = False
+                    edit_list = [(index, cd)]
+                    for (_index, current_code) in [(_index, x) for (_index, x) in self.code_data.items() if x['Source'] == tp and x != cd]:
+                        current_code['Address'] = '{:X}'.format(int(current_code['Address'], 16) + diff)
+                        current_code['Freeze'] = False
+                        if _index in self.freeze_map:
+                            del self.freeze_map[_index]
+                        if _index in self.result_map:
+                            del self.result_map[_index]
+                        edit_list.append((_index, current_code))
+                    resp.media['changes'] = edit_list
+                elif tp == 'pointer':
+                    old_address = cd['Address']
+                    old_offsets = cd['Offsets'].split(',')
+                    new_offsets = req.media['offsets'].split(',')
+                    diff = int(new_offsets[-1], 16) - int(old_offsets[-1], 16)
+                    cd['Address'] = req.media['address']
+                    cd['Offsets'] = req.media['offsets'].upper()
+                    cd['Freeze'] = False
+                    edit_list = [(index, cd)]
+                    for (_index, current_code) in [(_index, x) for (_index, x) in self.code_data.items() if x['Source'] == tp and x != cd and x['Address'] == old_address]:
+                        if [int(x, 16) for x in current_code['Offsets'].split(',')[0:-1]] != [int(x, 16) for x in req.media['offsets'].split(',')[0:-1]]:
+                            continue
+                        current_code['Address'] = req.media['address']
+                        offsets = [int(x, 16) for x in current_code['Offsets'].split(',')]
+                        offsets[-1] = offsets[-1] + diff
+                        current_code['Offsets'] = ', '.join(['{:X}'.format(x) for x in offsets])
+                        current_code['Resolved'] = '????????'
+                        current_code['Freeze'] = False
+                        if _index in self.freeze_map:
+                            del self.freeze_map[_index]
+                        if _index in self.result_map:
+                            del self.result_map[_index]
+                        edit_list.append((_index, current_code))
+                    resp.media['changes'] = edit_list
+                else:
+                    old_aob = cd['AOB']
+                    old_offset = int(cd['Offset'], 16)
+                    new_offset = int(req.media['offset'], 16)
+                    diff = new_offset - old_offset
+                    cd['AOB'] = req.media['aob'].upper()
+                    cd['Offset'] = req.media['offset'].upper()
+                    cd['Freeze'] = False
+                    edit_list = [(index, cd)]
+                    for (_index, current_code) in [(_index, x) for (_index, x) in self.code_data.items() if x['Source'] == tp and x != cd and x['AOB'] == old_aob]:
+                        current_code['AOB'] = req.media['aob'].upper()
+                        current_code['Offset'] = '{:X}'.format(int(current_code['Offset'], 16) + diff)
+                        current_code['Freeze'] = False
+                        if _index in self.freeze_map:
+                            del self.freeze_map[_index]
+                        if _index in self.result_map:
+                            del self.result_map[_index]
+                        edit_list.append((_index, current_code))
+                    resp.media['changes'] = edit_list
+                    if old_aob in self.aob_map:
+                        del self.aob_map[old_aob]
+                    self.process_add(cd)
         resp.media['repeat'] = 400
 
     def handle_aob_base_select(self, req: Request, resp: Response):

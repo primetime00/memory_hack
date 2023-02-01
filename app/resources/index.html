@@ -246,6 +246,9 @@ div .input_item{
         <ons-list-item class="more-options" name="copy" tappable>
           <div class="center">Copy</div>
         </ons-list-item>
+        <ons-list-item class="more-options" name="rebase" tappable>
+          <div class="center">Rebase</div>
+        </ons-list-item>
         <ons-list-item class="more-options hidden" name="address_to_aob" tappable>
           <div class="center">AOB From Address</div>
         </ons-list-item>
@@ -371,6 +374,84 @@ div .input_item{
     </ons-dialog>
   </template>
 
+  <template id="rebase_code">
+    <ons-dialog id="rebase_code_dialog">
+      <div style="text-align: center; padding: 10px;">
+        <p>
+          Rebase
+        </p>
+      </div>
+      <ons-row id="rebase_address" hidden>
+        <ons-row>
+          <ons-col align="center" width="80%" class="col ons-col-inner">
+            New Address
+          </ons-col>
+          <ons-col align="center" width="20%" class="col ons-col-inner">
+            <ons-button modifier="quiet" id="rebase_code_address_paste_button" onclick="codelist.get_rebase_dialog().on_aob_paste()"><ons-icon icon="md-paste"></ons-icon></ons-button>
+          </ons-col>
+        </ons-row>
+        <ons-row>
+          <ons-col align="center" width="100%" class="col ons-col-inner">
+            <input type="text" id="rebase_code_address" name="code_address" style="display:block; margin: 0 auto" class="text-input text-input--material text-full" oninput="codelist.get_rebase_dialog().validate()" autocomplete="chrome-off" autocapitalize="off">
+          </ons-col>
+        </ons-row>
+      </ons-row>
+      <ons-row id="rebase_pointer" hidden>
+        <ons-row>
+          <ons-col align="center" width="80%" class="col ons-col-inner">
+            New Pointer
+          </ons-col>
+          <ons-col align="center" width="20%" class="col ons-col-inner">
+            <ons-button modifier="quiet" id="rebase_code_pointer_paste_button" onclick="codelist.get_rebase_dialog().on_aob_paste()"><ons-icon icon="md-paste"></ons-icon></ons-button>
+          </ons-col>
+        </ons-row>
+        <ons-row>
+          <ons-col align="center" width="100%" class="col ons-col-inner">
+            <input type="text" id="rebase_code_pointer" name="code_address" style="display:block; margin: 0 auto" class="text-input text-input--material text-full" oninput="codelist.get_rebase_dialog().validate()" autocomplete="chrome-off" autocapitalize="off">
+          </ons-col>
+        </ons-row>
+        <ons-row>
+          <ons-col align="center" width="30%" class="col ons-col-inner">
+            Offsets
+          </ons-col>
+          <ons-col align="center" width="40%" class="col ons-col-inner">
+            <input type="text" id="rebase_code_offsets" name="code_address" class="text-input text-input--material text-full" oninput="codelist.get_rebase_dialog().validate()" autocomplete="chrome-off" autocapitalize="off">
+          </ons-col>
+        </ons-row>
+      </ons-row>
+      <ons-row id="rebase_aob">
+        <ons-row>
+          <ons-col align="center" width="80%" class="col ons-col-inner">
+            New AOB
+          </ons-col>
+          <ons-col align="center" width="20%" class="col ons-col-inner">
+            <ons-button modifier="quiet" id="rebase_code_aob_paste_button" onclick="codelist.get_rebase_dialog().on_aob_paste()"><ons-icon icon="md-paste"></ons-icon></ons-button>
+          </ons-col>
+        </ons-row>
+        <ons-row>
+          <ons-col align="center" width="100%" class="col ons-col-inner">
+            <input type="text" id="rebase_code_aob" name="code_address" style="display:block; margin: 0 auto" class="text-input text-input--material text-full" oninput="codelist.get_rebase_dialog().validate()" autocomplete="chrome-off" autocapitalize="off">
+          </ons-col>
+        </ons-row>
+        <ons-row>
+          <ons-col align="center" width="30%" class="col ons-col-inner">
+            Offset
+          </ons-col>
+          <ons-col align="center" width="40%" class="col ons-col-inner">
+            <input type="text" id="rebase_code_offset" name="code_address" class="text-input text-input--material text-full" oninput="codelist.get_rebase_dialog().validate()" autocomplete="chrome-off" autocapitalize="off">
+          </ons-col>
+        </ons-row>
+      </ons-row>
+      <ons-row style="margin-top:10px;">
+        <ons-col align="center" width="50%" class="col ons-col-inner">
+          <ons-button modifier="quiet" id="rebase_code_button" style="display:block;" onclick="codelist.get_rebase_dialog().on_rebase()">Rebase</ons-button>
+        </ons-col>
+        <ons-col align="center" width="50%" class="col ons-col-inner">
+          <ons-button modifier="quiet" id="rebase_code_cancel" style="display:block;" onclick="codelist.get_rebase_dialog().on_cancel()">Cancel</ons-button>
+        </ons-col>
+      </ons-row>
+    </ons-dialog>
+  </template>
 
   <script src="resources/static/process_control.js" type="text/javascript"></script>
   <script src="resources/static/search.js" type="text/javascript"></script>

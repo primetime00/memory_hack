@@ -206,6 +206,28 @@
 
                 $.send('/codelist', cmd, on_codelist_status);
                 break
+            case 'rebase':
+                var source = code_data[code_index]['Source']
+                var dt = {'index': code_index, 'source': source}
+                if (source === 'address') {
+                    if (code_data[code_index]['Address'].toString().indexOf(':') >= 0) {
+                        dt['address'] = code_data[code_index]['Address'].toString()
+                    } else {
+                        dt['address'] = code_data[code_index]['Address'].toString(16).toUpperCase()
+                    }
+                } else if (source === 'pointer') {
+                    if (code_data[code_index]['Address'].toString().indexOf(':') >= 0) {
+                        dt['pointer'] = code_data[code_index]['Address'].toString()
+                    } else {
+                        dt['pointer'] = code_data[code_index]['Address'].toString(16).toUpperCase()
+                    }
+                    dt['offsets'] = code_data[code_index]['Offsets']
+                } else {
+                    dt['aob'] = code_data[code_index]['AOB']
+                    dt['offset'] = code_data[code_index]['Offset']
+                }
+                component_code_rebase_dialog.create(dt)
+                break
         }
     }
 
@@ -325,6 +347,11 @@
     codelist.get_dialog = function() {
         return component_code_dialog
     }
+
+    codelist.get_rebase_dialog = function() {
+        return component_code_rebase_dialog
+    }
+
 
     codelist.address_copy = function(index) {
         var source = code_data[index]['Source']
@@ -597,6 +624,28 @@
                 apply_events(comp)
                 head.setup(code, head)
                 comp.setup(code, comp)
+            }
+            else if (has(result, 'changes')) {
+                var codes = result.changes
+                $.each(codes, function(i, value ){
+                    var code = value[1]
+                    var id = value[0]
+                    var index = _this.children.findIndex((item) => {return item[0].id == component_code_header.id+id})
+                    var pos = _this.obj.children().index(_this.children[index][0].obj)
+                    _this.children[index][0].obj.remove()
+                    _this.children[index][1].obj.remove()
+                    _this.children.splice(index, 1)
+                    var head = component_code_header.create(id, code)
+                    var comp = component_code.create(id, code)
+                    _this.children.push([head, comp])
+                    _this.obj.insertAt(pos, head.obj)
+                    _this.obj.insertAt(pos+1, comp.obj)
+                    code_data[id] = code
+                    apply_events(head)
+                    apply_events(comp)
+                    head.setup(code, head)
+                    comp.setup(code, comp)
+                });
             }
         },
         'update': (_this) => {},
@@ -1376,6 +1425,117 @@
             component_code_dialog.obj[0].hide()
         }
     }
+
+    var component_code_rebase_dialog = {
+        'id': 'rebase_code_dialog',
+        'obj': undefined,
+        'setup': (result, _this) => {
+        },
+        'update': (_this) => {},
+        'setup': (data) => {
+            component_code_rebase_dialog.index = data.index
+            component_code_rebase_dialog.type = data.source
+            if (document.clipboard.has_aob()) {
+                $("#rebase_code_aob_paste_button").show()
+            } else {
+                $("#rebase_code_aob_paste_button").hide()
+            }
+            if (document.clipboard.has_address()) {
+                $("#rebase_code_address_paste_button").show()
+            } else {
+                $("#rebase_code_address_paste_button").hide()
+            }
+            if (document.clipboard.has_pointer()) {
+                $("#rebase_code_pointer_paste_button").show()
+            } else {
+                $("#rebase_code_pointer_paste_button").hide()
+            }
+            if (has(data, 'address')) {
+                $("#rebase_code_address").val(data.address)
+                $("#rebase_address").show()
+                $("#rebase_pointer").hide()
+                $("#rebase_aob").hide()
+            } else if (has(data, 'aob')) {
+                $("#rebase_code_aob").val(data.aob)
+                $("#rebase_code_offset").val(data.offset)
+                $("#rebase_address").hide()
+                $("#rebase_pointer").hide()
+                $("#rebase_aob").show()
+            } else if (has(data, 'pointer')) {
+                $("#rebase_code_pointer").val(data.pointer)
+                $("#rebase_code_offsets").val(data.offsets)
+                $("#rebase_address").hide()
+                $("#rebase_pointer").show()
+                $("#rebase_aob").hide()
+            }
+            component_code_rebase_dialog.validate()
+        },
+        'create': (data) => {
+            if (component_code_rebase_dialog.obj === undefined) {
+                ons.createElement('rebase_code', { append: true })
+                .then(function(dialog) {
+                    component_code_rebase_dialog.obj = $(dialog)
+                    component_code_rebase_dialog.setup(data)
+                    dialog.show();
+                });
+            } else {
+                component_code_rebase_dialog.setup(data)
+                component_code_rebase_dialog.obj[0].show()
+            }
+        },
+        'index': -1,
+        'type': '',
+        'validate': () => {
+            if (component_code_rebase_dialog.type === 'address') {
+                var addr = $("#rebase_code_address").val()
+                if ((/^(?!.{256,})(?!(aux|clock\$|con|nul|prn|com[1-9]|lpt[1-9])(?:$|\.))[^ ][ \.\w-$()+=[\];#@~,&amp;']+[^\. ]:\d+\+[0-9a-f]+$/i.test(addr)) || /^[0-9A-F]{5,16}$/i.test(addr)) {
+                    $("#rebase_code_button").removeAttr('disabled')
+                } else {
+                    $("#rebase_code_button").attr('disabled', 'disabled')
+                }
+            }
+            else if (component_code_rebase_dialog.type === 'pointer') {
+                var addr = $("#rebase_code_pointer").val()
+                var offsets = $("#rebase_code_offsets").val()
+                if (/^[0-9a-f]+(, ?[0-9a-f]+)*$/i.test(offsets) && ((/^(?!.{256,})(?!(aux|clock\$|con|nul|prn|com[1-9]|lpt[1-9])(?:$|\.))[^ ][ \.\w-$()+=[\];#@~,&amp;']+[^\. ]:\d+\+[0-9a-f]+$/i.test(addr)) || /^[0-9A-F]{5,16}$/i.test(addr))) {
+                    $("#rebase_code_button").removeAttr('disabled')
+                } else {
+                    $("#rebase_code_button").attr('disabled', 'disabled')
+                }
+            } else {
+                var aob = $("#rebase_code_aob").val()
+                var offset = $("#rebase_code_offset").val()
+                if (/^(?:([0-9A-F]{2}|\?{2}) )*([0-9A-F]{2}|\?{2})$/i.test(aob) && /^-?[0-9A-F]{1,12}$/i.test(offset)) {
+                    $("#rebase_code_button").removeAttr('disabled')
+                } else {
+                    $("#rebase_code_button").attr('disabled', 'disabled')
+                }
+            }
+        },
+        'on_aob_paste': () => {
+            if (component_code_rebase_dialog.type == 'aob') {
+                $("#rebase_code_aob").val(document.clipboard.data.aob)
+                $("#rebase_code_offset").val(document.clipboard.data.offset)
+            } else if (component_code_rebase_dialog.type == 'address') {
+                $("#rebase_code_address").val(document.clipboard.data.address)
+            } else {
+                $("#rebase_code_pointer").val(document.clipboard.data.address)
+                $("#rebase_code_offsets").val(document.clipboard.data.offsets)
+            }
+        },
+        'on_cancel': () => {
+            component_code_rebase_dialog.obj[0].hide()
+        },
+        'on_rebase': () => {
+            var cmd = { 'command': "CODELIST_REBASE_CODE", 'type': component_code_rebase_dialog.type, 'index': component_code_rebase_dialog.index,
+                                  'address': (component_code_rebase_dialog.type == 'address' ? $("#rebase_code_address").val() : $("#rebase_code_pointer").val()),
+                                  'aob': $("#rebase_code_aob").val(),
+                                  'offset': $("#rebase_code_offset").val(), 'offsets': $("#rebase_code_offsets").val()}
+            $.send('/codelist', cmd, on_codelist_status)
+            component_code_rebase_dialog.obj[0].hide()
+        }
+    }
+
 
 
     var component_list = [component_codelist_file, component_codelist_save, component_codelist_download, component_codelist_upload, component_codelist_delete, component_code_list]
