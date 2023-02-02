@@ -21,7 +21,6 @@
             <option value="greater_than">GREATER THAN</option>
             <option value="less_than">LESS THAN</option>
             <option value="unknown">UNKNOWN</option>
-            <option value="unknown_near">UNKNOWN NEAR</option>
             <option value="increase">INCREASE</option>
             <option value="decrease">DECREASE</option>
             <option value="unchanged">UNCHANGED</option>
@@ -44,6 +43,32 @@
           </select>
         </ons-col>
         <ons-col align="center" class="col ons-col-inner"></ons-col>
+      </ons-row>
+
+      <ons-row id="row_search_proximity">
+        <ons-row>
+          <ons-col align="center" width="20%" class="col ons-col-inner">Proximity:</ons-col>
+          <ons-col align="center" width="40%" class="col ons-col-inner">
+            <ons-switch id="search_proximity_switch" onchange="event.target.checked ? $('#div_search_proximity_parameters').show() : $('#div_search_proximity_parameters').hide(); search.search_proximity_value_changed()"></ons-switch>
+          </ons-col>
+          <ons-col align="center" class="col ons-col-inner"></ons-col>
+        </ons-row>
+        <div id="div_search_proximity_parameters" style="margin-left:8px; background-color: ghostwhite;" hidden>
+          <ons-row>
+            <ons-col align="center" width="30%" class="col ons-col-inner">Address:</ons-col>
+            <ons-col align="center" width="60%" class="col ons-col-inner">
+              <input id="search_proximity_address" inputmode="decimal" name="search_value" class="text-input text-input--material r-value text-full" onkeydown="search.on_return_pressed(this)" oninput="search.search_proximity_value_changed(this.value)" autocomplete="off">
+            </ons-col>
+            <ons-col align="center" class="col ons-col-inner"></ons-col>
+          </ons-row>
+          <ons-row>
+            <ons-col align="center" width="30%" class="col ons-col-inner">Size:</ons-col>
+            <ons-col align="center" width="60%" class="col ons-col-inner">
+              <input id="search_proximity_size" inputmode="decimal" name="search_value" class="text-input text-input--material r-value" onkeydown="search.on_return_pressed(this)" oninput="search.search_proximity_value_changed(this.value)" autocomplete="off" value="256">
+            </ons-col>
+            <ons-col align="center" class="col ons-col-inner"></ons-col>
+          </ons-row>
+        </div>
       </ons-row>
 
 

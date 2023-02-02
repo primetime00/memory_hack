@@ -1,5 +1,6 @@
 import copy
 import ctypes
+import json
 import logging
 import traceback
 from queue import PriorityQueue
@@ -55,6 +56,7 @@ class Search(MemoryHandler):
         self.flow = self.FLOW_START
         self.type = ""
         self.size = ""
+        self.proximity = {}
         self.value: Value = None
         self.searcher: SearcherMulti = None
 
@@ -100,6 +102,7 @@ class Search(MemoryHandler):
         self.round = 0
         self.type = ""
         self.size = ""
+        self.proximity = {}
         self.value = None
         self.search_thread: Thread = None
         self.update_thread: Search.UpdateThread = None
@@ -157,6 +160,7 @@ class Search(MemoryHandler):
                 self.type = 'equal_to'
             self.progress.reset()
             self.stop_updater()
+            self.proximity = {}
             self.flow = self.FLOW_START
             resp.media['results'] = []
             self.round = 0
@@ -167,6 +171,7 @@ class Search(MemoryHandler):
             resp.media['size'] = self.size
             resp.media['value'] = ""
             resp.media['count'] = 0
+            resp.media['proximity'] = self.proximity
             self.reset()
 
     def handle_search(self, req: Request, resp: Response):
@@ -176,6 +181,7 @@ class Search(MemoryHandler):
         self.stop_updater()
         self.type = req.media['type']
         self.size = req.media['size']
+        self.proximity = json.loads(req.media['proximity'])
         sv = req.media['value'] if self.is_value_search() and len(req.media['value']) > 0 else "0"
         self.value = Value.create(sv, req.media['size'])
         resp.media['type'] = self.type
@@ -278,6 +284,10 @@ class Search(MemoryHandler):
     def _search(self, searcher):
         self.stop_updater()
         try:
+            if self.proximity and self.proximity['enabled']:
+                self.searcher.set_proximity(self.proximity['address'], int(self.proximity['size']))
+            else:
+                self.searcher.clear_proximity()
             searcher(copy.deepcopy(self.value))
         except BreakException:
             return
@@ -407,7 +417,7 @@ class Search(MemoryHandler):
         return True
 
     def is_value_search(self):
-        if self.type == 'equal_to' or self.type == 'greater_than' or self.type == 'less_than' or self.type == 'changed_by' or self.type == 'unknown_near':
+        if self.type == 'equal_to' or self.type == 'greater_than' or self.type == 'less_than' or self.type == 'changed_by':
             return True
         return False
 

@@ -7,6 +7,7 @@ from typing import Union
 import mem_edit
 from mem_edit import Process
 
+import app.helpers.process as ps
 from app.helpers.aob_value import AOBValue
 from app.helpers.directory_utils import memory_directory
 from app.helpers.exceptions import BreakException
@@ -37,6 +38,7 @@ class Searcher:
         self.memory = memory
         self.write_only = write_only
         self.include_paths = []
+        self.proximity = {}
         self.total_size, self.mem_start, self.mem_end, self.mem_average = self.get_total_memory_size()
         self.progress:Progress = progress
         self.search_size = None
@@ -127,6 +129,28 @@ class Searcher:
         self.include_paths = paths
         self.total_size, self.mem_start, self.mem_end, self.mem_average = self.get_total_memory_size()
 
+    def set_proximity(self, addr: str, size: int):
+        bs = ps.BaseConvert()
+        raw_addr = bs.convert(self.memory, addr, self.include_paths)
+        base = ps.get_address_base(self.memory, raw_addr)
+        start = raw_addr - int(size/2)
+        stop = raw_addr + int(size/2)
+        if start < base['start']:
+            stop += base['start'] - start
+            start = base['start']
+        if stop > base['stop']:
+            start -= stop - base['stop']
+            stop = base['stop']
+        if start < base['start']:
+            start = base['start']
+        self.proximity = {'start': start, 'stop': stop}
+        self.total_size, self.mem_start, self.mem_end, self.mem_average = self.get_total_memory_size()
+
+    def clear_proximity(self):
+        self.proximity = {}
+        self.total_size, self.mem_start, self.mem_end, self.mem_average = self.get_total_memory_size()
+
+
     def get_include_paths(self):
         return self.include_paths
 
@@ -138,6 +162,8 @@ class Searcher:
         return self.write_only
 
     def get_regions(self):
+        if self.proximity:
+            return [(self.proximity['start'], self.proximity['stop'])]
         return self.memory.list_mapped_regions(writeable_only=self.write_only, include_paths=self.include_paths)
 
     def setup_by_value(self, sv: Value):
@@ -151,6 +177,8 @@ class Searcher:
 
     def get_total_memory_size(self):
         total = 0
+        if self.proximity:
+            return self.proximity['stop'] - self.proximity['start'], self.proximity['start'], self.proximity['stop'],self.proximity['stop'] - self.proximity['start']
         ls = list(self.get_regions())
         _start = ls[0][0]
         _end = ls[-1][1]

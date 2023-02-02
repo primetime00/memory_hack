@@ -23,6 +23,10 @@
     var row_search_initialize_unknown;
     var search_progress;
 
+    var switch_search_proximity;
+    var inp_search_proximity_address;
+    var inp_search_proximity_size;
+
     var li_template = (['<ons-list-item class="result-row">',
           '<ons-row>',
             '<ons-col align="center" width="65%" class="col ons-col-inner">',
@@ -51,6 +55,7 @@
     var current_process = ""
     var initialized = false
     var value_valid = false
+    var proxy_valid = false
     search.updater = null
 
 
@@ -66,6 +71,10 @@
     };
 
     search.search_value_changed = function(value) {
+        update()
+    }
+
+    search.search_proximity_value_changed = function(value) {
         update()
     }
 
@@ -92,14 +101,12 @@
     search.on_search_clicked = function() {
         var size = sel_search_size.val()
         var type = sel_search_type.val()
-        if (type === 'unknown_near') {
-            size = 'address'
-        }
         $.send('/search',
         {   "command": "SEARCH_START",
             "size": size,
             "type": type,
             "value": inp_search_value.val(),
+            "proximity": JSON.stringify({'enabled': switch_search_proximity.prop('checked'), 'address': inp_search_proximity_address.val(), 'size': inp_search_proximity_size.val()}),
          }
         , on_search_status);
         current_flow = flow_map["FLOW_SEARCHING"]
@@ -109,7 +116,6 @@
     search.on_reset_clicked = function() {
         btn_reset_button.attr('disabled', 'disabled')
         btn_search_button.attr('disabled', 'disabled')
-        $("input.freeze").prop( "checked", false );
         $.send('/search', { "command": "SEARCH_RESET" }, on_search_status);
     };
 
@@ -193,7 +199,7 @@
         }
     }
     search.clipboard_data_pasted = function(data) {
-        if (sel_search_type.val() === 'unknown_near') {
+        /*if (sel_search_type.val() === 'unknown_near') {
             if (has(data, 'resolved')) {
                 inp_search_value.val(data.resolved)
                 update()
@@ -204,7 +210,7 @@
                 update()
                 return
             }
-        }
+        }*/
         if (sel_search_size.val() === 'array') {
             if (has(data, 'aob')) {
                 inp_search_value.val(data.aob)
@@ -257,6 +263,7 @@
         setup_search_type(result)
         setup_search_size(result)
         setup_search_value(result)
+        setup_search_proximity(result)
         setup_search_button(result)
         setup_reset_button(result)
         setup_results_progress(result)
@@ -297,7 +304,6 @@
                 sel_search_type.find('option[value="greater_than"]').show()
                 sel_search_type.find('option[value="less_than"]').show()
                 sel_search_type.find('option[value="unknown"]').show()
-                sel_search_type.find('option[value="unknown_near"]').show()
                 sel_search_type.find('option[value="increase"]').hide()
                 sel_search_type.find('option[value="decrease"]').hide()
                 sel_search_type.find('option[value="unchanged"]').hide()
@@ -321,7 +327,6 @@
                     sel_search_type.find('option[value="greater_than"]').hide()
                     sel_search_type.find('option[value="less_than"]').hide()
                     sel_search_type.find('option[value="unknown"]').hide()
-                    sel_search_type.find('option[value="unknown_near"]').hide()
                     sel_search_type.find('option[value="increase"]').hide()
                     sel_search_type.find('option[value="decrease"]').hide()
                     sel_search_type.find('option[value="unchanged"]').show()
@@ -333,7 +338,6 @@
                     sel_search_type.find('option[value="greater_than"]').show()
                     sel_search_type.find('option[value="less_than"]').show()
                     sel_search_type.find('option[value="unknown"]').hide()
-                    sel_search_type.find('option[value="unknown_near"]').hide()
                     sel_search_type.find('option[value="increase"]').show()
                     sel_search_type.find('option[value="decrease"]').show()
                     sel_search_type.find('option[value="unchanged"]').show()
@@ -357,7 +361,6 @@
                 sel_search_type.find('option[value="greater_than"]').hide()
                 sel_search_type.find('option[value="less_than"]').hide()
                 sel_search_type.find('option[value="unknown"]').hide()
-                sel_search_type.find('option[value="unknown_near"]').hide()
                 sel_search_type.find('option[value="increase"]').show()
                 sel_search_type.find('option[value="decrease"]').show()
                 sel_search_type.find('option[value="unchanged"]').show()
@@ -371,7 +374,7 @@
     function setup_search_size(result) {
         switch (current_flow) {
             case flow_map["FLOW_START"]:
-                if (has(result, 'type') && (result.type === 'unknown' || result.type === 'unknown_near')) {
+                if (has(result, 'type') && (result.type === 'unknown')) {
                     row_search_size.hide()
                 } else {
                     row_search_size.show()
@@ -441,16 +444,16 @@
             case flow_map["FLOW_START"]:
                 inp_search_value.removeAttr('disabled')
                 if (has(result, 'type') && result.type === 'unknown') {
-                    value_valid = true
+                    validate_value("_true", 0, 0, result.proximity)
                     row_search_value.hide()
                 }else {
                     row_search_value.show()
                     if (has(result, "value") && has(result, "size")) {
                         inp_search_value.val(result.value)
-                        validate_value(String(result.value), result.size, result.type)
+                        validate_value(String(result.value), result.size, result.type, result.proximity)
                     }else {
                         inp_search_value.val("")
-                        value_valid = false
+                        validate_value("_false", 0, 0, result.proximity)
                     }
                 }
                 break
@@ -458,34 +461,64 @@
                 inp_search_value.attr('disabled', 'disabled')
                 if (has(result, "value") && has(result, "size")) {
                     inp_search_value.val(result.value)
-                    validate_value(String(result.value), result.size, result.type)
+                    validate_value(String(result.value), result.size, result.type, result.proximity)
                 }else {
                     inp_search_value.val("")
-                    value_valid = false
+                    validate_value("_false", 0, 0, result.proximity)
                 }
                 break
             case flow_map["FLOW_RESULTS"]:
                 inp_search_value.removeAttr('disabled')
                 if (has(result, "value") && has(result, "size")) {
                     inp_search_value.val(result.value)
-                    validate_value(String(result.value), result.size, result.type)
+                    validate_value(String(result.value), result.size, result.type, result.proximity)
                 }else {
                     inp_search_value.val("")
-                    value_valid = false
+                    validate_value("_false", 0, 0, result.proximity)
                 }
                 break
             case flow_map["FLOW_NO_RESULTS"]:
                 inp_search_value.attr('disabled', 'disabled')
                 if (has(result, "value") && has(result, "size")) {
                     inp_search_value.val(result.value)
-                    validate_value(String(result.value), result.size, result.type)
+                    validate_value(String(result.value), result.size, result.type, result.proximity)
                 }else {
                     inp_search_value.val("")
-                    value_valid = false
+                    validate_value("_false", 0, 0, result.proximity)
                 }
                 break
             case flow_map["FLOW_INITIALIZE_UNKNOWN"]:
                 row_search_value.hide()
+                break
+        }
+    }
+
+    function setup_search_proximity(result) {
+        switch (current_flow) {
+            case flow_map["FLOW_START"]:
+                switch_search_proximity.removeAttr('disabled')
+                inp_search_proximity_address.removeAttr('disabled')
+                inp_search_proximity_size.removeAttr('disabled')
+                break
+            case flow_map["FLOW_SEARCHING"]:
+                switch_search_proximity.attr('disabled', 'disabled')
+                inp_search_proximity_address.attr('disabled', 'disabled')
+                inp_search_proximity_size.attr('disabled', 'disabled')
+                break
+            case flow_map["FLOW_RESULTS"]:
+                switch_search_proximity.attr('disabled', 'disabled')
+                inp_search_proximity_address.attr('disabled', 'disabled')
+                inp_search_proximity_size.attr('disabled', 'disabled')
+                break
+            case flow_map["FLOW_NO_RESULTS"]:
+                switch_search_proximity.attr('disabled', 'disabled')
+                inp_search_proximity_address.attr('disabled', 'disabled')
+                inp_search_proximity_size.attr('disabled', 'disabled')
+                break
+            case flow_map["FLOW_INITIALIZE_UNKNOWN"]:
+                switch_search_proximity.attr('disabled', 'disabled')
+                inp_search_proximity_address.attr('disabled', 'disabled')
+                inp_search_proximity_size.attr('disabled', 'disabled')
                 break
         }
     }
@@ -497,7 +530,7 @@
                 if (has(result, 'type') && result.type == 'unknown') {
                     btn_search_button.removeAttr('disabled')
                 } else {
-                    if (value_valid) {
+                    if (value_valid && proxy_valid) {
                         btn_search_button.removeAttr('disabled')
                     } else {
                         btn_search_button.attr('disabled', 'disabled')
@@ -509,10 +542,10 @@
                 break
             case flow_map["FLOW_RESULTS"]:
                 btn_search_button.attr('disabled', 'disabled')
-                if (has(result, 'type') && (result.type == 'unknown' || result.type == 'unknown_near' || result.type == 'increase' || result.type == 'decrease' || result.type == 'changed' || result.type == 'unchanged')) {
+                if (has(result, 'type') && (result.type == 'unknown' || result.type == 'increase' || result.type == 'decrease' || result.type == 'changed' || result.type == 'unchanged')) {
                     btn_search_button.removeAttr('disabled')
                 } else {
-                    if (value_valid) {
+                    if (value_valid && proxy_valid) {
                         btn_search_button.removeAttr('disabled')
                     } else {
                         btn_search_button.attr('disabled', 'disabled')
@@ -624,16 +657,18 @@
         var st = sel_search_type.val()
         var ss = sel_search_size.val()
         var value = inp_search_value.val()
-        update_search_type(st, ss, value)
-        update_search_size(st, ss, value)
-        update_search_value(st, ss, value)
-        update_search_button(st, ss, value)
-        update_reset_button(st, ss, value)
-        update_results_progress(st, ss, value)
-        update_results_list(st, ss, value)
+        var proxy = {'proximity': switch_search_proximity.prop('checked'), 'address': inp_search_proximity_address.val(), 'size': inp_search_proximity_size.val()}
+        update_search_type(st, ss, value, proxy)
+        update_search_size(st, ss, value, proxy)
+        update_search_value(st, ss, value, proxy)
+        update_search_proximity(st, ss, value, proxy)
+        update_search_button(st, ss, value, proxy)
+        update_reset_button(st, ss, value, proxy)
+        update_results_progress(st, ss, value, proxy)
+        update_results_list(st, ss, value, proxy)
     }
 
-    function update_search_type(_type, _size, _value) {
+    function update_search_type(_type, _size, _value, _proxy) {
         switch (current_flow) {
             case flow_map["FLOW_START"]:
                 sel_search_type.removeAttr('disabled')
@@ -649,7 +684,6 @@
                         sel_search_type.find('option[value="greater_than"]').show()
                         sel_search_type.find('option[value="less_than"]').show()
                         sel_search_type.find('option[value="unknown"]').show()
-                        sel_search_type.find('option[value="unknown_near"]').show()
                         sel_search_type.find('option[value="increase"]').hide()
                         sel_search_type.find('option[value="decrease"]').hide()
                         sel_search_type.find('option[value="unchanged"]').hide()
@@ -670,7 +704,6 @@
                         sel_search_type.find('option[value="greater_than"]').hide()
                         sel_search_type.find('option[value="less_than"]').hide()
                         sel_search_type.find('option[value="unknown"]').hide()
-                        sel_search_type.find('option[value="unknown_near"]').hide()
                         sel_search_type.find('option[value="increase"]').hide()
                         sel_search_type.find('option[value="decrease"]').hide()
                         sel_search_type.find('option[value="unchanged"]').show()
@@ -684,7 +717,6 @@
                         sel_search_type.find('option[value="greater_than"]').show()
                         sel_search_type.find('option[value="less_than"]').show()
                         sel_search_type.find('option[value="unknown"]').hide()
-                        sel_search_type.find('option[value="unknown_near"]').hide()
                         sel_search_type.find('option[value="increase"]').show()
                         sel_search_type.find('option[value="decrease"]').show()
                         sel_search_type.find('option[value="unchanged"]').show()
@@ -699,7 +731,6 @@
                 sel_search_type.find('option[value="greater_than"]').hide()
                 sel_search_type.find('option[value="less_than"]').hide()
                 sel_search_type.find('option[value="unknown"]').hide()
-                sel_search_type.find('option[value="unknown_near"]').hide()
                 sel_search_type.find('option[value="increase"]').show()
                 sel_search_type.find('option[value="decrease"]').show()
                 sel_search_type.find('option[value="unchanged"]').show()
@@ -709,7 +740,7 @@
         }
     }
 
-    function update_search_size(_type, _size, _value) {
+    function update_search_size(_type, _size, _value, _proxy) {
         switch (current_flow) {
             case flow_map["FLOW_START"]:
                 sel_search_size.removeAttr('disabled')
@@ -719,7 +750,6 @@
                         sel_search_size.find('option[value="array"]').show()
                         break
                     case 'unknown':
-                    case 'unknown_near':
                         row_search_size.hide()
                         break
                     default:
@@ -747,22 +777,18 @@
         }
     }
 
-    function update_search_value(_type, _size, _value) {
+    function update_search_value(_type, _size, _value, _proxy) {
         switch (current_flow) {
             case flow_map["FLOW_START"]:
                 inp_search_value.removeAttr('disabled')
-                if (_type == 'unknown_near') {
-                    $("#value_header").text("Address")
-                } else {
-                    $("#value_header").text("Value")
-                }
+                $("#value_header").text("Value")
                 if (_type == 'unknown') {
                     row_search_value.hide()
-                    value_valid = true
+                    validate_value("_true", 0, 0, _proxy)
                 } else {
                     row_search_value.show()
                     inp_search_value.attr('inputmode', _size === 'array' ? 'text' : 'decimal')
-                    validate_value(_value, _size, _type)
+                    validate_value(_value, _size, _type, _proxy)
                 }
                 break
             case flow_map["FLOW_SEARCHING"]:
@@ -772,11 +798,11 @@
                 inp_search_value.removeAttr('disabled')
                 if (_type == 'increase' || _type == 'decrease' || _type == 'changed' || _type == 'unchanged') {
                     row_search_value.hide()
-                    value_valid = true
+                    validate_value("_true", 0, 0, _proxy)
                 } else {
                     row_search_value.show()
                     inp_search_value.attr('inputmode', _size === 'array' ? 'text' : 'decimal')
-                    validate_value(_value, _size, _type)
+                    validate_value(_value, _size, _type, _proxy)
                 }
                 break
             case flow_map["FLOW_INITIALIZE_UNKNOWN"]:
@@ -785,23 +811,48 @@
                     inp_search_value.removeAttr('disabled')
                     row_search_value.show()
                     inp_search_value.attr('inputmode', _size === 'array' ? 'text' : 'decimal')
-                    validate_value(_value, _size, _type)
+                    validate_value(_value, _size, _type, _proxy)
                 }
                 else {
                     row_search_value.hide()
-                    value_valid = true
+                    validate_value("_true", 0, 0, _proxy)
                 }
                 break
         }
     }
 
-    function update_search_button(_type, _size, _value) {
+    function update_search_proximity(_type, _size, _value, _proxy) {
         switch (current_flow) {
             case flow_map["FLOW_START"]:
-                if (_type == 'unknown') {
+                switch_search_proximity.removeAttr('disabled')
+                inp_search_proximity_address.removeAttr('disabled')
+                inp_search_proximity_size.removeAttr('disabled')
+                break
+            case flow_map["FLOW_SEARCHING"]:
+                switch_search_proximity.attr('disabled', 'disabled')
+                inp_search_proximity_address.attr('disabled', 'disabled')
+                inp_search_proximity_size.attr('disabled', 'disabled')
+                break
+            case flow_map["FLOW_RESULTS"]:
+                switch_search_proximity.attr('disabled', 'disabled')
+                inp_search_proximity_address.attr('disabled', 'disabled')
+                inp_search_proximity_size.attr('disabled', 'disabled')
+                break
+            case flow_map["FLOW_INITIALIZE_UNKNOWN"]:
+                switch_search_proximity.attr('disabled', 'disabled')
+                inp_search_proximity_address.attr('disabled', 'disabled')
+                inp_search_proximity_size.attr('disabled', 'disabled')
+                break
+        }
+    }
+
+    function update_search_button(_type, _size, _value, _proxy) {
+        switch (current_flow) {
+            case flow_map["FLOW_START"]:
+                if (_type == 'unknown' && proxy_valid) {
                     btn_search_button.removeAttr('disabled')
                 } else {
-                    if (value_valid) {
+                    if (value_valid && proxy_valid) {
                         btn_search_button.removeAttr('disabled')
                     } else {
                         btn_search_button.attr('disabled', 'disabled')
@@ -836,7 +887,7 @@
         }
     }
 
-    function update_reset_button(_type, _size, _value) {
+    function update_reset_button(_type, _size, _value, _proxy) {
         switch (current_flow) {
             case flow_map["FLOW_START"]:
                 btn_reset_button.text("Reset")
@@ -856,7 +907,7 @@
                 break
         }
     }
-    function update_results_progress(_type, _size, _value) {
+    function update_results_progress(_type, _size, _value, _proxy) {
         switch (current_flow) {
             case flow_map["FLOW_START"]:
                 div_search_results.hide()
@@ -868,7 +919,7 @@
         }
     }
 
-    function update_results_list(_type, _size, _value) {
+    function update_results_list(_type, _size, _value, _proxy) {
         switch (current_flow) {
             case flow_map["FLOW_START"]:
                 div_search_results.hide()
@@ -880,13 +931,17 @@
     }
 
 
-    function validate_value(_value, _size, _type) {
+    function validate_value(_value, _size, _type, _proxy) {
+        validate_proximity(_value, _size, _type, _proxy)
         if (_value === "") {
             value_valid = false
             return
         }
-        if (_type == 'unknown_near') {
-            value_valid = /^[0-9A-F]{5,16}$/i.test(_value)
+        if (_value === '_true') {
+            value_valid = true
+            return
+        } else if (_value === '_false') {
+            value_valid = false
             return
         }
         const array_regex = new RegExp('^(?:([0-9A-F]{2}|\\?{2}) )*([0-9A-F]{2}|\\?{2})$');
@@ -912,6 +967,17 @@
                 }
             }
         }
+    }
+
+    function validate_proximity(_value, _size, _type, _proxy) {
+        if (!_proxy || !_proxy.proximity) {
+            proxy_valid = true
+            return
+        }
+        var address = _proxy.address
+        var proxy_valid_address = /^(?!.{256,})(?!(aux|clock\$|con|nul|prn|com[1-9]|lpt[1-9])(?:$|\.))[^ ][ \.\w-$()+=[\];#@~,&amp;']+[^\. ]:\d+\+[0-9a-f]+$/i.test(address) || /^[0-9A-F]{5,16}$/i.test(address)
+        var proxy_valid_size = /^[0-9]+$/.test(_proxy.size) && parseInt(_proxy.size) >= 16 && parseInt(_proxy.size) <= 65536
+        proxy_valid = proxy_valid_address && proxy_valid_size
     }
 
     function populate_results(results, is_array) {
@@ -966,6 +1032,10 @@
         row_search_initialize_unknown = $("#search_initialize_unknown_row")
         row_search_progress = $("#search_progress_row")
         search_progress = $("#search_progress")
+
+        switch_search_proximity = $("#search_proximity_switch")
+        inp_search_proximity_address = $("#search_proximity_address")
+        inp_search_proximity_size = $("#search_proximity_size")
 
         //$.send('/search', { "command": "SEARCH_INITIALIZE" }, on_search_status);
     };

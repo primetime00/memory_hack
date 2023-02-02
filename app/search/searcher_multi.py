@@ -62,7 +62,10 @@ class SearcherMulti(Searcher):
                     current_start += size
                     current_size = max_size
                 elif current_size - size > 0: #next region
-                    mem_map[region_index].append({'region_index': region_index, 'start': current_start, 'size': size})
+                    if size > 0:
+                        mem_map[region_index].append({'region_index': region_index, 'start': current_start, 'size': size})
+                    else:
+                        del mem_map[region_index]
                     current_size -= size
                     break
                 else:
@@ -274,6 +277,9 @@ class SearcherMulti(Searcher):
     def search_memory_value(self, value: str):
         if self.results is None:
             raise SearchException('No results associated with the searcher')
+        if self.total_size <= 128000:
+            super().search_memory_value(value)
+            return
         self.on_search_start(self.SEARCH_TYPE_VALUE)
         sv = Value.create(value, self.search_size)
         self.signed = sv.is_signed() if isinstance(sv, IntValue) else False
@@ -330,6 +336,9 @@ class SearcherMulti(Searcher):
     def search_memory_operation(self, operation, args=None):
         if self.results is None:
             raise SearchException('No results associated with the searcher')
+        if self.total_size <= 128000:
+            super().search_memory_operation(operation, args)
+            return
         self.on_search_start(self.SEARCH_TYPE_OPERATION)
         sv = Value.create("0", self.search_size)
         process_args = []
