@@ -395,7 +395,7 @@
         }
     }
 
-    codelist.clipboard_data_pasted = function(data) {
+    codelist.clipboard_data_pasted = function(data,  desc) {
         var type = ''
         var address = ''
         if (has(data, 'offsets')) { //this will be a pointer

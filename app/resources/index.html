@@ -76,13 +76,13 @@
         script.clipboard_data_copied(data)
         codelist.clipboard_data_copied(data)
       },
-      'paste': (ctrl) => {
+      'paste': (ctrl, desc) => {
         if (ctrl === codelist) {
-          codelist.clipboard_data_pasted(document.clipboard.data)
+          codelist.clipboard_data_pasted(document.clipboard.data, desc)
         } else if (ctrl === aob) {
-          aob.clipboard_data_pasted(document.clipboard.data)
+          aob.clipboard_data_pasted(document.clipboard.data, desc)
         } else if (ctrl === search) {
-          search.clipboard_data_pasted(document.clipboard.data)
+          search.clipboard_data_pasted(document.clipboard.data, desc)
         }
         document.clipboard.clear()
       },

@@ -33,7 +33,7 @@
 
       <ons-row id="row_search_size">
         <ons-col align="center" width="20%" class="col ons-col-inner">Search Size:</ons-col>
-        <ons-col align="center" width="40%" class="col ons-col-inner">
+        <ons-col align="center" width="24%" class="col ons-col-inner">
           <select name="search_size" id="search_size" class="select-input select-input--material" onchange="search.search_size_changed(this.val)">
             <option value="byte_1">BYTE</option>
             <option value="byte_2">2 BYTES</option>
@@ -43,6 +43,14 @@
           </select>
         </ons-col>
         <ons-col align="center" class="col ons-col-inner"></ons-col>
+      </ons-row>
+      <ons-row id="row_search_aligned">
+        <ons-col align="center" width="20%" class="col ons-col-inner">
+          Aligned:
+        </ons-col>
+        <ons-col align="center" width="20%" class="col ons-col-inner">
+          <ons-switch id="search_aligned_switch" checked></ons-switch>
+        </ons-col>
       </ons-row>
 
       <ons-row id="row_search_proximity">
@@ -55,9 +63,12 @@
         </ons-row>
         <div id="div_search_proximity_parameters" style="margin-left:8px; background-color: ghostwhite;" hidden>
           <ons-row>
-            <ons-col align="center" width="30%" class="col ons-col-inner">Address:</ons-col>
+            <ons-col align="center" width="25%" class="col ons-col-inner">Address:</ons-col>
             <ons-col align="center" width="60%" class="col ons-col-inner">
               <input id="search_proximity_address" inputmode="decimal" name="search_value" class="text-input text-input--material r-value text-full" onkeydown="search.on_return_pressed(this)" oninput="search.search_proximity_value_changed(this.value)" autocomplete="off">
+            </ons-col>
+            <ons-col align="center" width="10%" class="col ons-col-inner">
+              <ons-button id="search_proximity_paste" modifier="quiet" onclick="document.clipboard.paste(search, 'proximity')"><ons-icon icon="md-paste"></ons-icon></ons-button>
             </ons-col>
             <ons-col align="center" class="col ons-col-inner"></ons-col>
           </ons-row>
@@ -77,7 +88,7 @@
         <ons-col align="center" width="40%" class="col ons-col-inner">
           <input id="search_value" inputmode="decimal" name="search_value" class="text-input text-input--material r-value" onkeydown="search.on_return_pressed(this)" oninput="search.search_value_changed(this.value)" autocomplete="off">
         </ons-col>
-        <ons-col align="center" width="50px" class="col ons-col-inner"><ons-button id="search_paste_button" modifier="material--flat" onclick="document.clipboard.paste(search)"><ons-icon style="color:#777;" size="28px" icon="md-paste"></ons-icon></ons-button></ons-col>
+        <ons-col align="center" width="50px" class="col ons-col-inner"><ons-button id="search_paste_button" modifier="material--flat" onclick="document.clipboard.paste(search, 'search')"><ons-icon style="color:#777;" size="28px" icon="md-paste"></ons-icon></ons-button></ons-col>
       </ons-row>
 
       <ons-row style="margin-top:15px;">

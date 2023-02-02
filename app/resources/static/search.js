@@ -27,6 +27,9 @@
     var inp_search_proximity_address;
     var inp_search_proximity_size;
 
+    var row_search_aligned;
+    var switch_search_aligned;
+
     var li_template = (['<ons-list-item class="result-row">',
           '<ons-row>',
             '<ons-col align="center" width="65%" class="col ons-col-inner">',
@@ -116,6 +119,7 @@
     search.on_reset_clicked = function() {
         btn_reset_button.attr('disabled', 'disabled')
         btn_search_button.attr('disabled', 'disabled')
+        switch_search_aligned.prop('checked', true)
         $.send('/search', { "command": "SEARCH_RESET" }, on_search_status);
     };
 
@@ -179,6 +183,7 @@
       $('#search_reset_button').prop("disabled",true);
       $('#search_button').prop("disabled",true);
       $("#search_paste_button").hide()
+      $("#search_proximity_paste").hide()
 
       list_search_result_list.children("ons-list-item").remove()
       for (i=0; i<40; i++) {
@@ -197,43 +202,46 @@
         if (has(data, 'aob') || has(data, 'value')) {
             $("#search_paste_button").show()
         }
-    }
-    search.clipboard_data_pasted = function(data) {
-        /*if (sel_search_type.val() === 'unknown_near') {
-            if (has(data, 'resolved')) {
-                inp_search_value.val(data.resolved)
-                update()
-                return
-            }
-            if (has(data, 'address')) {
-                inp_search_value.val(data.address)
-                update()
-                return
-            }
-        }*/
-        if (sel_search_size.val() === 'array') {
-            if (has(data, 'aob')) {
-                inp_search_value.val(data.aob)
-            } else {
-                sel_search_size.val('byte_4')
-                update()
-                inp_search_value.val(data.value.Display)
-            }
-            update()
-        } else {
-            if (has(data, 'value')) {
-                inp_search_value.val(data.value.Display)
-            } else {
-                sel_search_size.val('array')
-                update()
-                inp_search_value.val(data.aob)
-            }
-            update()
+        if (has(data, 'address') || has(data, 'resolved')) {
+            $("#search_proximity_paste").show()
         }
+    }
+
+    search.clipboard_data_pasted = function(data, desc) {
+        if (desc === 'search') {
+            if (sel_search_size.val() === 'array') {
+                if (has(data, 'aob')) {
+                    inp_search_value.val(data.aob)
+                } else {
+                    sel_search_size.val('byte_4')
+                    update()
+                    inp_search_value.val(data.value.Display)
+                }
+            } else {
+                if (has(data, 'value')) {
+                    inp_search_value.val(data.value.Display)
+                } else {
+                    sel_search_size.val('array')
+                    update()
+                    inp_search_value.val(data.aob)
+                }
+            }
+        } else if (desc === 'proximity') {
+            var addr = 'deadbeef'
+            if (has(data, 'address')) {
+                addr = data.address
+            }
+            if (has(data, 'resolved')) {
+                addr = data.resolved
+            }
+            inp_search_proximity_address.val(addr)
+        }
+        update()
     }
 
     search.clipboard_data_cleared = function() {
         $("#search_paste_button").hide()
+        $("#search_proximity_paste").hide()
     }
 
 
@@ -376,6 +384,7 @@
             case flow_map["FLOW_START"]:
                 if (has(result, 'type') && (result.type === 'unknown')) {
                     row_search_size.hide()
+                    row_search_aligned.hide()
                 } else {
                     row_search_size.show()
                     sel_search_size.removeAttr('disabled')
@@ -385,19 +394,29 @@
                     sel_search_size.find('option[value="float"]').show()
                     sel_search_size.find('option[value="array"]').show()
                     sel_search_size.find('option[value="byte_4"]').prop('selected', true)
+                    var _size = sel_search_size.val()
                     if (has(result, "size")) {
+                        _size = result.size
                         sel_search_size.val(result.size)
                     }
+                   if (_size === 'byte_2' || _size === 'byte_4' || _size === 'byte_8' || _size === 'float') {
+                        row_search_aligned.show()
+                    } else {
+                        row_search_aligned.hide()
+                    }
+                    switch_search_aligned.removeAttr('disabled')
                 }
                 break
             case flow_map["FLOW_SEARCHING"]:
                 sel_search_size.attr('disabled', 'disabled')
+                switch_search_aligned.attr('disabled', 'disabled')
                 if (has(result, "size")) {
                     sel_search_size.val(result.size)
                 }
                 break
             case flow_map["FLOW_RESULTS"]:
                 sel_search_size.removeAttr('disabled')
+                switch_search_aligned.attr('disabled', 'disabled')
                 if (has(result, 'size') && result.size === 'array'){
                     sel_search_size.find('option[value="byte_1"]').hide()
                     sel_search_size.find('option[value="byte_2"]').hide()
@@ -419,20 +438,29 @@
                 break
             case flow_map["FLOW_NO_RESULTS"]:
                 sel_search_size.attr('disabled', 'disabled')
+                switch_search_aligned.attr('disabled', 'disabled')
                 if (has(result, "size")) {
                     sel_search_size.val(result.size)
                 }
                 break
             case flow_map["FLOW_INITIALIZE_UNKNOWN"]:
                 sel_search_size.removeAttr('disabled')
+                switch_search_aligned.removeAttr('disabled')
                 sel_search_size.find('option[value="byte_1"]').show()
                 sel_search_size.find('option[value="byte_2"]').show()
                 sel_search_size.find('option[value="byte_4"]').show()
                 sel_search_size.find('option[value="float"]').show()
                 sel_search_size.find('option[value="array"]').hide()
                 sel_search_size.find('option[value="byte_4"]').prop('selected', true)
+                var _size = sel_search_size.val()
                 if (has(result, "size")) {
+                    _size = result.size
                     sel_search_size.val(result.size)
+                }
+                if (_size === 'byte_2' || _size === 'byte_4' || _size === 'byte_8' || _size === 'float') {
+                    row_search_aligned.show()
+                } else {
+                    row_search_aligned.hide()
                 }
                 row_search_size.show()
                 break
@@ -748,23 +776,32 @@
                     case 'equal_to':
                         row_search_size.show()
                         sel_search_size.find('option[value="array"]').show()
+                        if (_size === 'byte_2' || _size === 'byte_4' || _size === 'byte_8' ||_size === 'float') {
+                            row_search_aligned.show()
+                        } else {
+                            row_search_aligned.hide()
+                        }
                         break
                     case 'unknown':
                         row_search_size.hide()
+                        row_search_aligned.hide()
                         break
                     default:
                         row_search_size.show()
+                        row_search_aligned.hide()
                         sel_search_size.find('option[value="array"]').hide()
                         break
                 }
                 break
             case flow_map["FLOW_SEARCHING"]:
                 sel_search_size.attr('disabled', 'disabled')
+                switch_search_aligned.attr('disabled', 'disabled')
                 break
             case flow_map["FLOW_RESULTS"]:
                 sel_search_size.removeAttr('disabled')
                 row_search_size.show()
                 sel_search_size.find('option[value="array"]').hide()
+                switch_search_aligned.attr('disabled', 'disabled')
                 break
             case flow_map["FLOW_INITIALIZE_UNKNOWN"]:
                 sel_search_size.removeAttr('disabled')
@@ -773,6 +810,12 @@
                 sel_search_size.find('option[value="byte_4"]').show()
                 sel_search_size.find('option[value="float"]').show()
                 sel_search_size.find('option[value="array"]').hide()
+                switch_search_aligned.removeAttr('disabled')
+                if (_size === 'byte_2' || _size === 'byte_4' || _size === 'byte_8' ||_size === 'float') {
+                    row_search_aligned.show()
+                } else {
+                    row_search_aligned.hide()
+                }
                 break
         }
     }
@@ -1036,6 +1079,9 @@
         switch_search_proximity = $("#search_proximity_switch")
         inp_search_proximity_address = $("#search_proximity_address")
         inp_search_proximity_size = $("#search_proximity_size")
+
+        row_search_aligned = $("#row_search_aligned")
+        switch_search_aligned = $("#search_aligned_switch")
 
         //$.send('/search', { "command": "SEARCH_INITIALIZE" }, on_search_status);
     };

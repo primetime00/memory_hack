@@ -254,7 +254,7 @@
         }
     }
 
-    aob.clipboard_data_pasted = function(data) {
+    aob.clipboard_data_pasted = function(data, desc) {
         if (sel_aob_search_type.val() === 'value') {
             if (has(data, 'value')) {
                 inp_address_value.val(data.value.Display)
