@@ -181,8 +181,8 @@ class SearcherMulti(Searcher):
                 ctypes.memmove(ctypes.pointer(capture_buffer), read_bytes, len(read_bytes))
                 region_buffer = (sv.get_ctype() * (stop - start))()
                 memory.read_memory(start, region_buffer)
-                search_buffer = SearchBuffer.create(region_buffer, start, sv, _results=results)
-                compare_buffer = SearchBuffer.create(capture_buffer, start, sv)
+                search_buffer = SearchBuffer.create(region_buffer, start, sv, _results=results, aligned=self.aligned)
+                compare_buffer = SearchBuffer.create(capture_buffer, start, sv, aligned=self.aligned)
                 search_buffer.compare_by_operation(compare_buffer, operation)
                 total_read += len(read_bytes)
             except OSError as e1:
@@ -206,7 +206,8 @@ class SearcherMulti(Searcher):
 
         process_args = []
         _id = 0
-        max_size = int(self.total_size / (multiprocessing.cpu_count()-1))+4096 #self.max_capture_size
+        #max_size = int(self.total_size / (multiprocessing.cpu_count()-1))+4096 #self.max_capture_size
+        max_size = 10000000
         current_size = max_size
         files = []
 
@@ -263,7 +264,7 @@ class SearcherMulti(Searcher):
             try:
                 region_buffer = (sv.get_ctype() * size)()
                 memory.read_memory(start, region_buffer)
-                search_buffer = SearchBuffer.create(region_buffer, start, sv, _results=results)
+                search_buffer = SearchBuffer.create(region_buffer, start, sv, _results=results, aligned=self.aligned)
                 count += search_buffer.find_value(sv)
             except OSError as e1:
                 self.release_mp_memory(memory)
@@ -322,7 +323,7 @@ class SearcherMulti(Searcher):
             try:
                 region_buffer = (sv.get_ctype() * size)()
                 memory.read_memory(start, region_buffer)
-                search_buffer = SearchBuffer.create(region_buffer, start, sv, _results=results)
+                search_buffer = SearchBuffer.create(region_buffer, start, sv, _results=results, aligned=self.aligned)
                 count += search_buffer.find_by_operation(operation, args)
             except OSError as e1:
                 self.release_mp_memory(memory)

@@ -39,6 +39,7 @@ class Searcher:
         self.write_only = write_only
         self.include_paths = []
         self.proximity = {}
+        self.aligned = True
         self.total_size, self.mem_start, self.mem_end, self.mem_average = self.get_total_memory_size()
         self.progress:Progress = progress
         self.search_size = None
@@ -149,6 +150,12 @@ class Searcher:
     def clear_proximity(self):
         self.proximity = {}
         self.total_size, self.mem_start, self.mem_end, self.mem_average = self.get_total_memory_size()
+
+    def set_aligned(self, aligned):
+        self.aligned = aligned
+
+    def get_aligned(self):
+        return self.aligned
 
 
     def get_include_paths(self):
@@ -289,7 +296,7 @@ class Searcher:
                             break
                         region_buffer = (sv.get_ctype() * size)()
                         self.memory.read_memory(i_start, region_buffer)
-                        search_buffer = SearchBuffer.create(region_buffer, i_start, sv, result_callback, _batch_results, self.result_write_threshold)
+                        search_buffer = SearchBuffer.create(region_buffer, i_start, sv, result_callback, _batch_results, self.result_write_threshold, aligned=self.aligned)
                         count = search_buffer.find_value(sv)
                         if self.progress:
                             self.progress.increment(count)
@@ -327,7 +334,7 @@ class Searcher:
                             break
                         region_buffer = (sv.get_ctype() * size)()
                         self.memory.read_memory(i_start, region_buffer)
-                        search_buffer = SearchBuffer.create(region_buffer, i_start, sv, result_callback, _batch_results, self.result_write_threshold)
+                        search_buffer = SearchBuffer.create(region_buffer, i_start, sv, result_callback, _batch_results, self.result_write_threshold, aligned=self.aligned)
                         sz = search_buffer.find_by_operation(operation, args)
                         if self.progress:
                             self.progress.increment(sz)
@@ -420,8 +427,8 @@ class Searcher:
                     ctypes.memmove(ctypes.pointer(capture_buffer), read_bytes, len(read_bytes))
                     region_buffer = (sv.get_ctype() * (stop - start))()
                     self.memory.read_memory(start, region_buffer)
-                    search_buffer = SearchBuffer.create(region_buffer, start, sv, result_callback, _batch_results, self.result_write_threshold)
-                    compare_buffer = SearchBuffer.create(capture_buffer, start, sv, result_callback, result_write_threshold=self.result_write_threshold)
+                    search_buffer = SearchBuffer.create(region_buffer, start, sv, result_callback, _batch_results, self.result_write_threshold, aligned=self.aligned)
+                    compare_buffer = SearchBuffer.create(capture_buffer, start, sv, result_callback, result_write_threshold=self.result_write_threshold, aligned=self.aligned)
                     count = search_buffer.compare_by_operation(compare_buffer, operation)
                     if self.progress:
                         self.progress.increment(count)

@@ -57,6 +57,7 @@ class Search(MemoryHandler):
         self.type = ""
         self.size = ""
         self.proximity = {}
+        self.aligned = True
         self.value: Value = None
         self.searcher: SearcherMulti = None
 
@@ -103,6 +104,7 @@ class Search(MemoryHandler):
         self.type = ""
         self.size = ""
         self.proximity = {}
+        self.aligned = True
         self.value = None
         self.search_thread: Thread = None
         self.update_thread: Search.UpdateThread = None
@@ -194,6 +196,12 @@ class Search(MemoryHandler):
         if not self.searcher:
             self.searcher = SearcherMulti(self.mem(), self.progress)
             self.searcher.reset()
+        if (self.flow == self.FLOW_START and self.size == 'float') or \
+                (self.flow == self.FLOW_INITIALIZE_UNKNOWN and self.size != 'byte_1') or \
+                (self.flow == self.FLOW_START and (self.type == 'greater_than' or self.type == 'less_than') and self.size != 'byte_1'):
+            self.aligned = req.media['aligned'] == 'true'
+        else:
+            self.aligned = True
         search_op = self.search_map[req.media['type']]
         self.search_thread = Thread(target=self._search, args=[search_op])
         self.previous_stats['flow'] = self.flow
@@ -288,6 +296,7 @@ class Search(MemoryHandler):
                 self.searcher.set_proximity(self.proximity['address'], int(self.proximity['size']))
             else:
                 self.searcher.clear_proximity()
+            self.searcher.set_aligned(self.aligned)
             searcher(copy.deepcopy(self.value))
         except BreakException:
             return

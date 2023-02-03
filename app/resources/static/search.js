@@ -110,6 +110,7 @@
             "type": type,
             "value": inp_search_value.val(),
             "proximity": JSON.stringify({'enabled': switch_search_proximity.prop('checked'), 'address': inp_search_proximity_address.val(), 'size': inp_search_proximity_size.val()}),
+            "aligned": switch_search_aligned.prop('checked'),
          }
         , on_search_status);
         current_flow = flow_map["FLOW_SEARCHING"]
@@ -399,7 +400,7 @@
                         _size = result.size
                         sel_search_size.val(result.size)
                     }
-                   if (_size === 'byte_2' || _size === 'byte_4' || _size === 'byte_8' || _size === 'float') {
+                   if (_size === 'float' || has(result, 'type') && ((result.type === 'greater_than') || (result.type === 'less_than'))) {
                         row_search_aligned.show()
                     } else {
                         row_search_aligned.hide()
@@ -776,7 +777,7 @@
                     case 'equal_to':
                         row_search_size.show()
                         sel_search_size.find('option[value="array"]').show()
-                        if (_size === 'byte_2' || _size === 'byte_4' || _size === 'byte_8' ||_size === 'float') {
+                        if (_size === 'float') {
                             row_search_aligned.show()
                         } else {
                             row_search_aligned.hide()
@@ -785,6 +786,14 @@
                     case 'unknown':
                         row_search_size.hide()
                         row_search_aligned.hide()
+                        break
+                    case 'greater_than':
+                    case 'less_than':
+                        if (_size === 'byte_2' || _size === 'byte_4' || _size === 'byte_8' ||_size === 'float') {
+                            row_search_aligned.show()
+                        } else {
+                            row_search_aligned.hide()
+                        }
                         break
                     default:
                         row_search_size.show()

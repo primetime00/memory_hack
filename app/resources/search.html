@@ -65,7 +65,7 @@
           <ons-row>
             <ons-col align="center" width="25%" class="col ons-col-inner">Address:</ons-col>
             <ons-col align="center" width="60%" class="col ons-col-inner">
-              <input id="search_proximity_address" inputmode="decimal" name="search_value" class="text-input text-input--material r-value text-full" onkeydown="search.on_return_pressed(this)" oninput="search.search_proximity_value_changed(this.value)" autocomplete="off">
+              <input id="search_proximity_address" inputmode="decimal" name="search_value" class="text-input text-input--material r-value text-full" onkeydown="search.on_return_pressed(this)" oninput="search.search_proximity_value_changed(this.value)" onclick="$(this).select()" autocomplete="off">
             </ons-col>
             <ons-col align="center" width="10%" class="col ons-col-inner">
               <ons-button id="search_proximity_paste" modifier="quiet" onclick="document.clipboard.paste(search, 'proximity')"><ons-icon icon="md-paste"></ons-icon></ons-button>
@@ -75,7 +75,7 @@
           <ons-row>
             <ons-col align="center" width="30%" class="col ons-col-inner">Size:</ons-col>
             <ons-col align="center" width="60%" class="col ons-col-inner">
-              <input id="search_proximity_size" inputmode="decimal" name="search_value" class="text-input text-input--material r-value" onkeydown="search.on_return_pressed(this)" oninput="search.search_proximity_value_changed(this.value)" autocomplete="off" value="256">
+              <input id="search_proximity_size" inputmode="decimal" name="search_value" class="text-input text-input--material r-value" onkeydown="search.on_return_pressed(this)" oninput="search.search_proximity_value_changed(this.value)" onclick="$(this).select()" autocomplete="off" value="256">
             </ons-col>
             <ons-col align="center" class="col ons-col-inner"></ons-col>
           </ons-row>

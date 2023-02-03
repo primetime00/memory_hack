@@ -9,13 +9,15 @@ from app.search.value import Value, FloatValue, IntValue, AOB
 ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, ctypes.Union]
 
 class SearchBuffer:
-    def __init__(self, buffer: ctypes_buffer_t, start_offset, _result_callback: callable=None, store_size:int=1, _results: list=None, result_write_threshold:int =10000):
+    def __init__(self, buffer: ctypes_buffer_t, start_offset, _result_callback: callable=None, store_size:int=1, _results: list=None, result_write_threshold:int =10000, aligned=True):
         self.buffer = buffer
         self.store_size = store_size
         self.start_offset = start_offset
         self.result_callback = _result_callback
         self.result_threshold = result_write_threshold
+        self.aligned = aligned
         self.ptr = ctypes.cast(self.buffer, ctypes.POINTER(ctypes.c_ubyte))
+        self.store_type = ctypes.c_ubyte
 
         self.results = [] if _results is None else _results
 
@@ -30,7 +32,10 @@ class SearchBuffer:
         pass
 
     def fb_cb(self, results, i, read):
-        results.append((self.start_offset + (i * self.store_size), self._value_to_bytes(read)))
+        if self.aligned:
+            results.append((self.start_offset + (i * self.store_size), self._value_to_bytes(read)))
+        else:
+            results.append((self.start_offset + i, self._value_to_bytes(read)))
         if self.result_callback and len(results) >= self.result_threshold:
             self.result_callback(results)
             results.clear()
@@ -41,9 +46,7 @@ class SearchBuffer:
         if not isinstance(operation, MemoryOperation):
             raise BufferException('Comparing buffers require a memory operation.')
         length = min(len(self), len(compare_buffer))
-        ptr1 = self.ptr
-        ptr2 = compare_buffer.ptr
-        operation.run(ptr1, ptr2, length, self.fb_cb, self.results)
+        operation.run(self, compare_buffer, self.fb_cb, self.results)
         return length*self.store_size
 
     def read(self, index):
@@ -68,11 +71,11 @@ class SearchBuffer:
 
 
     @staticmethod
-    def create(buffer, start_offset, search_value: Value, result_callback: callable=None, _results: list=None, result_write_threshold:int =10000):
+    def create(buffer, start_offset, search_value: Value, result_callback: callable=None, _results: list=None, result_write_threshold:int =10000, aligned:bool = True):
         if type(search_value) == IntValue:
-            return IntSearchBuffer(buffer, start_offset, result_callback, search_value.store_size, _results, result_write_threshold)
+            return IntSearchBuffer(buffer, start_offset, result_callback, search_value.store_size, _results, result_write_threshold, aligned)
         elif type(search_value) == FloatValue:
-            return FloatSearchBuffer(buffer, start_offset, result_callback, _results, result_write_threshold)
+            return FloatSearchBuffer(buffer, start_offset, result_callback, _results, result_write_threshold, aligned)
         elif type(search_value) == AOB:
             return AOBSearchBuffer(buffer, start_offset, result_callback, search_value.get_store_size(), _results, result_write_threshold)
         raise BufferException('could not create buffer of type ' + str(search_value))
@@ -81,8 +84,8 @@ class SearchBuffer:
 class IntSearchBuffer(SearchBuffer):
     report_increment = 4000000
 
-    def __init__(self, buffer: ctypes_buffer_t, start_offset, _result_callback: callable=None, store_size=1, _results: list=None, result_write_threshold:int =10000):
-        super().__init__(buffer, start_offset, _result_callback, store_size, _results, result_write_threshold)
+    def __init__(self, buffer: ctypes_buffer_t, start_offset, _result_callback: callable=None, store_size=1, _results: list=None, result_write_threshold:int =10000, aligned=True):
+        super().__init__(buffer, start_offset, _result_callback, store_size, _results, result_write_threshold, aligned)
         self.store_size = store_size
         self.read_map = {1: self._read1,
                          2: self._read2,
@@ -97,6 +100,7 @@ class IntSearchBuffer(SearchBuffer):
         if store_size not in list(self.read_map.keys()):
             raise BufferException("invalid store size of {}".format(store_size))
         self.ptr = ctypes.cast(self.buffer, ctypes.POINTER(self.type_map[store_size]))
+        self.store_type = self.type_map[store_size]
 
     def __len__(self):
         return int(super().__len__() / self.store_size)
@@ -141,17 +145,17 @@ class IntSearchBuffer(SearchBuffer):
         return len(haystack)
 
     def find_by_operation(self, operation:ValueOperation, args=None):
-        length = int(len(self.buffer) / self.store_size)
-        operation.run(self.ptr, length, self.fb_cb, self.results)
+        operation.run(self, self.fb_cb, self.results)
         return len(self.buffer)
 
 
 class FloatSearchBuffer(SearchBuffer):
     report_increment = 4000000
 
-    def __init__(self, buffer: ctypes_buffer_t, start_offset, _result_callback: callable=None, _results: list=None, result_write_threshold:int =10000):
-        super().__init__(buffer, start_offset, _result_callback, 4, _results, result_write_threshold)
+    def __init__(self, buffer: ctypes_buffer_t, start_offset, _result_callback: callable=None, _results: list=None, result_write_threshold:int =10000, aligned:bool = True):
+        super().__init__(buffer, start_offset, _result_callback, 4, _results, result_write_threshold, aligned)
         self.ptr = ctypes.cast(self.buffer, ctypes.POINTER(ctypes.c_float))
+        self.store_type = ctypes.c_float
 
     def __len__(self):
         return int(super().__len__()/4)
@@ -160,12 +164,12 @@ class FloatSearchBuffer(SearchBuffer):
         search_value = value.get_comparable_value()
         length = self.__len__()
         op = EqualFloat(search_value)
-        op.run(self.ptr, length, self.fb_cb, self.results)
+        op.run(self, self.fb_cb, self.results)
         return length*self.store_size
 
     def find_by_operation(self, operation: ValueOperation, args=None):
         length = self.__len__()
-        operation.run(self.ptr, length, self.fb_cb, self.results)
+        operation.run(self, self.fb_cb, self.results)
         return length * self.store_size
 
     def _read(self, index):
@@ -233,7 +237,7 @@ class AOBSearchBuffer(SearchBuffer):
         _type = ctypes.c_byte
         results = []
         length = len(self.buffer) - self.store_size
-        operation.run(self.ptr, length, self.fb_cb, results)
+        operation.run(self, self.fb_cb, results)
         if self.result_callback and len(results) > 0:
             self.result_callback(results)
             results.clear()
