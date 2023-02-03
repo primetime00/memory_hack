@@ -410,7 +410,7 @@ class AOB(MemoryHandler):
             else:
                 sz_map = {'byte_1': ctypes.c_uint, 'byte_2': ctypes.c_uint16, 'byte_4': ctypes.c_uint32, 'byte_8': ctypes.c_uint64}
             read = sz_map[self.current_size]()
-            for i in range(len(data)-1, -1, -1):
+            for i in range(0, len(data)):
                 found = False
                 aob = data[i]
                 self.searcher.search_memory_value(aob['aob_string'])
@@ -421,16 +421,19 @@ class AOB(MemoryHandler):
                 with self.searcher.results.db() as conn:
                     for res in self.searcher.results.get_results(connection=conn):
                         address = res[0]
-                        self.memory.read_memory(address - aob['offset_from_address'], read)
-                        if read.value == int(self.current_value):
-                            found = True
-                            break
+                        try:
+                            self.memory.read_memory(address - aob['offset_from_address'], read)
+                            if read.value == int(self.current_value):
+                                found = True
+                                break
+                        except OSError:
+                            continue
                 if found:
                     d = data[i].copy()
                     d['index'] += 1
                     new_data.append(d)
             self.progress.mark()
-            self.aob_file.add_data_list_item(sorted(new_data, reverse=True))
+            self.aob_file.add_data_list_item(new_data)
             self.aob_file.write()
             return len(new_data)
 
