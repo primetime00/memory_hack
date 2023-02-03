@@ -316,6 +316,14 @@ class AOBFile():
             while len(self.data_list) > 3:
                 self.data_list.pop(0)
 
+    def add_data_list_item(self, data: list):
+        self.data_list.append(data)
+        self.file_state = AOBFile.FILE_STATE_HAS_RESULTS
+        if len(self.data_list[-1]) == 0:
+            self.file_state = AOBFile.FILE_STATE_NO_RESULTS
+        self.initial = False
+        while len(self.data_list) > 3:
+            self.data_list.pop(0)
 
     def range_aob(self, lst: list, length: int, start: int, max_wild: int):
         i = start

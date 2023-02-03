@@ -57,7 +57,7 @@
       <ons-row>
         <ons-col id="aob_address_value_heading" align="center" width="18%" class="col ons-col-inner"><span id="val_address_text">Value</span>:</ons-col>
         <ons-col align="center" width="35%" class="col ons-col-inner">
-          <input type="text" id="aob_address_value" class="text-input text-input--material r-value" oninput="aob.aob_address_value_changed(this.value)" autocomplete="chrome-off" autocapitalize="off">
+          <input type="text" id="aob_address_value" class="text-input text-input--material r-value" oninput="aob.aob_address_value_changed(this.value)" onclick="$(this).select()" autocomplete="chrome-off" autocapitalize="off">
         </ons-col>
         <ons-col id="aob_value_size_col" align="center" width="15%" class="col ons-col-inner">
           <select id="aob_value_size" class="select-input select-input--material" onchange="aob.aob_size_changed(this.value)">
@@ -73,7 +73,7 @@
       <ons-row id="aob_range_row">
         <ons-col align="center" width="18%" class="col ons-col-inner">Range:</ons-col>
         <ons-col align="center" width="25%" class="col ons-col-inner">
-          <input inputmode="numeric" type="text" id="aob_range" class="text-input text-input--material" value="65536" oninput="aob.aob_range_changed(this.value)" autocapitalize="off" autocomplete="chrome-off">
+          <input inputmode="numeric" type="text" id="aob_range" class="text-input text-input--material" value="65536" oninput="aob.aob_range_changed(this.value)" onclick="$(this).select()" autocapitalize="off" autocomplete="chrome-off">
         </ons-col>
       </ons-row>
 

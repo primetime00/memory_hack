@@ -13,7 +13,6 @@ from mem_edit import Process
 
 from app.helpers.aob_file import AOBFile
 from app.helpers.aob_utils import AOBUtilities
-from app.helpers.aob_walk import AOBWalk
 from app.helpers.data_store import DataStore
 from app.helpers.directory_utils import aob_directory
 from app.helpers.dyn_html import DynamicHTML
@@ -115,7 +114,7 @@ class AOB(MemoryHandler):
 
     def handle_reset(self, req: Request, resp: Response):
         if self.aob_work_thread and self.aob_work_thread.is_alive():
-            DataStore().get_operation_control().control_break()
+            self.aob_work_thread.kill()
             self.aob_work_thread.join()
         self.flow = self.previous_state['flow']
         self.set_current_name(self.previous_state['name'])
@@ -164,7 +163,7 @@ class AOB(MemoryHandler):
         self.aob_file.set_name(name)
         self.set_current_name(name)
         try:
-            self.aob_work_thread = AOB.AOBWorkThread(self.aob_file, self.mem(), search_type, address_value, search_range, value_size)
+            self.aob_work_thread = AOB.AOBWorkThread(self.aob_file, self.mem(), search_type, address_value, search_range, value_size, self.searcher)
         except ValueError as e:
             resp.media['error'] = 'Could not start: {}'.format(e)
             return
@@ -316,7 +315,7 @@ class AOB(MemoryHandler):
         smallest_run = 5
         consecutive_zeros = 5
 
-        def __init__(self, _aob_file: AOBFile, _memory, _type=None, _address_value=None, _range=None, _size=None):
+        def __init__(self, _aob_file: AOBFile, _memory, _type=None, _address_value=None, _range=None, _size=None, searcher=None):
             super().__init__(target=self.process)
             self.aob_file = _aob_file
             self.memory: Process = _memory
@@ -334,11 +333,16 @@ class AOB(MemoryHandler):
                 self.current_range += 1
             self.progress = Progress()
             self.error = ""
+            self.stop = False
+            self.searcher = searcher
             self.operation_control = DataStore().get_operation_control()
 
 
         def get_file(self):
             return self.aob_file
+
+        def kill(self):
+            self.stop = True
 
         def get_progress(self):
             return self.progress.get_progress()
@@ -383,15 +387,9 @@ class AOB(MemoryHandler):
                 logging.error("Trying to do a value search without an .aob file!")
                 return
             try:
-                number_of_results = self.aob_value_search()
+                self.aob_value_search()
             except AOBException as e:
                 self.error = 'Search Failed: {}'.format(e.get_message())
-                return
-            if number_of_results >= 0:
-                if number_of_results == 0:
-                    self.aob_file.set_final()
-                self.aob_file.write()
-
 
         def process(self):
             try:
@@ -403,15 +401,38 @@ class AOB(MemoryHandler):
                 pass
 
         def aob_value_search(self):
-            au = AOBUtilities(self.memory, self.operation_control, self.progress)
-            walker = AOBWalk(aob_file=self.aob_file, max_size=50, filter_result_size=6)
-            if self.current_value:
-                sz_map = {'byte_1': AOBWalk.BYTE, 'byte_2': AOBWalk.BYTE_2, 'byte_4': AOBWalk.BYTE_4, 'byte_8': AOBWalk.BYTE_8}
-                walker.set_result_value_filter(self.current_value, sz_map[self.current_size], self.memory)
-            self.progress.add_constraint(0, au.get_total_memory_size()[0], 1.0)
-            walker.search(self.memory, progress=self.progress)
+            new_data = []
+            self.searcher.set_search_size('array')
+            data = self.aob_file.get_data_list()[-1]
+            self.progress.add_constraint(0, len(data), 1.0)
+            if self.current_value.strip().startswith('-'):
+                sz_map = {'byte_1': ctypes.c_int, 'byte_2': ctypes.c_int16, 'byte_4': ctypes.c_int32, 'byte_8': ctypes.c_int64}
+            else:
+                sz_map = {'byte_1': ctypes.c_uint, 'byte_2': ctypes.c_uint16, 'byte_4': ctypes.c_uint32, 'byte_8': ctypes.c_uint64}
+            read = sz_map[self.current_size]()
+            for i in range(len(data)-1, -1, -1):
+                found = False
+                aob = data[i]
+                self.searcher.search_memory_value(aob['aob_string'])
+                self.progress.increment(1)
+                if self.stop:
+                    self.stop = False
+                    return -1
+                with self.searcher.results.db() as conn:
+                    for res in self.searcher.results.get_results(connection=conn):
+                        address = res[0]
+                        self.memory.read_memory(address - aob['offset_from_address'], read)
+                        if read.value == int(self.current_value):
+                            found = True
+                            break
+                if found:
+                    d = data[i].copy()
+                    d['index'] += 1
+                    new_data.append(d)
             self.progress.mark()
-            return self.aob_file.count_aob_results()
+            self.aob_file.add_data_list_item(sorted(new_data, reverse=True))
+            self.aob_file.write()
+            return len(new_data)
 
         def aob_address_search(self):
             self.progress.add_constraint(0, 1, 0.1)
