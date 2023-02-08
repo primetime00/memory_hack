@@ -123,6 +123,15 @@ class Element(Build):
         else:
             self.update_queue.put({'op': "prop", 'data': {'name': 'disabled', 'value': True, 'id': '{}'.format(self.script_ids[id_index])}})
 
+    def js(self, script: str, id_index: int = -1):
+        if id_index < 0 or id_index >= len(self.script_ids):
+            [self.update_queue.put({'op': "script", 'data': {'script': script, 'id': x}}) for x in self.script_ids]
+        else:
+            self.update_queue.put({'op': "script", 'data': {'script': script, 'id': '{}'.format(self.script_ids[id_index])}})
+
+    def add_style(self, style: str):
+        self.js("const style = document.createElement('style'); style.textContent = '{}'; document.head.append(style);".format(style))
+
     def enable(self, id_index: int = -1):
         self.enabled = True
         if id_index < 0 or id_index >= len(self.script_ids):

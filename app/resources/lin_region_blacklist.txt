@@ -1,0 +1,8 @@
+*-linux-gnu*
+*memfd:*
+/usr/plugins*
+*/cache/*
+*.ttf
+*/locale/*
+*.cache*
+*gtk-*

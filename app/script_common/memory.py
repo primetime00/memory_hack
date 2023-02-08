@@ -27,7 +27,7 @@ class MemoryManager:
         if memory is None:
             self.process_map = {}
         else:
-            self.process_map = get_process_map(memory, include_paths)
+            self.process_map = get_process_map(memory, include_paths=include_paths)
         self.searcher_map: {str, SearcherMulti} = {}
 
     def get_searcher(self, name:str = '_default') -> SearcherMulti:

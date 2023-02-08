@@ -31,6 +31,8 @@ class Process(Service):
         self.error = ""
         self.pid_map_lock = threading.Lock()
 
+        self.load_region_blacklist()
+
         self.handle_map = {
             "GET_PROCESSES": self.handle_processes,
             "REQUEST_PROCESS": self.handle_request
@@ -235,6 +237,20 @@ class Process(Service):
             return []
         bl = p.read_text().splitlines()
         return [b.strip() for b in bl]
+
+
+    def load_region_blacklist(self):
+        p = Path("./resources")
+        if os.name == 'nt':
+            p = p.joinpath('win_region_blacklist.txt')
+        else:
+            p = p.joinpath('lin_region_blacklist.txt')
+        if not p.exists():
+            return []
+        bl = p.read_text().splitlines()
+        blacklist = [b.strip() for b in bl]
+        mem_edit.Process.set_blacklist(blacklist)
+
 
 
 

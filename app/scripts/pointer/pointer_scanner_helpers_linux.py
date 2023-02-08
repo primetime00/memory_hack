@@ -27,16 +27,18 @@ def weigh_regions(proc_exe, region_list):
             region['weight'] = 7
         elif region['select'].startswith('/app/bin'):
             region['weight'] = 6
-        elif region['select'].startswith('/usr/bin'):
+        elif region['select'].startswith('/dev/shm'):
             region['weight'] = 5
-        elif len(region['select']) == 0:
+        elif region['select'].startswith('/usr/bin'):
             region['weight'] = 4
-        elif region['select'].startswith('/app'):
+        elif len(region['select']) == 0:
             region['weight'] = 3
-        elif region['select'].startswith('/usr'):
+        elif region['select'].startswith('/app'):
             region['weight'] = 2
-        else:
+        elif region['select'].startswith('/usr'):
             region['weight'] = 1
+        else:
+            region['weight'] = 0
 
 def get_node_bounds(process_map):
     return [(x['start'], x['stop']) for x in process_map if x['inode'] != '0']

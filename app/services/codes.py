@@ -19,7 +19,7 @@ from app.helpers.directory_utils import codes_directory
 from app.helpers.exceptions import AOBException
 from app.helpers.exceptions import CodelistException
 from app.helpers.memory_utils import get_ctype
-from app.helpers.process import BaseConvert, BaseConvertException
+from app.helpers.process import BaseConvert, BaseConvertException, get_address_path, get_path_address
 from app.script_common.aob import AOB
 from app.script_common.utilities import ScriptUtilities
 
@@ -518,6 +518,13 @@ class CodeList(MemoryHandler):
                 del item['Resolved']
             if 'Selected' in item:
                 del item['Selected']
+        for c in write_data.values():
+            if c['Source'] == 'address':
+                if ':' not in c['Address']:
+                    addr = int(c['Address'], 16)
+                    path = get_address_path(self.mem(), addr)
+                    if path:
+                        c['Address'] = path
         file_data = {'version': CodeList._FILE_VERSION,
                      'codes': list(write_data.values())}
         return json.dumps(file_data, indent=4)
@@ -558,6 +565,11 @@ class CodeList(MemoryHandler):
         if code['Source'] == 'aob':
             if code['AOB'] not in self.aob_map:
                 self.aob_map[code['AOB']] = AOB('', code['AOB'])
+        if code['Source'] == 'address':
+            if ':' in code['Address']:
+                addr = get_path_address(self.mem(), code['Address'])
+                code['Address'] = '{:X}'.format(addr)
+
 
     def process_delete(self, code, index):
         if code['Source'] == 'aob':

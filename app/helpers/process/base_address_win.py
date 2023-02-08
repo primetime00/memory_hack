@@ -3,6 +3,7 @@ import ctypes.wintypes
 
 import mem_edit
 import psutil
+import fnmatch
 
 # Process handle privileges
 privileges = {
@@ -205,6 +206,10 @@ def get_process_map(process: mem_edit.Process, writeable_only=True, include_path
                 page_ptr += page_info.RegionSize
                 continue
 
+        if mem_edit.Process.blacklist:
+            if any(fnmatch.fnmatch(pathname, x) for x in mem_edit.Process.blacklist):
+                continue
+
         item_map['start'] = page_ptr
         item_map['stop'] = page_ptr + page_info.RegionSize
         item_map['size'] = page_info.RegionSize
@@ -229,3 +234,29 @@ def get_address_base(process: mem_edit.Process, address):
             return p
     return None
 
+def get_address_path(process: mem_edit.Process, address: int):
+    pm = sorted(get_process_map(process, writeable_only=False), key=lambda x: x['start'])
+    for p in pm:
+        if p['start'] <= address <= p['stop']:
+            if '\\' not in p['pathname']:
+                return None
+            offset = address - p['start']
+            stem = p['pathname'].split('\\')[-1]
+            index = p['map_index']
+            return '{}:{}+{:X}'.format(stem, index, offset)
+    return None
+
+def get_path_address(process: mem_edit.Process, path: str):
+    pm = sorted(get_process_map(process, writeable_only=False), key=lambda x: x['start'])
+    if ':' in path:
+        path = path.strip()
+        pn = path.split(':')[0]
+        index = path.split(':')[1].split('+')[0]
+        offset = path.split(':')[1].split('+')[1]
+        for proc in pm:
+            if proc['pathname'].endswith(pn) and proc['map_index'] == int(index):
+                res = proc['start'] + int(offset, 16)
+                return res
+        return None
+    else:
+        return int(path, 16)

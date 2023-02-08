@@ -443,10 +443,11 @@ class AOB(MemoryHandler):
             heap_start, heap_end = au.find_heap_data(self.memory, self.current_address)
             start = self.current_address - self.aob_file.get_address_offset()
             end = start+self.aob_file.get_length()
-            start_diff = heap_start - start
-            end_diff = heap_end - end
             real_start = max(start, heap_start)
             real_end = min(end, heap_end)
+            start_diff = real_start - start
+            end_diff = real_end - end
+
             try:
                 new_data = (ctypes.c_ubyte * (end - start))()
                 if start_diff > 0 or end_diff < 0:

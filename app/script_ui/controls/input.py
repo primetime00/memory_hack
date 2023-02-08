@@ -5,6 +5,7 @@ class Input(BaseControl):
     def __init__(self, on_change: callable, readonly=False, **kwargs): #values should a (value, text) tuple
         super().__init__(**kwargs)
         self.text = "" if 'text' not in kwargs else kwargs['text']
+        self.selectAll = kwargs.get("select_all", False)
         self.trigger_by_focus = True if 'trigger_by_focus' not in kwargs else kwargs['trigger_by_focus']
         self.on_change = on_change
         self.readonly = readonly
@@ -19,6 +20,10 @@ class Input(BaseControl):
         else:
             return '<ons-input id="{}" style="width:100%;" class="text-input text-input--material r-value" autocomplete="chrome-off" autocapitalize="off" modifier="underbar" value="{}" onchange="script.script_interact_value(event)" float {}></ons-input>'.format(self.script_ids[-1], self.text, 'readonly' if self.readonly else '')
 
+    def on_ready(self):
+        if self.selectAll:
+            for s in self.script_ids:
+                self.js('$("#{}").bind("click", () => {{ event.target.select(); }});'.format(s))
 
     def handle_interaction(self, _id: str, data):
         self.text = data['value']
