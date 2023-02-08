@@ -56,6 +56,17 @@ class MemoryManager:
         else:
             return int(addr, 16)
 
+    def get_base_bounds(self, addr):
+        cv_addr = self.get_address(addr)
+        if not cv_addr:
+            return None
+
+        pm = sorted(self.get_process_map(), key=lambda x: x['start'])
+        for p in pm:
+            if p['start'] <= cv_addr <= p['stop']:
+                return p['start'], p['stop']
+        return None
+
     def get_base(self, addr: str):
         cv_addr = self.get_address(addr)
         if not cv_addr:

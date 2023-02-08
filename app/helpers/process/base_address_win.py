@@ -1,9 +1,9 @@
 import ctypes
 import ctypes.wintypes
+import fnmatch
 
 import mem_edit
 import psutil
-import fnmatch
 
 # Process handle privileges
 privileges = {

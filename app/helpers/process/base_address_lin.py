@@ -1,6 +1,7 @@
+import fnmatch
+
 import mem_edit
 import psutil
-import fnmatch
 
 
 def get_process_map(process: mem_edit.Process, writeable_only=True, include_paths=[]):

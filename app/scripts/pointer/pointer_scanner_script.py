@@ -1,6 +1,5 @@
 import json
 import time
-from pathlib import Path
 from queue import Queue
 from threading import Thread, Event
 from typing import cast

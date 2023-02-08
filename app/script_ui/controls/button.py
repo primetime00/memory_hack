@@ -7,6 +7,7 @@ class Button(BaseControl):
         self.text = text
         self.quiet = quiet
         self.on_click = on_click
+        self.custom_data = kwargs.get('custom_data', [])
         self.pressed = False
 
     def set_on_click(self, on_click:callable):
@@ -14,7 +15,10 @@ class Button(BaseControl):
 
     def build(self, id_map: {}):
         id_map[self.script_ids[-1]] = self
-        return '<ons-button id="{}" {} onclick="script.script_interact_button(event)">{}</ons-button>'.format(self.script_ids[-1], 'modifier="quiet"' if self.quiet else '', self.text)
+        data = '<ons-button id="{}" {} onclick="script.script_interact_button(event)">{}</ons-button>'.format(self.script_ids[-1], 'modifier="quiet"' if self.quiet else '', self.text)
+        if self.custom_data:
+            data = data[0:data.index('id=')] + 'data-{}="{}"'.format(self.custom_data[0], self.custom_data[1]) + data[data.index('id='):]
+        return data
 
     def pop_pressed(self):
         pressed = self.pressed

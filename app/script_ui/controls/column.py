@@ -9,6 +9,7 @@ class Column(Element):
         super().__init__(**kwargs)
         self.column_items: List[Element] = []
         self.width: str = kwargs.get('width', '')
+        self.center: bool = kwargs.get('center', False)
 
     def children(self):
         return self.column_items
@@ -37,6 +38,8 @@ class Column(Element):
     def add_element(self, ele: 'Element') -> 'Element':
         if 'width' in ele.keys:
             self.width = ele.keys['width']
+        if 'center' in ele.keys and ele.keys['center']:
+            self.style += " text-align: center; align-items: center; "
         if 'align_text' in ele.keys:
             self.style += ' text-align: {}; '.format(ele.keys['align_text'])
 

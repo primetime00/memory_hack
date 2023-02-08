@@ -1,7 +1,7 @@
+import time
 from threading import Lock
 
 from app.helpers.aob_value import AOBValue
-import time
 
 
 class AOB:

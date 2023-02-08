@@ -1,10 +1,10 @@
 import ctypes
-
-from app.helpers.exceptions import OperationException
 from typing import TYPE_CHECKING, Union
 
+from app.helpers.exceptions import OperationException
+
 if TYPE_CHECKING:
-    from app.search.buffer import SearchBuffer, IntSearchBuffer
+    from app.search.buffer import SearchBuffer
 
 ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, ctypes.Union]
 
