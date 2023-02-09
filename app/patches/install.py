@@ -155,13 +155,13 @@ def uninstall_files():
 
 
 def wants_service():
-    return question('\nWould you like to install Memory Manipulator as a service?')
+    return question('\nWould you like to install Memory Hack as a service?')
 
 def wants_service_run():
     return question('Would you like to run the service?')
 
 def wants_uninstall():
-    return question('Would you like to uninstall Memory Manipulator?')
+    return question('Would you like to uninstall Memory Hack?')
 
 
 if '--service_install' in sys.argv:
@@ -212,4 +212,4 @@ else:
         if wants_service():
             get_sudo('--service_install')
         else:
-            print("Installation complete.  You can manually start Memory Manipulator by running\n'./run.sh'")
+            print("Installation complete.  You can manually start Memory Hack by running\n'./run.sh'")

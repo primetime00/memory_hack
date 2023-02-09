@@ -207,7 +207,7 @@ def wants_service_run():
     return question('Would you like to run the service?')
 
 def wants_uninstall():
-    return question('Would you like to uninstall Memory Manipulator?')
+    return question('Would you like to uninstall Memory Hack?')
 
 if '--service_install' in sys.argv:
     if not is_admin():
