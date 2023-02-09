@@ -201,7 +201,7 @@ def uninstall_files():
         os.unlink(str(Path('README.md').absolute()))
 
 def wants_service():
-    return question('\nWould you like to install Memory Manipulator as a service?')
+    return question('\nWould you like to install Memory Hack as a service?')
 
 def wants_service_run():
     return question('Would you like to run the service?')
@@ -270,5 +270,5 @@ else:
         else:
             print("Service is running.\nYou can test by accessing http://{}:5000.".format(get_hostname()))
     else:
-        print("Installation complete.  You can manually start Memory Manipulator by running\n'run.bat'")
+        print("Installation complete.  You can manually start Memory Hack by running\n'run.bat'")
 
