@@ -7,6 +7,7 @@ from app.services.codes import CodeList
 from app.services.process import Process
 from app.services.script import Script
 from app.services.searcher import Search
+from app.version import __version__
 
 
 def initialize():
@@ -22,12 +23,10 @@ def initialize():
 class MainResource:
     pattern = r'\s*<ons-tab.*page="/(\w+)"(.*)>'
     def on_get(self, req, resp):
-        script_instance = DataStore().get_service('script')
-        search_instance = DataStore().get_service('search')
-        aob_instance = DataStore().get_service('aob')
+        global __version__
         resp.content_type = falcon.MEDIA_HTML
         with open('resources/index.html', 'rt') as ac:
-            resp.text = ac.read().replace('#search_active#', '').replace('#aob_active#', '').replace('#script_active#', '')
+            resp.text = ac.read().replace('#search_active#', '').replace('#aob_active#', '').replace('#script_active#', '').replace("#version#", __version__)
 
 class SearchResource:
     def on_get(self, req, resp):
