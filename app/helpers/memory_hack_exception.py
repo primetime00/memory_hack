@@ -1,4 +1,4 @@
-class MemManipException(Exception):
+class MemoryHackException(Exception):
     def __init__(self, msg, from_thread=False):
         self.from_thread = from_thread
         self.msg = msg

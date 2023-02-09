@@ -1,14 +1,14 @@
-# Mem Manip Beginner Tutorial
-_This tutorial is intended to teach basic usage  or Mem Manip.  It will demonstrate how to find a value in memory, change it and freeze that value._
+# Memory Hack Beginner Tutorial
+_This tutorial is intended to teach basic usage  or Memory Hack.  It will demonstrate how to find a value in memory, change it and freeze that value._
 
-The game that we will use in this tutorial is [_Terraria_](https://store.steampowered.com/app/105600/Terraria/).  We will use Mem Manip to search for character life and freeze that life so that the character cannot die.
+The game that we will use in this tutorial is [_Terraria_](https://store.steampowered.com/app/105600/Terraria/).  We will use Memory Hack to search for character life and freeze that life so that the character cannot die.
 
-If you do not  own _Terraria_, you can still follow along and learn how Mem Manip works.
+If you do not  own _Terraria_, you can still follow along and learn how Memory Hack works.
 
 ## Finding the code for life
-1. Start Mem Manip.  If Mem Manip is installed as a service, it is already running.
+1. Start Memory Hack.  If Memory Hack is installed as a service, it is already running.
 2. Run _Terraria_ and start a game.
-3. Open your browser to Mem Manip.  I have Mem Manip running on my PC at `http://192.168.1.3:5000.`  If Mem Manip is installed on a Steam Deck, you may find it at `http://steamdeck:5000`
+3. Open your browser to Memory Hack.  I have Memory Hack running on my PC at `http://192.168.1.3:5000.`  If Memory Hack is installed on a Steam Deck, you may find it at `http://steamdeck:5000`
 4. Tap on the Search item on the toolbar.
 
 <img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/search_toolbar.jpg" alt="search_toolbar" width="500"/>
@@ -43,8 +43,8 @@ _Now back to the tutorial_
 
 <img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/in_game01.jpg" alt="ingame01" width="700"/>
 
-8. In Mem Manip, select Search Type `EQUAL TO`, Search Size `4 BYTES` and Value `100` then click `SEARCH`
-9. Mem Manip should process a search and return all addresses with values of 100.
+8. In Memory Hack, select Search Type `EQUAL TO`, Search Size `4 BYTES` and Value `100` then click `SEARCH`
+9. Memory Hack should process a search and return all addresses with values of 100.
 
 <img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/search_results.jpg" alt="search_results" width="500"/>
 
@@ -53,12 +53,12 @@ _Now back to the tutorial_
 
 <img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/in_game02.jpg" alt="ingame02" width="700"/>
 
-12. Back in Mem Manip, we will modify our value from 100 to 96 (which is our current life points.)  Click `SEARCH` again.
+12. Back in Memory Hack, we will modify our value from 100 to 96 (which is our current life points.)  Click `SEARCH` again.
 13. For me, this narrowed my list of possible codes to 2.
 
 <img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/search_round2.jpg" alt="search_round2" width="500"/>
 
-At this point we can run steps 10-13 again to narrow the list to one result, or we can just lose some life again in the game and monitor our search result list in Mem Manip to see which result reflects the life point change.
+At this point we can run steps 10-13 again to narrow the list to one result, or we can just lose some life again in the game and monitor our search result list in Memory Hack to see which result reflects the life point change.
 
 I'll do the  later.
 14. I lost some more life.  Now I'm down to 84 life points.  If I look at my result list, I can see on item updated to 87.  This will be the item I want.
@@ -69,8 +69,8 @@ I'll do the  later.
 ## Adding your value to the code list 
 Now that you found the value that you want to modify, we need to place that address on the code list.
 
-1. While still on the Search screen, press the `COPY` button next to the result that we found.  That will copy the address of the value so that we can paste it in other areas of Mem Manip.
-2. Navigate to the Codes section of Mem Manip.
+1. While still on the Search screen, press the `COPY` button next to the result that we found.  That will copy the address of the value so that we can paste it in other areas of Memory Hack.
+2. Navigate to the Codes section of Memory Hack.
 
 <img src="https://github.com/primetime00/memory_hack/raw/master/docs/tutorial/images/search/search_copy.jpg" alt="search_copy" width="500"/>
 
@@ -86,7 +86,7 @@ This will delete the currently loaded code list.
 
 You should also see a :heavy_plus_sign: floating button at the bottom right.  This button will manually add a code to your code list.
 
-Finally, there also should be a clipboard floating button on the bottom right.  This button is visible if you've copied an item somewhere in Mem Manip.
+Finally, there also should be a clipboard floating button on the bottom right.  This button is visible if you've copied an item somewhere in Memory Hack.
 
 5. Click on the clipboard button.
 

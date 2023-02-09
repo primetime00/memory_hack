@@ -98,11 +98,11 @@ def get_hostname():
 
 def create_run_script():
     with open('run.bat', 'wt') as fp:
-        fp.write("{} {}\n".format(Path('venv\\Scripts\\python.exe').absolute(), Path('mem_manip.py').absolute()))
+        fp.write("{} {}\n".format(Path('venv\\Scripts\\python.exe').absolute(), Path('memory_hack.py').absolute()))
 
 def installed():
     app_path = Path(".\\app")
-    prog_path = Path(".\\mem_manip.py")
+    prog_path = Path(".\\memory_hack.py")
     return app_path.exists() and prog_path.exists()
 
 def is_admin():
@@ -126,17 +126,17 @@ def run_service():
 def install_service():
     print('installing service!')
     exe_path = Path('.\\venv\\Scripts\\python.exe').absolute()
-    scr_path = Path('.\\mem_manip.py').absolute()
+    scr_path = Path('.\\memory_hack.py').absolute()
     try:
         subprocess.check_call(["nssm.exe", "install", "MemManipService", str(exe_path), str(scr_path)])
     except Exception as e:
         print(e)
 
 def remove_service():
-    subprocess.check_call(['/usr/bin/systemctl', "stop", "mem_manip.service"])
-    subprocess.check_call(['/usr/bin/systemctl', "disable", "mem_manip.service"])
+    subprocess.check_call(['/usr/bin/systemctl', "stop", "memory_hack.service"])
+    subprocess.check_call(['/usr/bin/systemctl', "disable", "memory_hack.service"])
     subprocess.check_call(['/usr/bin/systemctl', "daemon-reload"])
-    os.unlink("/etc/systemd/system/mem_manip.service")
+    os.unlink("/etc/systemd/system/memory_hack.service")
 
 def has_service():
     try:
@@ -192,7 +192,7 @@ def uninstall_files():
     shutil.rmtree(str(Path('app').absolute()))
     shutil.rmtree(str(Path('venv').absolute()))
     shutil.rmtree(str(Path('docs').absolute()))
-    os.unlink(str(Path('mem_manip.py').absolute()))
+    os.unlink(str(Path('memory_hack.py').absolute()))
     if Path('run.bat').exists():
         os.unlink(str(Path('run.bat').absolute()))
     for item in Path('.\\').glob('nssm.*'):

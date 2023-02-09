@@ -84,12 +84,12 @@ def get_hostname():
 def create_run_script():
     with open('run.sh', 'wt') as fp:
         fp.write("#!/bin/bash\n")
-        fp.write("{} {}\n".format(Path('venv/bin/python3').absolute(), Path('mem_manip.py').absolute()))
+        fp.write("{} {}\n".format(Path('venv/bin/python3').absolute(), Path('memory_hack.py').absolute()))
     os.chmod('run.sh', stat.S_IRWXU)
 
 def installed():
     app_path = Path("./app")
-    prog_path = Path("./mem_manip.py")
+    prog_path = Path("./memory_hack.py")
     return app_path.exists() and prog_path.exists()
 
 def get_sudo(service_type):
@@ -101,31 +101,31 @@ def get_sudo(service_type):
 
 def run_service():
     subprocess.check_call(['/usr/bin/systemctl', "daemon-reload"])
-    subprocess.check_call(['/usr/bin/systemctl', "enable", "mem_manip.service"])
-    subprocess.check_call(['/usr/bin/systemctl', "start", "mem_manip.service"])
+    subprocess.check_call(['/usr/bin/systemctl', "enable", "memory_hack.service"])
+    subprocess.check_call(['/usr/bin/systemctl', "start", "memory_hack.service"])
 
 def install_service():
     print('installing service!')
     with open("app/patches/service.stub", "rt") as fp:
-        data = fp.read().replace('#venv#', str(Path('venv/bin/python3').absolute())).replace('#script#', str(Path('mem_manip.py').absolute()))
-    with open("/etc/systemd/system/mem_manip.service", "wt") as fp:
+        data = fp.read().replace('#venv#', str(Path('venv/bin/python3').absolute())).replace('#script#', str(Path('memory_hack.py').absolute()))
+    with open("/etc/systemd/system/memory_hack.service", "wt") as fp:
         fp.write(data)
     run_service()
 
 
 def remove_service():
-    subprocess.check_call(['/usr/bin/systemctl', "stop", "mem_manip.service"])
-    subprocess.check_call(['/usr/bin/systemctl', "disable", "mem_manip.service"])
+    subprocess.check_call(['/usr/bin/systemctl', "stop", "memory_hack.service"])
+    subprocess.check_call(['/usr/bin/systemctl', "disable", "memory_hack.service"])
     subprocess.check_call(['/usr/bin/systemctl', "daemon-reload"])
-    os.unlink("/etc/systemd/system/mem_manip.service")
+    os.unlink("/etc/systemd/system/memory_hack.service")
 
 def has_service():
-    if Path("/etc/systemd/system/mem_manip.service").exists():
+    if Path("/etc/systemd/system/memory_hack.service").exists():
         return True
     return False
 
 def service_running():
-    stat = subprocess.call(["systemctl", "is-active", "--quiet", "mem_manip.service"])
+    stat = subprocess.call(["systemctl", "is-active", "--quiet", "memory_hack.service"])
     return stat == 0
 
 def question(question):
@@ -141,13 +141,13 @@ def question(question):
 def uninstall_service():
     print("Removing service...")
     remove_service()
-    Path("/etc/systemd/system/mem_manip.service").unlink(missing_ok=True)
+    Path("/etc/systemd/system/memory_hack.service").unlink(missing_ok=True)
 
 def uninstall_files():
     shutil.rmtree(str(Path('app').absolute()))
     shutil.rmtree(str(Path('venv').absolute()))
     shutil.rmtree(str(Path('docs').absolute()))
-    os.unlink(str(Path('mem_manip.py').absolute()))
+    os.unlink(str(Path('memory_hack.py').absolute()))
     if Path('run.sh').exists():
         os.unlink(str(Path('run.sh').absolute()))
     if Path('README.md').exists():

@@ -1,7 +1,7 @@
-# Mem Manip
+# Memory Hack
 ## _Cross-platform memory editor for games_
 
-Mem Manip is a cross-platform memory editor with a web based front-end.
+Memory Hack is a cross-platform memory editor with a web based front-end.
 
 - Search and modify memory regions.
 - Save and load codes for use in games.
@@ -32,7 +32,7 @@ Mem Manip is a cross-platform memory editor with a web based front-end.
 |:-------------------------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------------------:|
 | ![snap_codes](https://github.com/primetime00/memory_hack/raw/master/docs/images/snap_aob.png) | ![snap_codes](https://github.com/primetime00/memory_hack/raw/master/docs/images/snap_scripts.png) | 
 
-Mem Manip uses a number of open source projects to work properly:
+Memory Hack uses a number of open source projects to work properly:
 
 - [Falcon] - Minimalist ASGI/WSGI framework for building mission-critical REST APIs.
 - [OnsenUI] - A rich variety of UI components specially designed for mobile apps.
@@ -41,8 +41,8 @@ Mem Manip uses a number of open source projects to work properly:
 
 ## Installation
 ### Windows
-From Windows, a powershell command can be run to download the installer script.  This script will grab the code from the repository and optionally set up Mem Manip as a service.
-1. Create a directory where Mem Manip should be installed.
+From Windows, a powershell command can be run to download the installer script.  This script will grab the code from the repository and optionally set up Memory Hack as a service.
+1. Create a directory where Memory Hack should be installed.
 2. Run the powershell command to get the code.
 ```
 powershell -Command "(new-object System.Net.WebClient).DownloadFile('https://github.com/primetime00/memory_hack/raw/master/app/patches/win_install.py','install.py')"
@@ -51,69 +51,69 @@ powershell -Command "(new-object System.Net.WebClient).DownloadFile('https://git
 ```
 python install.py
 ```
-During installation, you will be asked if Mem Manip can be installed as a service.  If Mem Manip is run as a service, it will always be running.  Otherwise, Mem Manip must be manually started.
+During installation, you will be asked if Memory Hack can be installed as a service.  If Memory Hack is run as a service, it will always be running.  Otherwise, Memory Hack must be manually started.
 > **_NOTE:_**  Service installation for Windows uses [Non-Sucking Service Manager] to make service installation easier.
-4. Run Mem Manip if it was not installed as a service.
+4. Run Memory Hack if it was not installed as a service.
 ```
 run.bat
 ```
-5. Test Mem Manip by opening a browser windows and pointing it to [localhost:5000](http://localhost:5000)
+5. Test Memory Hack by opening a browser windows and pointing it to [localhost:5000](http://localhost:5000)
 
 #### Uninstall
-To uninstall Mem Manip, navigate to the installation directory and run the installation script again.
+To uninstall Memory Hack, navigate to the installation directory and run the installation script again.
 ```
 python install.py
 ```
-The script should detect the installation and ask if you would like to uninstall Mem Manip.
+The script should detect the installation and ask if you would like to uninstall Memory Hack.
 
 ### Linux
-Like Windows, Linux will download the installation script and install, optionally setting up Mem Manip as a service.
-1. Create a directory where Mem Manip should be installed.
+Like Windows, Linux will download the installation script and install, optionally setting up Memory Hack as a service.
+1. Create a directory where Memory Hack should be installed.
 2. Run the following command to download and install.
 ```
 python3 <(wget -qO- https://github.com/primetime00/memory_hack/raw/master/app/patches/install.py)
 ```
-During installation, you will be asked if Mem Manip can be installed as a service.  If Mem Manip is run as a service, it will always be running.  Otherwise, Mem Manip must be manually started.
-3. Run Mem Manip if it was not installed as a service.
+During installation, you will be asked if Memory Hack can be installed as a service.  If Memory Hack is run as a service, it will always be running.  Otherwise, Memory Hack must be manually started.
+3. Run Memory Hack if it was not installed as a service.
 ```
 ./run.sh
 ```
-4. Test Mem Manip by opening a browser window and pointing it to [localhost:5000](http://localhost:5000)
+4. Test Memory Hack by opening a browser window and pointing it to [localhost:5000](http://localhost:5000)
 
 #### Uninstall
-To uninstall Mem Manip, navigate to the installation directory and run the installation script again.
+To uninstall Memory Hack, navigate to the installation directory and run the installation script again.
 ```
 python install.py
 ```
-The script should detect the installation and ask if you would like to uninstall Mem Manip.
+The script should detect the installation and ask if you would like to uninstall Memory Hack.
 ### Steam Deck
-Steam Deck installation follows the Linux installation.  However, you must have a password set on the Steam Deck to install Mem Manip. Those instructions can be found [here](https://steamdecktips.com/blog/how-to-set-a-password-for-your-steam-deck-user-in-desktop-mode)
+Steam Deck installation follows the Linux installation.  However, you must have a password set on the Steam Deck to install Memory Hack. Those instructions can be found [here](https://steamdecktips.com/blog/how-to-set-a-password-for-your-steam-deck-user-in-desktop-mode)
 
-1. Create a directory where Mem Manip should be installed.
+1. Create a directory where Memory Hack should be installed.
 2. Run the following command to download and install.
 ```
 python3 <(wget -qO- https://github.com/primetime00/memory_hack/raw/master/app/patches/install.py)
 ```
-During installation, you will be asked if Mem Manip can be installed as a service.  If Mem Manip is run as a service, it will always be running.  Otherwise, Mem Manip must be manually started.
-3. Run Mem Manip if it was not installed as a service.
+During installation, you will be asked if Memory Hack can be installed as a service.  If Memory Hack is run as a service, it will always be running.  Otherwise, Memory Hack must be manually started.
+3. Run Memory Hack if it was not installed as a service.
 ```
 ./run.sh
 ```
-4. Test Mem Manip by opening a browser window and pointing it to [localhost:5000](http://localhost:5000)
+4. Test Memory Hack by opening a browser window and pointing it to [localhost:5000](http://localhost:5000)
 
 #### Uninstall
-To uninstall Mem Manip, navigate to the installation directory and run the installation script again.
+To uninstall Memory Hack, navigate to the installation directory and run the installation script again.
 ```
 python install.py
 ```
-The script should detect the installation and ask if you would like to uninstall Mem Manip.
+The script should detect the installation and ask if you would like to uninstall Memory Hack.
 
 ## Usage
-Mem Manip is controlled through your browser.  Ideally, Mem Manip can be accessed through your phone.  To do this, your PC/Stream Deck must have a known IP address or host name.  For example, the Steam Deck has a default host name of `steamdeck`
+Memory Hack is controlled through your browser.  Ideally, Memory Hack can be accessed through your phone.  To do this, your PC/Stream Deck must have a known IP address or host name.  For example, the Steam Deck has a default host name of `steamdeck`
 
-You would access Mem Manip by opening your phone's browser and navigating to `http://steamdeck:5000`
+You would access Memory Hack by opening your phone's browser and navigating to `http://steamdeck:5000`
 
-You would then see the UI for Mem Manip.
+You would then see the UI for Memory Hack.
 
 Here are instructions for setting up a hostname in [Linux](https://www.tecmint.com/set-hostname-permanently-in-linux/) and [Windows](https://tecadmin.net/change-windows-hostname/) 
 

@@ -1,31 +1,31 @@
-from app.helpers.mem_manip_exception import MemManipException
+from app.helpers.memory_hack_exception import MemoryHackException
 
-class SearchException(MemManipException):
+class SearchException(MemoryHackException):
     pass
 
-class ScriptException(MemManipException):
+class ScriptException(MemoryHackException):
     pass
 
-class AOBException(MemManipException):
+class AOBException(MemoryHackException):
     pass
 
-class ProgressException(MemManipException):
+class ProgressException(MemoryHackException):
     pass
 
-class CodelistException(MemManipException):
+class CodelistException(MemoryHackException):
     pass
 
-class ProcessException(MemManipException):
+class ProcessException(MemoryHackException):
     pass
-class BreakException(MemManipException):
+class BreakException(MemoryHackException):
     def __init__(self):
         super().__init__("Operation Break", True)
 
-class ValueException(MemManipException):
+class ValueException(MemoryHackException):
     pass
 
-class BufferException(MemManipException):
+class BufferException(MemoryHackException):
     pass
 
-class OperationException(MemManipException):
+class OperationException(MemoryHackException):
     pass

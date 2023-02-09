@@ -2,11 +2,11 @@ import re
 
 import mem_edit
 
-from app.helpers.mem_manip_exception import MemManipException
+from app.helpers.memory_hack_exception import MemoryHackException
 from app.helpers.process import get_process_map
 
 
-class BaseConvertException(MemManipException):
+class BaseConvertException(MemoryHackException):
     pass
 
 class BaseConvert:

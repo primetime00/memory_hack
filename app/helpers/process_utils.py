@@ -96,7 +96,7 @@ def valid_processes(proc_list):
     return None, -1
 
 
-cmd_exceptions = ['multiprocessing', 'mem_manip', 'pydevconsole']
+cmd_exceptions = ['multiprocessing', 'memory_hack', 'pydevconsole']
 def is_pid_valid(pid):
     try:
         pc = psutil.Process(pid)
