@@ -64,7 +64,6 @@ class MemoryViewer(BaseScript):
             self.put_data("RESULT_DATA", None)
         else:
             self.ui.get_element("MAIN_PAGE").show()
-            #self.ui.get_element("MEMORY_PAGE").show()
             pass
 
     def frame(self):

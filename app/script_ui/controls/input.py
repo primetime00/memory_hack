@@ -9,16 +9,21 @@ class Input(BaseControl):
         self.trigger_by_focus = True if 'trigger_by_focus' not in kwargs else kwargs['trigger_by_focus']
         self.on_change = on_change
         self.readonly = readonly
+        self.input_mode = kwargs.get('input_mode', '')
 
     def set_on_change(self, on_change:callable):
         self.on_change = on_change
 
     def build(self, id_map: {}):
         id_map[self.script_ids[-1]] = self
+        html = ''
         if not self.trigger_by_focus:
-            return '<ons-input id="{}" style="width:100%;" class="text-input text-input--material r-value" autocomplete="chrome-off" autocapitalize="off" modifier="underbar" value="{}" oninput="script.script_interact_value(event)" float {}></ons-input>'.format(self.script_ids[-1], self.text, 'readonly' if self.readonly else '')
+            html += '<ons-input id="{}" style="width:100%;" class="text-input text-input--material r-value" autocomplete="chrome-off" autocapitalize="off" modifier="underbar" value="{}" oninput="script.script_interact_value(event)" float {}></ons-input>'.format(self.script_ids[-1], self.text, 'readonly' if self.readonly else '')
         else:
-            return '<ons-input id="{}" style="width:100%;" class="text-input text-input--material r-value" autocomplete="chrome-off" autocapitalize="off" modifier="underbar" value="{}" onchange="script.script_interact_value(event)" float {}></ons-input>'.format(self.script_ids[-1], self.text, 'readonly' if self.readonly else '')
+            html += '<ons-input id="{}" style="width:100%;" class="text-input text-input--material r-value" autocomplete="chrome-off" autocapitalize="off" modifier="underbar" value="{}" onchange="script.script_interact_value(event)" float {}></ons-input>'.format(self.script_ids[-1], self.text, 'readonly' if self.readonly else '')
+        if self.input_mode:
+            html = html[0:html.index('id=')] + 'inputmode="{}"'.format(self.input_mode) + html[html.index('id='):]
+        return html
 
     def on_ready(self):
         if self.selectAll:
