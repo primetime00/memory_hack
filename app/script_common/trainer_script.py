@@ -36,6 +36,10 @@ class TrainerScript(BaseScript):
         if len(self.aob_codes) > 0:
             self.aob_scanner.start()
 
+    def on_process_unattached(self):
+        if self.aob_scanner:
+            self.aob_scanner.stop()
+
 
     def add_aob_code(self, name:str, aob:str, offset: [str]):
         actual_aob = self.aob_scanner.add(AOB(name, aob))
@@ -98,6 +102,7 @@ class TrainerScript(BaseScript):
 
     def add_input(self, _default: str, callback: callable, row: int, **kwargs):
         ctrl = controls.Input(self._callback, text=_default, **kwargs)
+        ctrl.set_on_process(self.ctrl_process, ctrl.get_id(), ctrl)
         self.callback_map[ctrl.get_id()] = callback
         self.add_control(ctrl, row)
 
@@ -109,11 +114,13 @@ class TrainerScript(BaseScript):
     def add_button(self, label: str,  callback: callable, row: int, **kwargs):
         quiet = kwargs.get('quiet', False)
         ctrl = controls.Button(label, self._callback, quiet, **kwargs)
+        ctrl.set_on_process(self.ctrl_process, ctrl.get_id(), ctrl)
         self.callback_map[ctrl.get_id()] = callback
         self.add_control(ctrl, row)
 
     def add_toggle(self, _default: str, callback: callable, row: int, **kwargs):
         ctrl = controls.Toggle(self._callback, **kwargs)
+        ctrl.set_on_process(self.ctrl_process, ctrl.get_id(), ctrl)
         if _default.casefold() == 'on':
             ctrl.check()
         self.callback_map[ctrl.get_id()] = callback
@@ -121,6 +128,7 @@ class TrainerScript(BaseScript):
 
     def add_select(self, values: list, selection: str, callback: callable, row: int, **kwargs):
         ctrl = controls.Select(values, self._callback, **kwargs)
+        ctrl.set_on_process(self.ctrl_process, ctrl.get_id(), ctrl)
         try:
             idx = [v[0] for v in values].index(selection)
             if idx > 0:
@@ -136,6 +144,23 @@ class TrainerScript(BaseScript):
             self.ui_map[row] = []
         self.ui_map[row].append(ctrl)
 
+    def validate_control(self, ctrl_name, code_name):
+        code = self.get_code(code_name)
+        if not code:
+            return
+        if code.is_valid():
+            if not self.get_control(ctrl_name).is_enabled():
+                self.get_control(ctrl_name).enable()
+        else:
+            if self.get_control(ctrl_name).is_enabled():
+                self.get_control(ctrl_name).disable()
+
+    def ctrl_process(self, _id: str, ctrl: controls.Element):
+        self.process_control(_id, ctrl)
+
+    def process_control(self, _id: str, ctrl: controls.Element):
+        pass
+
     def get_control(self, _id: str) -> controls.Element:
         return self.ui.get_element(_id)
 
@@ -144,6 +169,12 @@ class TrainerScript(BaseScript):
 
     def build_ui(self):
         self.define_ui()
+        procs = self.get_script_information().get('process', [])
+        if not procs:
+            if not any(type(x) == controls.advanced.ProcessSelect for x in self.ui_map.values()):
+                proc_page = self.ui.add_page(controls.Page(id='PROC_PAGE'))
+                proc_page.add_elements([controls.advanced.ProcessSelect(on_process_selected=self.process_selected)])
+
         main_page = self.ui.add_page(controls.Page(id='MAIN_PAGE'))
         for row in sorted(self.ui_map.keys()):
             elements: [controls.Element] = self.ui_map[row]
@@ -165,7 +196,17 @@ class TrainerScript(BaseScript):
         for ele in elements:
             cast(controls.Element, ele).enable()
 
+    def on_ready(self):
+        super().on_ready()
+        proc_page = self.ui.get_element("PROC_PAGE")
+        if proc_page:
+            self.ui.get_element("MAIN_PAGE").hide()
 
+    def process_selected(self, proc):
+        if proc is None:
+            self.ui.get_element('MAIN_PAGE').hide()
+        else:
+            self.ui.get_element('MAIN_PAGE').show()
 
     class Code:
         mm: MemoryManager = None
@@ -194,6 +235,17 @@ class TrainerScript(BaseScript):
                 addr = self.mm.get_address(self.address)
                 return [addr] if addr is not None else []
             return []
+
+        def is_valid(self):
+            if self.aob:
+                return self.scanner.get_valid(self.aob.get_aob_string())
+            if self.pointer:
+                base = self.mm.read_pointer(self.pointer, self.offsets, return_base=True)
+                return base is not None
+            if self.address:
+                addr = self.mm.get_address(self.address)
+                return addr is not None
+
 
         def write(self, value: ctypes_buffer_t):
             addrs = self.get_addresses()

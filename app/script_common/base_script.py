@@ -30,6 +30,9 @@ class BaseScript:
     def on_process_attached(self):
         pass
 
+    def on_process_unattached(self):
+        pass
+
     def perform_unload(self):
         self.on_unload()
     def on_unload(self):

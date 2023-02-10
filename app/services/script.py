@@ -164,14 +164,17 @@ class Script(MemoryHandler):
             proc_service.request_process('scripts', app_name)
             if app_name == '_null':
                 app_name = ""
-            #self.current_script_obj.set_process(app_name)
             if app_name:
                 if not self.has_mem():
                     raise ScriptException('Could not find requested process for this script.')
+                if self.current_script_obj.get_memory():
+                    self.current_script_obj.set_memory(None)
+                    self.current_script_obj.on_process_unattached()
                 self.current_script_obj.set_memory(self.mem())
                 self.current_script_obj.on_process_attached()
             else:
                 self.current_script_obj.set_memory(None)
+                self.current_script_obj.on_process_unattached()
         except ProcessException:
             raise ScriptException("Could not find app")
 
