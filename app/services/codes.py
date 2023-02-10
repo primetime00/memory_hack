@@ -21,13 +21,14 @@ from app.helpers.memory_utils import get_ctype
 from app.helpers.process import BaseConvert, BaseConvertException, get_address_path, get_path_address
 from app.script_common.aob import AOB
 from app.script_common.utilities import ScriptUtilities
+from app.version import __version__
 
 ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, ctypes.Union]
 
 
 class CodeList(MemoryHandler):
     directory = codes_directory
-    _FILE_VERSION = 1
+    _FILE_VERSION = __version__
     def __init__(self):
         super().__init__('codelist')
         self.handle_map = {

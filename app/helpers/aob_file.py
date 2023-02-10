@@ -3,6 +3,7 @@ import pickle
 import re
 from io import BytesIO
 from pathlib import Path
+from app.version import __version__
 
 from app.helpers.directory_utils import aob_directory
 from app.helpers.exceptions import AOBException
@@ -18,7 +19,7 @@ class AOBFile():
     FILE_STATE_HAS_RESULTS = 2
     FILE_STATE_NO_RESULTS = 3
     FILE_STATE_NEEDS_SEARCH = 4
-    _FILE_VERSION = 1
+    _FILE_VERSION = __version__
 
     def __init__(self, directory: Path = aob_directory, filename=None):
         self.process = ""
