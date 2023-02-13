@@ -233,6 +233,10 @@ class AOBFile():
             self.filename = self.name+'.aob'
             if not self.directory.joinpath(self.filename).exists():
                 self.file_state = AOBFile.FILE_STATE_NOT_EXIST
+                self.data_list = []
+                self.aob_list = []
+                self.initial = True
+                self.final = False
             else:
                 self.read()
 
