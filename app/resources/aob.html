@@ -3,7 +3,7 @@
 
   <ons-row>
     <ons-col align="center" width="120px" class="col ons-col-inner">Process:</ons-col>
-    <ons-col align="center" width="25%" class="col ons-col-inner">
+    <ons-col align="center" width="28%" class="col ons-col-inner">
       <select id="aob_process" class="select-input select-input--material" onchange="aob.on_process_changed(this.value)">
         <option value="_null"></option>
       </select>
@@ -81,6 +81,15 @@
         <ons-col align="center" width="18%" class="col ons-col-inner"></ons-col>
         <ons-col align="center" width="25%" class="col ons-col-inner">
           <ons-button id="aob_search_button" onclick="aob.aob_search_clicked(this)">Search</ons-button>
+        </ons-col>
+      </ons-row>
+      <ons-row>
+        <ons-col align="center" width="18%" class="col ons-col-inner"></ons-col>
+        <ons-col align="center" width="25%" class="col ons-col-inner">
+          Repeat:
+        </ons-col>
+        <ons-col align="center" width="25%" class="col ons-col-inner">
+          <ons-switch id="aob_repeat_switch"></ons-switch>
         </ons-col>
       </ons-row>
     </div>

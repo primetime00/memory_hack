@@ -5,6 +5,7 @@ import os
 from io import BytesIO
 from pathlib import Path
 from queue import Queue
+from threading import Event
 from threading import Thread
 from typing import List
 
@@ -160,10 +161,11 @@ class AOB(MemoryHandler):
         search_range = req.media["range"]
         address_value = req.media["address_value"]
         value_size = req.media["value_size"]
+        repeat = req.media["repeat"] == 'true'
         self.aob_file.set_name(name)
         self.set_current_name(name)
         try:
-            self.aob_work_thread = AOB.AOBWorkThread(self.aob_file, self.mem(), search_type, address_value, search_range, value_size, self.searcher)
+            self.aob_work_thread = AOB.AOBWorkThread(self.aob_file, self.mem(), search_type, address_value, search_range, value_size, self.searcher, repeat)
         except ValueError as e:
             resp.media['error'] = 'Could not start: {}'.format(e)
             return
@@ -314,8 +316,9 @@ class AOB(MemoryHandler):
     class AOBWorkThread(Thread):
         smallest_run = 5
         consecutive_zeros = 5
+        repeat_seconds = 2.5
 
-        def __init__(self, _aob_file: AOBFile, _memory, _type=None, _address_value=None, _range=None, _size=None, searcher=None):
+        def __init__(self, _aob_file: AOBFile, _memory, _type=None, _address_value=None, _range=None, _size=None, searcher=None, repeat=False):
             super().__init__(target=self.process)
             self.aob_file = _aob_file
             self.memory: Process = _memory
@@ -327,13 +330,14 @@ class AOB(MemoryHandler):
                 raise AOBException('Range must be greater than 0.')
             self.current_value = str(_address_value) if _type == 'value' else ""
             self.current_size = _size
+            self.repeat = repeat
+            self.stop_event = Event()
             self.is_value = _type == 'value'
             self.current_range = int(_range) if _range else 0
             if self.current_range % 2 != 0:
                 self.current_range += 1
             self.progress = Progress()
             self.error = ""
-            self.stop = False
             self.searcher = searcher
             self.operation_control = DataStore().get_operation_control()
 
@@ -342,7 +346,7 @@ class AOB(MemoryHandler):
             return self.aob_file
 
         def kill(self):
-            self.stop = True
+            self.stop_event.set()
 
         def get_progress(self):
             return self.progress.get_progress()
@@ -363,14 +367,14 @@ class AOB(MemoryHandler):
                 start, end, self.current_range = au.calculate_range(self.current_address, self.current_range)
                 if start == -1:  # error with range
                     self.error = "Invalid address for this process."
-                    return
+                    raise AOBException(self.error)
                 self.progress.increment(30)
                 try:
                     data = self.memory.read_memory(start, (ctypes.c_ubyte * (end - start))())
                     self.aob_file.add_data(data)
                 except OSError:
                     self.error = "Invalid region to scan."
-                    return
+                    raise AOBException(self.error)
                 self.progress.increment(40)
                 self.aob_file.set_process(DataStore().get_process('aob'))
                 self.aob_file.set_range(self.current_range)
@@ -394,7 +398,12 @@ class AOB(MemoryHandler):
         def process(self):
             try:
                 if not self.is_value:
-                    self.process_address_run()
+                    if self.repeat:
+                        while not self.stop_event.is_set():
+                            self.process_address_run()
+                            self.stop_event.wait(self.repeat_seconds)
+                    else:
+                        self.process_address_run()
                 else:
                     self.process_value_run()
             except BreakException:
@@ -415,8 +424,8 @@ class AOB(MemoryHandler):
                 aob = data[i]
                 self.searcher.search_memory_value(aob['aob_string'])
                 self.progress.increment(1)
-                if self.stop:
-                    self.stop = False
+                if self.stop_event.is_set():
+                    self.stop_event = Event()
                     return -1
                 with self.searcher.results.db() as conn:
                     for res in self.searcher.results.get_results(connection=conn):
@@ -438,7 +447,8 @@ class AOB(MemoryHandler):
             return len(new_data)
 
         def aob_address_search(self):
-            self.progress.add_constraint(0, 1, 0.1)
+            if not self.repeat:
+                self.progress.add_constraint(0, 1, 0.1)
             au = AOBUtilities(self.memory, DataStore().get_operation_control(), self.progress)
             heap_start, heap_end = au.find_heap_data(self.memory, self.current_address)
             start = self.current_address - self.aob_file.get_address_offset()
@@ -457,9 +467,11 @@ class AOB(MemoryHandler):
                 else:
                     new_data = self.memory.read_memory(start, new_data)
             except OSError:
-                self.progress.mark()
+                if not self.repeat:
+                    self.progress.mark()
                 return 0
-            self.progress.mark()
+            if not self.repeat:
+                self.progress.mark()
             self.aob_file.add_data(new_data)
             self.aob_file.write()
             return self.aob_file.count_aob_results()

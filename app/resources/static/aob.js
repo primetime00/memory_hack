@@ -18,6 +18,7 @@
     var row_aob_range;
     var inp_aob_range;
     var btn_search;
+    var switch_repeat;
     var div_search_results;
     var row_search_progress;
     var search_progress;
@@ -64,6 +65,7 @@
         row_aob_range = $("#aob_range_row");
         inp_aob_range = $("#aob_range");
         btn_search = $("#aob_search_button");
+        switch_repeat = $("#aob_repeat_switch");
         div_search_results = $("#aob_search_results");
         row_search_progress = $("#aob_search_progress_row");
         row_aob_initial_search = $("#aob_initial_search_row");
@@ -144,12 +146,13 @@
         var value = inp_address_value.val()
         var size = sel_value_size.val()
         var range = inp_aob_range.val()
+        var repeat = switch_repeat.prop('checked')
 
         if (current_flow == flow_map['FLOW_WORKING']) { //we are requesting a stop!
             $.send('/aob', { "command": "AOB_RESET", "name": name_input, "search_type": search_type, "range": range, "address_value": value, "value_size": size }, on_aob_status);
         } else {
             current_flow = flow_map['FLOW_WORKING']
-            $.send('/aob', { "command": "AOB_SEARCH", "name": name_input, "search_type": search_type, "range": range, "address_value": value, "value_size": size }, on_aob_status);
+            $.send('/aob', { "command": "AOB_SEARCH", "name": name_input, "search_type": search_type, "range": range, "address_value": value, "value_size": size, "repeat": repeat }, on_aob_status);
             update(btn_search)
         }
     };
@@ -548,7 +551,7 @@
                 if (has(result, 'value')) {
                     inp_address_value.val(result.value)
                 }
-                validate_value(inp_address_value.val())
+                validate_value(inp_address_value.val(), sel_value_size.val(), sel_aob_search_type.val())
                 break
             case flow_map["FLOW_WORKING"]:
                 inp_address_value.attr('disabled', 'disabled')
@@ -558,21 +561,21 @@
                 if (has(result, 'value')) {
                     inp_address_value.val(result.value)
                 }
-                validate_value(inp_address_value.val())
+                validate_value(inp_address_value.val(), sel_value_size.val(), sel_aob_search_type.val())
                 break
             case flow_map["FLOW_INITIAL_COMPLETE"]:
                 inp_address_value.removeAttr('disabled')
                 if (has(result, 'value')) {
                     inp_address_value.val(result.value)
                 }
-                validate_value(inp_address_value.val())
+                validate_value(inp_address_value.val(), sel_value_size.val(), sel_aob_search_type.val())
                 break
             case flow_map["FLOW_NO_RESULTS"]:
                 inp_address_value.removeAttr('disabled')
                 if (has(result, 'value')) {
                     inp_address_value.val(result.value)
                 }
-                validate_value(inp_address_value.val())
+                validate_value(inp_address_value.val(), sel_value_size.val(), sel_aob_search_type.val())
                 break
         }
     }
@@ -675,33 +678,60 @@
                 btn_search.text('Search')
                 if (value_valid && range_valid && inp_aob_name.val().length > 0) {
                     btn_search.removeAttr('disabled')
+                    if (sel_aob_search_type.val() === 'address') {
+                        switch_repeat.removeAttr('disabled')
+                    } else {
+                        switch_repeat.prop('checked', false)
+                        switch_repeat.attr('disabled', 'disabled')
+                    }
                 } else {
                     btn_search.attr('disabled', 'disabled')
+                    switch_repeat.attr('disabled', 'disabled')
                 }
                 break
             case flow_map["FLOW_WORKING"]:
                 btn_search.text('Stop')
                 btn_search.removeAttr('disabled')
+                switch_repeat.attr('disabled', 'disabled')
                 break
             case flow_map["FLOW_RESULTS"]:
                 btn_search.text('Search')
                 if (value_valid && range_valid && inp_aob_name.val().length > 0) {
                     btn_search.removeAttr('disabled')
+                    if (sel_aob_search_type.val() === 'address') {
+                        switch_repeat.removeAttr('disabled')
+                    } else {
+                        switch_repeat.prop('checked', false)
+                        switch_repeat.attr('disabled', 'disabled')
+                    }
                 } else {
                     btn_search.attr('disabled', 'disabled')
+                    switch_repeat.attr('disabled', 'disabled')
                 }
                 break
             case flow_map["FLOW_INITIAL_COMPLETE"]:
-                btn_search.text('Search')
+                if (switch_repeat.prop('checked')) {
+                    btn_search.text('Stop')
+                } else {
+                    btn_search.text('Search')
+                }
                 if (value_valid && range_valid && inp_aob_name.val().length > 0) {
                     btn_search.removeAttr('disabled')
+                    if (sel_aob_search_type.val() === 'address') {
+                        switch_repeat.removeAttr('disabled')
+                    } else {
+                        switch_repeat.prop('checked', false)
+                        switch_repeat.attr('disabled', 'disabled')
+                    }
                 } else {
                     btn_search.attr('disabled', 'disabled')
+                    switch_repeat.attr('disabled', 'disabled')
                 }
                 break
             case flow_map["FLOW_NO_RESULTS"]:
                 btn_search.text('Search')
                 btn_search.attr('disabled', 'disabled')
+                switch_repeat.attr('disabled', 'disabled')
                 break
         }
     }
@@ -1039,29 +1069,52 @@
             case flow_map["FLOW_START"]:
                 if (value_valid && range_valid && _name_input.length > 0) {
                     btn_search.removeAttr('disabled')
+                    if (_search_type === 'address') {
+                        switch_repeat.removeAttr('disabled')
+                    } else {
+                        switch_repeat.prop('checked', false)
+                        switch_repeat.attr('disabled', 'disabled')
+                    }
                 } else {
                     btn_search.attr('disabled', 'disabled')
+                    switch_repeat.attr('disabled', 'disabled')
                 }
                 break
             case flow_map["FLOW_LOOKUP"]:
                 btn_search.attr('disabled', 'disabled')
+                switch_repeat.attr('disabled', 'disabled')
                 break
             case flow_map["FLOW_RESULTS"]:
                 if (value_valid && range_valid && _name_input.length > 0) {
                     btn_search.removeAttr('disabled')
+                    if (_search_type === 'address') {
+                        switch_repeat.removeAttr('disabled')
+                    } else {
+                        switch_repeat.prop('checked', false)
+                        switch_repeat.attr('disabled', 'disabled')
+                    }
                 } else {
                     btn_search.attr('disabled', 'disabled')
+                    switch_repeat.attr('disabled', 'disabled')
                 }
                 break
             case flow_map["FLOW_INITIAL_COMPLETE"]:
                 if (value_valid && _name_input.length > 0) {
                     btn_search.removeAttr('disabled')
+                    if (_search_type === 'address') {
+                        switch_repeat.removeAttr('disabled')
+                    } else {
+                        switch_repeat.prop('checked', false)
+                        switch_repeat.attr('disabled', 'disabled')
+                    }
                 } else {
                     btn_search.attr('disabled', 'disabled')
+                    switch_repeat.attr('disabled', 'disabled')
                 }
                 break
             case flow_map["FLOW_NO_RESULTS"]:
                 btn_search.attr('disabled', 'disabled')
+                switch_repeat.attr('disabled', 'disabled')
                 break
         }
     }
