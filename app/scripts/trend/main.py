@@ -6,6 +6,7 @@ from struct import unpack
 from threading import Event
 from threading import Thread
 from typing import cast
+from math import isnan
 
 from app.script_common import BaseScript
 from app.script_ui import controls
@@ -323,6 +324,8 @@ class TrendSearch(BaseScript):
                     [val] = unpack('f', file_data[i:i+4])
                     if i not in data:
                         data[i] = []
+                    if isnan(val):
+                        val = 0.0
                     data[i].append(val)
             else:
                 sz = 4
