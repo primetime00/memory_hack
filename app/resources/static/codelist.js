@@ -43,6 +43,7 @@
         var f = sel_codelist_process.find('option:first')
         for (const item of process_list_add) {
             f.after($('<option>', {value: item, text: item}))
+            f = sel_codelist_process.find('option:last')
         }
     }
 

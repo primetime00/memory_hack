@@ -1,5 +1,6 @@
 import fnmatch
 import os
+import platform
 import threading
 import time
 from pathlib import Path
@@ -72,7 +73,7 @@ class Process(Service):
     def handle_processes(self, req: Request, resp: Response):
         _id = int(req.media['id'])
         resp.media = {'status': 'INFO_GET_SUCCESS', 'processes': self.get_process_list(), 'last_update': self.get_last_update_time()}
-        resp.media['services'] = [{'name':x[0], 'process': x[1]['name']} for x in self.service_pids.items()]
+        resp.media['services'] = [{'name':x[0], 'process': x[1]['exe']} for x in self.service_pids.items()]
         self.pid_map_copy = self.pid_map.copy()
         self.last_id = _id
 
@@ -95,8 +96,8 @@ class Process(Service):
         self.process_classes.append(cls)
 
     def get_process_list(self):
-        pid_sorted = sorted([v for v in list(self.pid_map.values()) if v['valid']], key=lambda x: x['pid'], reverse=False)
-        return [v['name'] for v in pid_sorted]
+        pid_sorted = sorted([v for v in list(self.pid_map.values()) if v['valid']], key=lambda x: x['mem_percent'], reverse=True)
+        return [v['exe'] for v in pid_sorted]
 
 
     def get_process_map(self):
@@ -134,12 +135,12 @@ class Process(Service):
     def open_process(self, p: str, service: str):
         p_data = None
         try:
-            pid = [x[0] for x in self.pid_map.items() if x[1]['name'] == p and x[1]['valid']][0]
+            pid = [x[0] for x in self.pid_map.items() if x[1]['exe'] == p and x[1]['valid']][0]
             if pid in self.open_pids:
                 p_data = self.open_pids[pid]
             else:
                 proc = mem_edit.Process(pid)
-                p_data = {'process': proc, 'pid': pid, 'name': p}
+                p_data = {'process': proc, 'pid': pid, 'exe': p}
                 self.open_pids[pid] = p_data
         except:
             raise ProcessException("Process {} does not exist".format(p))
@@ -173,7 +174,7 @@ class Process(Service):
                 with self.pid_map_lock:
                     if not is_process_valid(pid):
                         if pid in self.pid_map:
-                            err = 'Process "{}" is no longer valid'.format(self.pid_map[pid]['name'])
+                            err = 'Process "{}" is no longer valid'.format(self.pid_map[pid]['exe'])
                         else:
                             err = 'Process is not longer valid'
                         self.error_process(pid, err)
@@ -210,7 +211,16 @@ class Process(Service):
                                         user = 'NT AUTHORITY\\SYSTEM'
                                 else:
                                     user = proc.username()
-                                self.pid_map[d] = {'pid': d, 'name': proc.name(), 'user': user, 'status': proc.status(), 'valid': is_pid_valid(proc.pid) and not self.is_blacklisted(proc.name()) and can_attach(proc.pid)}
+                                exe_name = proc.as_dict()['exe']
+                                if platform.system() == 'Linux':
+                                    if exe_name and '/' in exe_name:
+                                        exe_name = exe_name.split('/')[-1]
+                                else:
+                                    if exe_name and '\\' in exe_name:
+                                        exe_name = exe_name.split('\\')[-1]
+                                if exe_name and proc.name() != exe_name:
+                                    exe_name += ':{}'.format(proc.name())
+                                self.pid_map[d] = {'pid': d, 'exe': exe_name, 'name': proc.name(), 'user': user, 'status': proc.status(), 'mem_percent': proc.memory_percent(), 'valid': exe_name is not None and is_pid_valid(proc.pid) and not self.is_blacklisted(proc.name()) and can_attach(proc.pid)}
                                 self.pids.append(d)
                         except psutil.NoSuchProcess:
                             continue
