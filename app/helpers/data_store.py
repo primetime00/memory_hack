@@ -49,7 +49,7 @@ class DataStore(metaclass=SingletonMeta):
 
     def get_process(self, service):
         try:
-            return self.services['process'].service_pids[service]['name']
+            return self.services['process'].service_pids[service]['exe']
         except:
             raise ProcessException('Cannot find class')
 
