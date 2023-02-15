@@ -55,6 +55,10 @@ class CodeList(MemoryHandler):
         self.freeze_thread: Thread = None
         self.freeze_event: Event = None
 
+        self.aob_thread: Thread = None
+        self.aob_event: Event = None
+        self.aob_searcher: ScriptUtilities = None
+
         self.code_data: dict = None
         self.loaded_file = "_null"
         self.file_version = CodeList._FILE_VERSION
@@ -85,6 +89,7 @@ class CodeList(MemoryHandler):
     def reset(self):
         self.stop_freezer()
         self.stop_updater()
+        self.stop_aob()
         self.code_data = None
         self.loaded_file = "_null"
         self.aob_map.clear()
@@ -306,6 +311,9 @@ class CodeList(MemoryHandler):
             self.stop_freezer()
         if not (self.update_thread and self.update_thread.is_alive()):
             self.start_updater()
+        if not (self.aob_thread and self.aob_thread.is_alive()):
+            self.start_aob()
+
         resp.media['repeat'] = 400
 
     def handle_rebase(self, req: Request, resp: Response):
@@ -471,9 +479,10 @@ class CodeList(MemoryHandler):
         self.aob_map[aob_str].clear_bases()
 
     def handle_load(self, req: Request, resp: Response):
+        self.stop_freezer()
+        self.stop_updater()
+        self.stop_aob()
         if req.media['file'] == '_null':
-            self.stop_freezer()
-            self.stop_updater()
             self.code_data = None
             self.loaded_file = "_null"
             resp.media['file_data'] = self.code_data
@@ -508,6 +517,7 @@ class CodeList(MemoryHandler):
         resp.media['file'] = self.loaded_file
         resp.media['repeat'] = 400
         self.start_updater()
+        self.start_aob()
 
     def dump_codelist(self):
         write_data = copy.copy(self.code_data)
@@ -583,10 +593,7 @@ class CodeList(MemoryHandler):
     def update_aobs(self):
         for aob in self.aob_map.values():
             if aob.is_found():
-                if aob.get_last_searched() > random.randint(15, 18):
-                    bases = self.utilities.search_aob_all_memory(aob)
-                else:
-                    bases = self.utilities.compare_aob(aob)
+                bases = self.utilities.compare_aob(aob)
                 aob.set_bases(bases)
             if not aob.is_found() and aob.get_last_searched() > random.randint(8, 12):
                 bases = self.utilities.search_aob_all_memory(aob)
@@ -762,3 +769,30 @@ class CodeList(MemoryHandler):
         if self.freeze_thread and self.freeze_thread.is_alive():
             self.freeze_event.set()
             self.freeze_thread.join()
+
+    def start_aob(self):
+        self.aob_thread = Thread(target=self._aob_process)
+        self.aob_event = Event()
+        self.aob_searcher = ScriptUtilities(self.mem(), "aob_searcher", multi=False)
+        self.aob_thread.start()
+
+    def stop_aob(self):
+        if self.aob_thread and self.aob_thread.is_alive():
+            self.aob_event.set()
+            self.aob_searcher.cancel()
+            self.aob_thread.join()
+
+    def _aob_process(self):
+        self.aob_searcher.create_searcher()
+        base_list = {}
+        while not self.aob_event.is_set():
+            base_list.clear()
+            if self.aob_map:
+                for aob in self.aob_map.values():
+                    bases = self.aob_searcher.search_aob_all_memory(aob)
+                    base_list[aob] = bases
+                with self.update_lock:
+                    for aob, bases in base_list.items():
+                        aob.set_bases(bases)
+            self.aob_event.wait(15)
+

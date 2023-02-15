@@ -507,3 +507,5 @@ class Searcher:
         self.delete_previous_results_and_captures()
         self.delete_captures()
 
+    def set_single_process(self, p):
+        pass

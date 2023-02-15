@@ -9,6 +9,7 @@ from app.helpers.search_results import SearchResults
 from app.script_common.aob import AOB
 from app.search.searcher import Searcher
 from app.search.searcher_multi import SearcherMulti
+from app.helpers.exceptions import BreakException
 
 ctypes_buffer_t = Union[ctypes._SimpleCData, ctypes.Array, ctypes.Structure, ctypes.Union]
 
@@ -105,10 +106,14 @@ class ScriptUtilities:
                 pass
         return found
 
-    def search_aob_all_memory(self, aob: AOB) -> List:
+    def search_aob_all_memory(self, aob: AOB, single_process=False) -> List:
         if self.searcher is None:
             self.create_searcher()
-        self.searcher.search_memory_value(aob.get_aob_string())
+        self.searcher.set_single_process(single_process)
+        try:
+            self.searcher.search_memory_value(aob.get_aob_string())
+        except BreakException:
+            return []
         aob.set_last_searched()
         with self.searcher.results.db() as conn:
             res = self.searcher.results.get_results(conn, _count=4).fetchall()
@@ -141,3 +146,7 @@ class ScriptUtilities:
         else:
             self.searcher = Searcher(self.process, results=SearchResults(db_path=memory_directory.joinpath("{}.db".format(self.name))))
         self.searcher.set_search_size('array')
+
+    def cancel(self):
+        if self.searcher:
+            self.searcher.cancel()

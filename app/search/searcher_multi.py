@@ -29,6 +29,7 @@ class SearcherMulti(Searcher):
         self.multiprocessing_event = None
         multiprocessing.set_start_method('spawn', force=True)
         self.round_robin_size = 4096000
+        self.single_process = False
 
     def check_multi_clear(self):
         if self.multiprocessing_event.is_set():
@@ -42,6 +43,9 @@ class SearcherMulti(Searcher):
     def release_mp_memory(self, proc: Process):
         if platform.system() == "Windows":
             proc.close()
+
+    def set_single_process(self, p):
+        self.single_process = p
 
     def _create_uniform_rounds(self, sv: Value, max_size=40000000):
         mem_map = {0: []}
@@ -131,7 +135,7 @@ class SearcherMulti(Searcher):
         return {"pid": pid, "size": size, "filename": cap_file, "error": False}
 
     def capture_memory(self):
-        if self.total_size < 500000000:
+        if self.total_size < 500000000 or self.single_process:
             super().capture_memory()
             return
         self.on_search_start(self.SEARCH_TYPE_CAPTURE)
@@ -194,7 +198,7 @@ class SearcherMulti(Searcher):
         return {'id': _id, 'results': results, 'count': total_read}
 
     def _search_continue_capture_operation(self, operation: MemoryOperation, store_size=4):
-        if self.total_size < 12000000:
+        if self.total_size < 12000000 or self.single_process:
             super()._search_continue_capture_operation(operation)
             return
         if self.search_size == 'array':
@@ -278,7 +282,7 @@ class SearcherMulti(Searcher):
     def search_memory_value(self, value: str):
         if self.results is None:
             raise SearchException('No results associated with the searcher')
-        if self.total_size <= 128000:
+        if self.total_size <= 128000 or self.single_process:
             super().search_memory_value(value)
             return
         self.on_search_start(self.SEARCH_TYPE_VALUE)
@@ -337,7 +341,7 @@ class SearcherMulti(Searcher):
     def search_memory_operation(self, operation, args=None):
         if self.results is None:
             raise SearchException('No results associated with the searcher')
-        if self.total_size <= 128000:
+        if self.total_size <= 128000 or self.single_process:
             super().search_memory_operation(operation, args)
             return
         self.on_search_start(self.SEARCH_TYPE_OPERATION)
@@ -369,7 +373,7 @@ class SearcherMulti(Searcher):
 
     def _search_continue_value_results(self, sv: Value):
         with self.results.db() as conn:
-            if self.results.get_number_of_results(conn, -2) < 300:
+            if self.results.get_number_of_results(conn, -2) < 300 or self.single_process:
                 super()._search_continue_value_results(sv)
                 return
 
@@ -418,7 +422,7 @@ class SearcherMulti(Searcher):
     def _search_continue_operation_result(self, operation: Operation, store_size=4):
         with self.results.db() as conn:
             result_count = self.results.get_number_of_results(conn, -2)
-        if result_count < 300:
+        if result_count < 300 or self.single_process:
             super()._search_continue_operation_result(operation)
             return
 
