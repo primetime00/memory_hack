@@ -144,7 +144,7 @@
             items = $(popover).find('ons-list-item')
             for (i=0; i<items.length; i++) {
                 var item = items[i]
-                if (item.getAttribute("name") === 'address_to_aob' && document.clipboard.has_address() && !document.clipboard.has_pointer() && aob_resolve_map.hasOwnProperty(index) && aob_resolve_map[index].length > 0) {
+                if (item.getAttribute("name") === 'address_to_aob' && document.clipboard.has_address() && !document.clipboard.has_pointer() && aob_resolve_map.hasOwnProperty(index) && aob_resolve_map[index].hasOwnProperty('Addresses') && aob_resolve_map[index]['Addresses'].length > 0) {
                     $(item).removeClass('hidden')
                 }
                 $(item).bind('click', {list_id: item.getAttribute("name"), code_index: index}, (event) => {codelist.option_clicked(event.data.list_id, event.data.code_index); popover.hide()})
@@ -359,7 +359,7 @@
         if (source === 'address') {
             document.clipboard.copy({'address': code_data[index]['Address'], 'value': value_map[index]})
         } else {
-            document.clipboard.copy({'address': aob_resolve_map[index][0], 'value': value_map[index]})
+            document.clipboard.copy({'address': aob_resolve_map[index]['Addresses'][0], 'value': value_map[index]})
         }
     }
 
@@ -377,13 +377,16 @@
         } else {
             var selected = has(code_data[index], 'Selected') && code_data[index].Selected >=0 ? code_data[index].Selected : -1
             if (selected >= 0) {
-                data = {'address': aob_resolve_map[index][selected], 'value': value_map[index], 'aob': code_data[index]['AOB'], 'offset': code_data[index]['Offset']}
+                data = {'address': aob_resolve_map[index]['Addresses'][selected], 'value': value_map[index], 'aob': code_data[index]['AOB'], 'offset': code_data[index]['Offset']}
             } else {
-                if (aob_resolve_map[index].length > 0) {
-                    data = {'address': aob_resolve_map[index][0], 'value': value_map[index], 'aob': code_data[index]['AOB'], 'offset': code_data[index]['Offset']}
+                if (aob_resolve_map[index].hasOwnProperty('Addresses') && aob_resolve_map[index]['Addresses'].length > 0) {
+                    data = {'address': aob_resolve_map[index]['Addresses'][0], 'value': value_map[index], 'aob': code_data[index]['AOB'], 'offset': code_data[index]['Offset']}
                 } else {
                     data = {'aob': code_data[index]['AOB'], 'offset': code_data[index]['Offset']}
                 }
+            }
+            if (aob_resolve_map[index].hasOwnProperty('LastAddresses') && aob_resolve_map[index]['LastAddresses'].length > 0) {
+                data['last_addresses'] = aob_resolve_map[index]['LastAddresses']
             }
         }
         document.clipboard.copy(data)
@@ -1159,10 +1162,18 @@
         'obj': undefined,
         'index': -1,
         'setup': (result, _this) => {
+            if (has(result, 'LastAddresses')) {
+                if (!aob_resolve_map.hasOwnProperty(_this.index)) {
+                    aob_resolve_map[_this.index] = {}
+                }
+                aob_resolve_map[_this.index]['LastAddresses'] = result.LastAddresses
+            }
             if (has(result, 'Addresses')) {
-                aob_resolve_map[_this.index] = []
+                if (!aob_resolve_map.hasOwnProperty(_this.index)) {
+                    aob_resolve_map[_this.index] = {}
+                }
                 if (result.Addresses.Display.length > 0) {
-                    aob_resolve_map[_this.index] = result.Addresses.Display
+                    aob_resolve_map[_this.index]['Addresses'] = result.Addresses.Display
                     if ($(":focus")[0] && $(":focus")[0].id === _this.obj[0].id){
                         return
                     }

@@ -36,6 +36,9 @@ class TrainerScript(BaseScript):
         if len(self.aob_codes) > 0:
             self.aob_scanner.start()
 
+    def set_aob_refresh_time(self, tm):
+        self.aob_scanner.set_auto_refresh(tm)
+
     def on_process_unattached(self):
         if self.aob_scanner:
             self.aob_scanner.stop()

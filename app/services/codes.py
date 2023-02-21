@@ -62,7 +62,7 @@ class CodeList(MemoryHandler):
         self.code_data: dict = None
         self.loaded_file = "_null"
         self.file_version = CodeList._FILE_VERSION
-        self.aob_map = {}
+        self.aob_map: dict[str, AOB] = {}
         self.result_map = {}
         self.freeze_map = {}
         self.utilities: ScriptUtilities = None
@@ -535,6 +535,15 @@ class CodeList(MemoryHandler):
                     path = get_address_path(self.mem(), addr)
                     if path:
                         c['Address'] = path
+            elif c['Source'] == 'aob':
+                aob = c['AOB'].split(' ')
+                aob_data = []
+                for a in aob:
+                    if a == '??':
+                        aob_data.append('??')
+                    else:
+                        aob_data.append('{:02X}'.format(int(a, 16)))
+                c['AOB'] = ' '.join(aob_data)
         file_data = {'version': CodeList._FILE_VERSION,
                      'codes': list(write_data.values())}
         return json.dumps(file_data, indent=4)
@@ -595,7 +604,8 @@ class CodeList(MemoryHandler):
             if aob.is_found():
                 bases = self.utilities.compare_aob(aob)
                 aob.set_bases(bases)
-            if not aob.is_found() and aob.get_last_searched() > random.randint(8, 12):
+            #if not aob.is_found() and aob.get_last_searched() > random.randint(8, 12):
+            else:
                 bases = self.utilities.search_aob_all_memory(aob)
                 aob.set_bases(bases)
     def _update_process(self):
@@ -667,6 +677,7 @@ class CodeList(MemoryHandler):
                             code['Selected'] = selected
                         self.result_map[key] = {'Value': {'Actual': read.value if read is not None else None, 'Display': str(read.value) if read is not None else '??'},
                                                 'Addresses': {'Actual': addrs, 'Display': ["{:X}".format(x) for x in addrs] if addrs is not None else []},
+                                                'LastAddresses': self.aob_map[aob_str].get_last_found_bases(),
                                                 'Selected': selected}
             self.update_event.wait(0.5)
 
