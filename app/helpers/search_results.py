@@ -37,6 +37,9 @@ class SearchResults:
         except:
             return 0
 
+    def get_table(self):
+        return self.table_stack[-1]
+
     def get_results(self, connection: sqlite3.Connection, _offset=0, _count=-1, table_name=None):
         if not table_name:
             return connection.execute('''SELECT address, value from "{}" ORDER BY address ASC LIMIT {} OFFSET {}'''.format(self.table_stack[-1], _count, _offset))

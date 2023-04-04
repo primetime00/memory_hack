@@ -124,7 +124,10 @@ class Searcher:
         if self.progress:
             self.progress.mark()
 
-
+    def set_progress(self, _progress: Progress):
+        self.progress = _progress
+    def add_progress(self):
+        self.progress = Progress()
 
     def set_include_paths(self, paths: list):
         self.include_paths = paths
@@ -466,7 +469,7 @@ class Searcher:
         self.last_search_type = Searcher.SEARCH_RETURN_RESULT
 
 
-    def cancel(self):
+    def cancel(self, _cancel_cb = None):
         self.cancel_search = True
 
     def get_cancel(self):

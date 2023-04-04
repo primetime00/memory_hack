@@ -116,7 +116,7 @@ class ScriptUtilities:
             return []
         aob.set_last_searched()
         with self.searcher.results.db() as conn:
-            res = self.searcher.results.get_results(conn, _count=4).fetchall()
+            res = self.searcher.results.get_results(conn, _count=20).fetchall()
             if len(res) == 0:
                 return []
             return [x[0] for x in res]

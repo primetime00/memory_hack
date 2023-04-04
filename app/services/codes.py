@@ -3,7 +3,6 @@ import copy
 import ctypes
 import json
 import os
-import random
 from io import BytesIO
 from pathlib import Path
 from threading import Thread, Lock, Event
