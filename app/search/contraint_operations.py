@@ -2,15 +2,16 @@ import ctypes
 from app.search.operations import MemoryOperation
 
 class ConstraintOperationFloat(MemoryOperation):
-    def __init__(self, low_value, high_value):
+    def __init__(self, low_value, high_value, max_change):
         self.low = low_value
         self.high = high_value
+        self.max_change = max_change
         super().__init__()
 
 class IncreaseOperationConstraintFloat(ConstraintOperationFloat):
     def operation(self, *current_and_previous_read):
         diff = current_and_previous_read[0] - current_and_previous_read[1]
-        return diff > 0.001 and self.low <= diff <= self.high
+        return 0.001 < diff <= self.max_change and self.low <= current_and_previous_read[0] <= self.high
 
     def run(self, buf1: "SearchBuffer", buf2: "SearchBuffer", result_callback: callable, result_list: list):
         length = min(len(buf1), len(buf2))
@@ -22,18 +23,18 @@ class IncreaseOperationConstraintFloat(ConstraintOperationFloat):
                 r1 = buf1.store_type.from_address(address1+i).value
                 r2 = buf1.store_type.from_address(address2+i).value
                 diff = r1 - r2
-                if diff > 0.001 and self.low <= diff <= self.high:
+                if 0.001 < diff <= self.max_change and self.low <= r1 <= self.high:
                     result_callback(result_list, i, r1)
         else:
             for i in range(0, length):
                 diff = buf1.ptr[i] - buf2.ptr[i]
-                if diff > 0.001 and self.low <= diff <= self.high:
+                if 0.001 < diff <= self.max_change and self.low <= buf1.ptr[i] <= self.high:
                     result_callback(result_list, i, buf1.ptr[i])
 
 class DecreaseOperationConstraintFloat(ConstraintOperationFloat):
     def operation(self, *current_and_previous_read):
         diff = current_and_previous_read[1] - current_and_previous_read[0]
-        return diff > 0.001 and self.low <= diff <= self.high
+        return 0.001 < diff <= self.max_change and self.low <= current_and_previous_read[0] <= self.high
 
     def run(self, buf1: "SearchBuffer", buf2: "SearchBuffer", result_callback: callable, result_list: list):
         length = min(len(buf1), len(buf2))
@@ -45,11 +46,11 @@ class DecreaseOperationConstraintFloat(ConstraintOperationFloat):
                 r1 = buf1.store_type.from_address(address1+i).value
                 r2 = buf1.store_type.from_address(address2+i).value
                 diff = r2 - r1
-                if diff > 0.001 and self.low <= diff <= self.high:
+                if 0.001 < diff <= self.max_change and self.low <= r1 <= self.high:
                     result_callback(result_list, i, r1)
         else:
             for i in range(0, length):
                 diff = buf2.ptr[i] - buf1.ptr[i]
-                if diff > 0.001 and self.low <= diff <= self.high:
+                if 0.001 < diff <= self.max_change and self.low <= buf1.ptr[i] <= self.high:
                     result_callback(result_list, i, buf1.ptr[i])
 

@@ -319,7 +319,7 @@ class Script(MemoryHandler):
                     self.wait_event.wait(self.script.get_speed())
             except IOError as io_error:
                 logging.error(str(io_error))
-                self.error = 'Could not open process {}. Is it opened in scanners?'.format(self.script.get_app())
+                self.error = 'Could not open process. Is it opened in scanners?'
             except Exception as e:
                 logging.error(str(e))
                 self.error = Script.parse_error(self.filename, traceback.format_exc(limit=-1))
