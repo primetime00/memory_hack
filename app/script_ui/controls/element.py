@@ -35,6 +35,7 @@ class Element(Build):
         self.keys = kwargs
 
         self.data_map: dict = {}
+        self.custom_map: dict = {}
 
     def children(self) -> List['Element']:
         return []
@@ -162,6 +163,12 @@ class Element(Build):
     def put_data(self, key: str, data):
         self.data_map[key] = data
 
+
+    def get_custom_data(self, key: str):
+        return self.custom_map.get(key, None)
+
+    def put_custom_data(self, key: str, data):
+        self.custom_map[key] = data
 
     def on_ready(self):
         pass
