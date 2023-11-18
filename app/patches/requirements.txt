@@ -2,5 +2,5 @@ falcon==3.1.0
 falcon-multipart==0.2.0
 gunicorn==20.1.0
 mem-edit==0.6
-psutil==5.9.1
+psutil==5.9.6
 typing==3.7.4.3
