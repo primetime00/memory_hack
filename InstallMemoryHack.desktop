@@ -1,0 +1,7 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Name=Install Memory Hack
+Exec=sh -c 'python3 <(wget -qO- https://github.com/primetime00/memory_hack/raw/master/app/patches/install.py)'
+Terminal=true
+Type=Application
+StartupNotify=false
