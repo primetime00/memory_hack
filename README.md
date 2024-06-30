@@ -9,7 +9,7 @@ Memory Hack is a cross-platform memory editor with a web based front-end.
 
 ## Features
 
-- Memory searcher that can find 1, 2, 4 byte values as well as floating point values.
+- Memory searcher that can find 1, 2, 4, 8 byte values as well as floating point values.
 - Unknown value scanner to search for values not represented as numeric (life bars, timers, etc...)
 - AOB (Array of bytes) heap scanner to help narrow down dynamic values.
 - Code list that can store memory addresses and AOB values for reuse.
