@@ -1142,12 +1142,12 @@
                 case 'byte_2':
                     value_valid = (n >= -2<<14 && n < 2<<15)
                     break
-                case 'byte_4':
-                    value_valid = (n >= -2<<30 && n < 2<<31)
-                    break
-                case 'byte_8':
-                    value_valid = (n >= -2<<62 && n < 2<<63)
-                    break
+                    case 'byte_4':
+                        value_valid = (n >= -2<<30 && n < 2**32)
+                        break
+                    case 'byte_8':
+                        value_valid = (n >= -(2**63) && n < 2**64)
+                        break
             }
         }
     }
