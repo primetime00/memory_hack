@@ -393,6 +393,7 @@
                     sel_search_size.find('option[value="byte_1"]').show()
                     sel_search_size.find('option[value="byte_2"]').show()
                     sel_search_size.find('option[value="byte_4"]').show()
+                    sel_search_size.find('option[value="byte_8"]').show()
                     sel_search_size.find('option[value="float"]').show()
                     sel_search_size.find('option[value="array"]').show()
                     sel_search_size.find('option[value="byte_4"]').prop('selected', true)
@@ -423,6 +424,7 @@
                     sel_search_size.find('option[value="byte_1"]').hide()
                     sel_search_size.find('option[value="byte_2"]').hide()
                     sel_search_size.find('option[value="byte_4"]').hide()
+                    sel_search_size.find('option[value="byte_8"]').hide()
                     sel_search_size.find('option[value="float"]').hide()
                     sel_search_size.find('option[value="array"]').hide()
                     sel_search_size.find('option[value="array"]').prop('selected', true)
@@ -430,6 +432,7 @@
                     sel_search_size.find('option[value="byte_1"]').show()
                     sel_search_size.find('option[value="byte_2"]').show()
                     sel_search_size.find('option[value="byte_4"]').show()
+                    sel_search_size.find('option[value="byte_8"]').show()
                     sel_search_size.find('option[value="float"]').show()
                     sel_search_size.find('option[value="array"]').hide()
                     sel_search_size.find('option[value="byte_4"]').prop('selected', true)
@@ -451,6 +454,7 @@
                 sel_search_size.find('option[value="byte_1"]').show()
                 sel_search_size.find('option[value="byte_2"]').show()
                 sel_search_size.find('option[value="byte_4"]').show()
+                sel_search_size.find('option[value="byte_8"]').show()
                 sel_search_size.find('option[value="float"]').show()
                 sel_search_size.find('option[value="array"]').hide()
                 sel_search_size.find('option[value="byte_4"]').prop('selected', true)
@@ -818,6 +822,7 @@
                 sel_search_size.find('option[value="byte_1"]').show()
                 sel_search_size.find('option[value="byte_2"]').show()
                 sel_search_size.find('option[value="byte_4"]').show()
+                sel_search_size.find('option[value="byte_8"]').show()
                 sel_search_size.find('option[value="float"]').show()
                 sel_search_size.find('option[value="array"]').hide()
                 switch_search_aligned.removeAttr('disabled')
@@ -1016,6 +1021,9 @@
                         break
                     case 'byte_4':
                         value_valid = (n >= -2<<30 && n < 2**32)
+                        break
+                    case 'byte_8':
+                        value_valid = (n >= -(2**63) && n < 2**64)
                         break
                 }
             }

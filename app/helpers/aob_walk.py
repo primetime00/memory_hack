@@ -228,6 +228,8 @@ class AOBWalk:
                 val = value_to_bytes(val, 2)
             elif tp == AOBWalk.BYTE_4:
                 val = value_to_bytes(val, 4)
+            elif tp == AOBWalk.BYTE_8:
+                val = value_to_bytes(val, 8)
             else: #better be a hex string
                 val = value_to_bytes(val, 0)
         except Exception as e:

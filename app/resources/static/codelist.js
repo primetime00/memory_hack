@@ -867,6 +867,7 @@
                         <option value="byte_1">BYTE</option>
                         <option value="byte_2">2 BYTES</option>
                         <option value="byte_4" selected>4 BYTES</option>
+                        <option value="byte_8">8 BYTES</option>
                         <option value="float">FLOAT</option>
                      </select>`,
         'create': index => {
