@@ -3,5 +3,4 @@ falcon-multipart==0.2.0
 gunicorn==23.0.0
 mem-edit==0.8
 psutil==7.0.0
-typing==3.7.4.3
-legacy-api==2.6.3
+legacy-cgi==2.6.3
