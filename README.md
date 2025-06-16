@@ -17,7 +17,7 @@ Memory Hack is a cross-platform memory editor with a web based front-end.
 - Web-based front-end that can be accessed from PC or phone.
 
 ## Requirements
-- Python >= 3.8
+- Python >= 3.11
 
 ## Screenshots
 
