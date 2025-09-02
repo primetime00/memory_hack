@@ -1,5 +1,5 @@
 import falcon
-
+from pathlib import Path
 from app.helpers.data_store import DataStore
 from app.helpers.process_utils import get_process_names
 from app.services.aob import AOB
@@ -9,7 +9,6 @@ from app.services.script import Script
 from app.services.searcher import Search
 from app.version import __version__
 
-
 def initialize():
     data_store = DataStore()
     data_store.set_service('process', Process())
@@ -17,8 +16,6 @@ def initialize():
     data_store.set_service('aob', AOB())
     data_store.set_service('script', Script())
     data_store.set_service('codelist', CodeList())
-
-
 
 class MainResource:
     pattern = r'\s*<ons-tab.*page="/(\w+)"(.*)>'
@@ -39,6 +36,7 @@ class SearchResource:
         search_instance.process(req, resp)
         if resp.status == 200:
             resp.media['process'] = search_instance.get_process_name()
+
 class ScriptResource:
     def on_get(self, req, resp):
         script_instance = DataStore().get_service('script')
@@ -65,7 +63,6 @@ class AOBResource:
         aob_instance.process(req, resp)
         if resp.status == 200:
             resp.media['process'] = aob_instance.get_process_name()
-
 
 class CodeListResource:
 

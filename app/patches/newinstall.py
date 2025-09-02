@@ -58,7 +58,7 @@ def generate_ssl_keys():
     print("SSL keys generated: cert.pem and key.pem")
 
 def download_source():
-    remote_url = 'https://github.com/primetime00/memory_hack/archive/refs/heads/master.zip'
+    remote_url = 'https://github.com/Deftones565/memory_hack/archive/refs/heads/master.zip'
     # Define the local filename to save data
     local_file = 'master.zip'
     # Download remote and save locally
