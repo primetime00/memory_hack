@@ -1,0 +1,10 @@
+﻿venv/*
+nssm.exe
+run.bat
+run.sh
+*.pyc
+app/resources/static/jquery.js
+app/resources/static/material-design-iconic-font/*
+app/resources/static/onsenui*
+app/resources/static/onsen-css-components.min.css
+.vscode/*
