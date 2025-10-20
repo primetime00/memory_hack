@@ -137,4 +137,4 @@ _Lets get back_
 
 You should now have a valid code for the game!
 
-The next tutorial will describe how to find a more permanent code as this code will change to another address on game restart.
+Next, have a look at the [AOB tutorial](https://github.com/isighless/memory_hack/raw/aob_documentation/docs/tutorial/Tutorial-2-AOB.md) to see how to find a more permanent code, as the code found via this tutorial will no longer be valid the next time the game is restarted.
